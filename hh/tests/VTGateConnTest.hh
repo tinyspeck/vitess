@@ -76,6 +76,8 @@ class VTGateConnTest extends \PHPUnit_Framework_TestCase
         // Pick an unused port.
         $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
         socket_bind($sock, 'localhost');
+        $addr = null;
+        $port = null;
         if (! socket_getsockname($sock, $addr, $port)) {
             throw new Exception('Failed to find unused port for mock vtgate server.');
         }
@@ -83,6 +85,7 @@ class VTGateConnTest extends \PHPUnit_Framework_TestCase
 
         $cmd = "$VTROOT/bin/vtgateclienttest -logtostderr -lameduck-period 0 -grpc_port $port -service_map grpc-vtgateservice";
 
+        $pipes = null;
         $proc = proc_open($cmd, array(), $pipes);
         if (! $proc) {
             throw new Exception("Failed to start mock vtgate server with command: $cmd");
