@@ -251,7 +251,7 @@ class ProtoUtils
      *
      * @return BoundShardQuery
      */
-    public function BoundShardQuery($query, $bind_vars, $keyspace, $shards)
+    public static function BoundShardQuery($query, $bind_vars, $keyspace, $shards)
     {
         $value = new BoundShardQuery();
         $value->setQuery(self::BoundQuery($query, $bind_vars));
@@ -269,7 +269,7 @@ class ProtoUtils
      *
      * @return BoundKeyspaceIdQuery
      */
-    public function BoundKeyspaceIdQuery($query, $bind_vars, $keyspace, $keyspace_ids)
+    public static function BoundKeyspaceIdQuery($query, $bind_vars, $keyspace, $keyspace_ids)
     {
         $value = new BoundKeyspaceIdQuery();
         $value->setQuery(self::BoundQuery($query, $bind_vars));
