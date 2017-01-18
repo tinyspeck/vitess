@@ -49,6 +49,9 @@ _test/
 /php/composer.phar
 /php/vendor
 
+/hh/composer.phar
+/hh/vendor
+
 # site-local example files
 /examples/kubernetes/config.sh
 
