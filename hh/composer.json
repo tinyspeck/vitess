@@ -1,0 +1,18 @@
+{
+  "name": "vitess/hh-client",
+  "description": "Hacklang client for Vitess",
+  "minimum-stability": "dev",
+  "config": {
+    "vendor-dir": "vendor"
+  },
+  "require": {
+    "hhvm": ">=3.17.1",
+    "stanley-cheung/protobuf-php": "v0.6",
+    "google/auth": "v0.10"
+  },
+  "autoload": {
+    "psr-4": {
+      "Vitess\\": "src/Vitess/"
+    }
+  }
+}
