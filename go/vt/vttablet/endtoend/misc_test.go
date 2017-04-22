@@ -547,7 +547,7 @@ func TestLongQueryErrorTruncation(t *testing.T) {
 		"insert into vitess_test values(123, null, null, :data)",
 		map[string]interface{}{"data": buf.String()},
 	)
-	if err == nil {
+	if (err == nil) {
 		t.Error("expected data too long error")
 		return
 	}
