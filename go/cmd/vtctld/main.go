@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	"github.com/youtube/vitess/go/exit"
+
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/topo"
 	"github.com/youtube/vitess/go/vt/vtctld"
@@ -40,7 +40,7 @@ func main() {
 
 	if *servenv.Version {
 		servenv.AppVersion.Print()
-		exit.Return(0)
+		os.Exit(0)
 	}
 
 	ts = topo.Open()

@@ -21,7 +21,6 @@ import (
 	"flag"
 
 	log "github.com/golang/glog"
-	"github.com/youtube/vitess/go/exit"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/mysqlctl"
 	"github.com/youtube/vitess/go/vt/servenv"
@@ -56,7 +55,7 @@ func main() {
 
 	if *servenv.Version {
 		servenv.AppVersion.Print()
-		exit.Return(0)
+		os.Exit(0)
 	}
 
 	if len(flag.Args()) > 0 {

@@ -62,7 +62,7 @@ func main() {
 
 	if *servenv.Version {
 		servenv.AppVersion.Print()
-		exit.Return(0)
+		os.Exit(0)
 	}
 
 	// We'll register this OnTerm handler before mysqld starts, so we get notified

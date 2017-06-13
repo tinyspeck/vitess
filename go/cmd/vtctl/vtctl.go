@@ -73,7 +73,7 @@ func main() {
 
 	if *servenv.Version {
 		servenv.AppVersion.Print()
-		exit.Return(0)
+		os.Exit(0)
 	}
 
 	if len(args) == 0 {
