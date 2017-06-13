@@ -17,6 +17,7 @@ limitations under the License.
 package servenv
 
 import (
+	"flag"
 	"fmt"
 	"github.com/youtube/vitess/go/stats"
 	"runtime"
@@ -28,6 +29,7 @@ var (
 	buildUser   = ""
 	buildTime   = ""
 	buildGitRev = ""
+	Version     = flag.Bool("version", false, "print binary version")
 )
 
 var AppVersion versionInfo

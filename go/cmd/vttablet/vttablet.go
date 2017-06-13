@@ -40,8 +40,6 @@ var (
 	tableACLConfig        = flag.String("table-acl-config", "", "path to table access checker config file")
 	tabletPath            = flag.String("tablet-path", "", "tablet alias")
 
-	version = flag.Bool("version", false, "print binary version")
-
 	agent *tabletmanager.ActionAgent
 )
 
@@ -56,7 +54,7 @@ func main() {
 	mysqlctl.RegisterFlags()
 	flag.Parse()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}

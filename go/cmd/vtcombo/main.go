@@ -50,8 +50,6 @@ var (
 
 	schemaDir = flag.String("schema_dir", "", "Schema base directory. Should contain one directory per keyspace, with a vschema.json file if necessary.")
 
-	version = flag.Bool("version", false, "print binary version")
-
 	ts topo.Server
 )
 
@@ -69,7 +67,7 @@ func main() {
 	mysqlctl.RegisterFlags()
 	flag.Parse()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}

@@ -28,10 +28,6 @@ import (
 	"github.com/youtube/vitess/go/vt/vtgate"
 )
 
-var (
-	version = flag.Bool("version", false, "print binary version")
-)
-
 func init() {
 	servenv.RegisterDefaultFlags()
 }
@@ -42,7 +38,7 @@ func main() {
 	flag.Parse()
 	servenv.Init()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}

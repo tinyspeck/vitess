@@ -29,10 +29,6 @@ import (
 	"github.com/youtube/vitess/go/vt/servenv"
 )
 
-var (
-	version = flag.Bool("version", false, "print binary version")
-)
-
 func init() {
 	servenv.RegisterDefaultFlags()
 }
@@ -41,7 +37,7 @@ func main() {
 
 	flag.Parse()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		os.Exit(0)
 	}

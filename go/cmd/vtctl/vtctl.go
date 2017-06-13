@@ -39,7 +39,6 @@ import (
 
 var (
 	waitTime = flag.Duration("wait-time", 24*time.Hour, "time to wait on an action")
-	version  = flag.Bool("version", false, "print binary version")
 )
 
 func init() {
@@ -72,7 +71,7 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}

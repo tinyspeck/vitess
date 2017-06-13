@@ -41,7 +41,6 @@ import (
 var (
 	cell                   = flag.String("cell", "", "cell to pick servers from")
 	commandDisplayInterval = flag.Duration("command_display_interval", time.Second, "Interval between each status update when vtworker is executing a single command from the command line")
-	version                = flag.Bool("version", false, "print binary version")
 )
 
 func init() {
@@ -71,7 +70,7 @@ func main() {
 	servenv.Init()
 	defer servenv.Close()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}

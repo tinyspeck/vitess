@@ -30,8 +30,7 @@ func init() {
 
 // used at runtime by plug-ins
 var (
-	ts      topo.Server
-	version = flag.Bool("version", false, "print binary version")
+	ts topo.Server
 )
 
 func main() {
@@ -39,7 +38,7 @@ func main() {
 	servenv.Init()
 	defer servenv.Close()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}

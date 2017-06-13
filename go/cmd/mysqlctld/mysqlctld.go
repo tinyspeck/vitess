@@ -44,8 +44,6 @@ var (
 	// mysqlctl init flags
 	waitTime      = flag.Duration("wait_time", 5*time.Minute, "how long to wait for mysqld startup or shutdown")
 	initDBSQLFile = flag.String("init_db_sql_file", "", "path to .sql file to run after mysql_install_db")
-
-	version = flag.Bool("version", false, "print binary version")
 )
 
 func init() {
@@ -62,7 +60,7 @@ func main() {
 	dbconfigs.RegisterFlags(dbconfigFlags)
 	flag.Parse()
 
-	if *version {
+	if *servenv.Version {
 		servenv.AppVersion.Print()
 		exit.Return(0)
 	}
