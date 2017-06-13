@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-
+	"github.com/youtube/vitess/go/exit"
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/topo"
 	"github.com/youtube/vitess/go/vt/vtctld"
@@ -30,13 +30,19 @@ func init() {
 
 // used at runtime by plug-ins
 var (
-	ts topo.Server
+	ts      topo.Server
+	version = flag.Bool("version", false, "print binary version")
 )
 
 func main() {
 	flag.Parse()
 	servenv.Init()
 	defer servenv.Close()
+
+	if *version {
+		servenv.AppVersion.Print()
+		exit.Return(0)
+	}
 
 	ts = topo.Open()
 	defer ts.Close()

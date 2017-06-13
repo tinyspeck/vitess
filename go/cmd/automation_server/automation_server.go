@@ -29,13 +29,25 @@ import (
 	"github.com/youtube/vitess/go/vt/servenv"
 )
 
+var (
+	version = flag.Bool("version", false, "print binary version")
+)
+
 func init() {
 	servenv.RegisterDefaultFlags()
 }
 
 func main() {
+
 	flag.Parse()
+
+	if *version {
+		servenv.AppVersion.Print()
+		os.Exit(0)
+	}
+
 	fmt.Println("Automation Server, listening on:", *servenv.Port)
+
 	if *servenv.Port == 0 {
 		fmt.Println("No port specified using --port.")
 		os.Exit(1)

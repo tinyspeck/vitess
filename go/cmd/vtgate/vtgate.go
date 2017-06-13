@@ -43,6 +43,7 @@ var (
 	healthCheckRetryDelay  = flag.Duration("healthcheck_retry_delay", 2*time.Millisecond, "health check retry delay")
 	healthCheckTimeout     = flag.Duration("healthcheck_timeout", time.Minute, "the health check timeout period")
 	tabletTypesToWait      = flag.String("tablet_types_to_wait", "", "wait till connected for specified tablet types during Gateway initialization")
+	version                = flag.Bool("version", false, "print binary version")
 )
 
 var resilientSrvTopoServer *vtgate.ResilientSrvTopoServer
@@ -60,6 +61,11 @@ func main() {
 
 	flag.Parse()
 	servenv.Init()
+
+	if *version {
+		servenv.AppVersion.Print()
+		exit.Return(0)
+	}
 
 	if initFakeZK != nil {
 		initFakeZK()

@@ -21,6 +21,7 @@ import (
 	"flag"
 
 	log "github.com/golang/glog"
+	"github.com/youtube/vitess/go/exit"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/mysqlctl"
 	"github.com/youtube/vitess/go/vt/servenv"
@@ -39,6 +40,8 @@ var (
 	tableACLConfig        = flag.String("table-acl-config", "", "path to table access checker config file")
 	tabletPath            = flag.String("tablet-path", "", "tablet alias")
 
+	version = flag.Bool("version", false, "print binary version")
+
 	agent *tabletmanager.ActionAgent
 )
 
@@ -52,6 +55,12 @@ func main() {
 	dbconfigs.RegisterFlags(dbconfigFlags)
 	mysqlctl.RegisterFlags()
 	flag.Parse()
+
+	if *version {
+		servenv.AppVersion.Print()
+		exit.Return(0)
+	}
+
 	if len(flag.Args()) > 0 {
 		flag.Usage()
 		log.Exit("vttablet doesn't take any positional arguments")

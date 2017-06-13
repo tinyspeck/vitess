@@ -50,6 +50,8 @@ var (
 
 	schemaDir = flag.String("schema_dir", "", "Schema base directory. Should contain one directory per keyspace, with a vschema.json file if necessary.")
 
+	version = flag.Bool("version", false, "print binary version")
+
 	ts topo.Server
 )
 
@@ -66,6 +68,12 @@ func main() {
 	dbconfigs.RegisterFlags(dbconfigFlags)
 	mysqlctl.RegisterFlags()
 	flag.Parse()
+
+	if *version {
+		servenv.AppVersion.Print()
+		exit.Return(0)
+	}
+
 	if len(flag.Args()) > 0 {
 		flag.Usage()
 		log.Errorf("vtcombo doesn't take any positional arguments")

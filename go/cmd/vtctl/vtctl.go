@@ -39,6 +39,7 @@ import (
 
 var (
 	waitTime = flag.Duration("wait-time", 24*time.Hour, "time to wait on an action")
+	version  = flag.Bool("version", false, "print binary version")
 )
 
 func init() {
@@ -70,10 +71,17 @@ func main() {
 
 	flag.Parse()
 	args := flag.Args()
+
+	if *version {
+		servenv.AppVersion.Print()
+		exit.Return(0)
+	}
+
 	if len(args) == 0 {
 		flag.Usage()
 		exit.Return(1)
 	}
+
 	action := args[0]
 
 	startMsg := fmt.Sprintf("USER=%v SUDO_USER=%v %v", os.Getenv("USER"), os.Getenv("SUDO_USER"), strings.Join(os.Args, " "))
