@@ -21,6 +21,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	"github.com/youtube/vitess/go/cmd/vtgateclienttest/services"
 	"github.com/youtube/vitess/go/exit"

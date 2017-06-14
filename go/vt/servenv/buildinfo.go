@@ -19,9 +19,10 @@ package servenv
 import (
 	"flag"
 	"fmt"
-	"github.com/youtube/vitess/go/stats"
 	"runtime"
 	"time"
+
+	"github.com/youtube/vitess/go/stats"
 )
 
 var (

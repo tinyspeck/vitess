@@ -19,6 +19,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	log "github.com/golang/glog"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
