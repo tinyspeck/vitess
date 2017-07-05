@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"os"
 
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/topo"
@@ -38,11 +37,6 @@ func main() {
 	flag.Parse()
 	servenv.Init()
 	defer servenv.Close()
-
-	if *servenv.Version {
-		servenv.AppVersion.Print()
-		os.Exit(0)
-	}
 
 	ts = topo.Open()
 	defer ts.Close()

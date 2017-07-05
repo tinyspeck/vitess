@@ -21,7 +21,6 @@ package main
 
 import (
 	"flag"
-	"os"
 
 	"github.com/youtube/vitess/go/cmd/vtgateclienttest/services"
 	"github.com/youtube/vitess/go/exit"
@@ -38,11 +37,6 @@ func main() {
 
 	flag.Parse()
 	servenv.Init()
-
-	if *servenv.Version {
-		servenv.AppVersion.Print()
-		os.Exit(0)
-	}
 
 	// The implementation chain.
 	servenv.OnRun(func() {

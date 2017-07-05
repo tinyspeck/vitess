@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
@@ -58,11 +57,6 @@ func main() {
 
 	flag.Parse()
 	servenv.Init()
-
-	if *servenv.Version {
-		servenv.AppVersion.Print()
-		os.Exit(0)
-	}
 
 	ts := topo.Open()
 	defer ts.Close()

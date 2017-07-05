@@ -70,11 +70,6 @@ func main() {
 	servenv.Init()
 	defer servenv.Close()
 
-	if *servenv.Version {
-		servenv.AppVersion.Print()
-		os.Exit(0)
-	}
-
 	ts := topo.Open()
 	defer ts.Close()
 
