@@ -19,6 +19,7 @@ package vtgate
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -198,9 +199,74 @@ func TestStreamUnsharded(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wantResult := sandboxconn.SingleRowResult
+	wantResult := sandboxconn.StreamRowResult
 	if !result.Equal(wantResult) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
+	}
+}
+
+func TestStreamBuffering(t *testing.T) {
+	executor, _, _, sbclookup := createExecutorEnv()
+
+	// This test is similar to TestStreamUnsharded except that it returns a Result > 10 bytes,
+	// such that the splitting of the Result into multiple Result responses gets tested.
+	sbclookup.SetResults([]*sqltypes.Result{{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+			{Name: "col", Type: sqltypes.Int32},
+		},
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("01234567890123456789")),
+		}, {
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("2")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("12345678901234567890")),
+		}},
+	}})
+
+	results := make(chan *sqltypes.Result, 10)
+	err := executor.StreamExecute(
+		context.Background(),
+		masterSession,
+		"select id from music_user_map where id = 1",
+		nil,
+		querypb.Target{
+			TabletType: topodatapb.TabletType_MASTER,
+		},
+		func(qr *sqltypes.Result) error {
+			results <- qr
+			return nil
+		},
+	)
+	close(results)
+	if err != nil {
+		t.Error(err)
+	}
+	wantResults := []*sqltypes.Result{{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+			{Name: "col", Type: sqltypes.Int32},
+		},
+	}, {
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("01234567890123456789")),
+		}},
+	}, {
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("2")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("12345678901234567890")),
+		}},
+	}}
+	var gotResults []*sqltypes.Result
+	for r := range results {
+		gotResults = append(gotResults, r)
+	}
+	if !reflect.DeepEqual(gotResults, wantResults) {
+		t.Logf("len: %d", len(gotResults))
+		for i := range gotResults {
+			t.Errorf("Buffered streaming:\n%v, want\n%v", gotResults[i], wantResults[i])
+		}
 	}
 }
 
@@ -428,7 +494,7 @@ func TestStreamSelectEqual(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wantResult := sandboxconn.SingleRowResult
+	wantResult := sandboxconn.StreamRowResult
 	if !result.Equal(wantResult) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
 	}
@@ -671,7 +737,7 @@ func TestStreamSelectIN(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wantResult := sandboxconn.SingleRowResult
+	wantResult := sandboxconn.StreamRowResult
 	if !result.Equal(wantResult) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
 	}
@@ -682,12 +748,12 @@ func TestStreamSelectIN(t *testing.T) {
 		t.Error(err)
 	}
 	wantResult = &sqltypes.Result{
-		Fields: sandboxconn.SingleRowResult.Fields,
+		Fields: sandboxconn.StreamRowResult.Fields,
 		Rows: [][]sqltypes.Value{
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
 		},
-		RowsAffected: 2,
+		RowsAffected: 0,
 	}
 	if !result.Equal(wantResult) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
@@ -698,7 +764,7 @@ func TestStreamSelectIN(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wantResult = sandboxconn.SingleRowResult
+	wantResult = sandboxconn.StreamRowResult
 	if !result.Equal(wantResult) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
 	}
@@ -760,7 +826,7 @@ func TestSelectScatter(t *testing.T) {
 		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
 		conns = append(conns, sbc)
 	}
-	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false)
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize)
 
 	_, err := executorExec(executor, "select id from user", nil)
 	if err != nil {
@@ -792,7 +858,7 @@ func TestStreamSelectScatter(t *testing.T) {
 		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
 		conns = append(conns, sbc)
 	}
-	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false)
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize)
 
 	sql := "select id from user"
 	result, err := executorStream(executor, sql)
@@ -802,16 +868,15 @@ func TestStreamSelectScatter(t *testing.T) {
 	wantResult := &sqltypes.Result{
 		Fields: sandboxconn.SingleRowResult.Fields,
 		Rows: [][]sqltypes.Value{
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
-			sandboxconn.SingleRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
+			sandboxconn.StreamRowResult.Rows[0],
 		},
-		RowsAffected: 8,
 	}
 	if !result.Equal(wantResult) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
@@ -834,12 +899,309 @@ func TestSelectScatterFail(t *testing.T) {
 	}
 	serv := new(sandboxTopo)
 	resolver := newTestResolver(hc, serv, cell)
-	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false)
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize)
 
 	_, err := executorExec(executor, "select id from user", nil)
 	want := "paramsAllShards: keyspace TestExecutor fetch error: topo error GetSrvKeyspace"
 	if err == nil || err.Error() != want {
 		t.Errorf("executorExec: %v, want %v", err, want)
+	}
+}
+
+// TestSelectScatterOrderBy will run an ORDER BY query that will scatter out to 8 shards and return the 8 rows (one per shard) sorted.
+func TestSelectScatterOrderBy(t *testing.T) {
+	// Special setup: Don't use createExecutorEnv.
+	cell := "aa"
+	hc := discovery.NewFakeHealthCheck()
+	s := createSandbox("TestExecutor")
+	s.VSchema = executorVSchema
+	getSandbox(KsTestUnsharded).VSchema = unshardedVSchema
+	serv := new(sandboxTopo)
+	resolver := newTestResolver(hc, serv, cell)
+	shards := []string{"-20", "20-40", "40-60", "60-80", "80-a0", "a0-c0", "c0-e0", "e0-"}
+	var conns []*sandboxconn.SandboxConn
+	for i, shard := range shards {
+		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
+		sbc.SetResults([]*sqltypes.Result{{
+			Fields: []*querypb.Field{
+				{Name: "col1", Type: sqltypes.Int32},
+				{Name: "col2", Type: sqltypes.Int32},
+			},
+			RowsAffected: 1,
+			InsertID:     0,
+			Rows: [][]sqltypes.Value{{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i%4))),
+			}},
+		}})
+		conns = append(conns, sbc)
+	}
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize)
+
+	query := "select col1, col2 from user order by col2 desc"
+	gotResult, err := executorExec(executor, query, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           query,
+		BindVariables: map[string]interface{}{},
+	}}
+	for _, conn := range conns {
+		if !reflect.DeepEqual(conn.Queries, wantQueries) {
+			t.Errorf("conn.Queries = %#v, want %#v", conn.Queries, wantQueries)
+		}
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "col1", Type: sqltypes.Int32},
+			{Name: "col2", Type: sqltypes.Int32},
+		},
+		RowsAffected: 8,
+		InsertID:     0,
+	}
+	for i := 0; i < 4; i++ {
+		// There should be a duplicate for each row returned.
+		for j := 0; j < 2; j++ {
+			row := []sqltypes.Value{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(3-i))),
+			}
+			wantResult.Rows = append(wantResult.Rows, row)
+		}
+	}
+	if !reflect.DeepEqual(gotResult, wantResult) {
+		t.Errorf("scatter order by:\n%v, want\n%v", gotResult, wantResult)
+	}
+}
+
+func TestStreamSelectScatterOrderBy(t *testing.T) {
+	// Special setup: Don't use createExecutorEnv.
+	cell := "aa"
+	hc := discovery.NewFakeHealthCheck()
+	s := createSandbox("TestExecutor")
+	s.VSchema = executorVSchema
+	getSandbox(KsTestUnsharded).VSchema = unshardedVSchema
+	serv := new(sandboxTopo)
+	resolver := newTestResolver(hc, serv, cell)
+	shards := []string{"-20", "20-40", "40-60", "60-80", "80-a0", "a0-c0", "c0-e0", "e0-"}
+	var conns []*sandboxconn.SandboxConn
+	for i, shard := range shards {
+		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
+		sbc.SetResults([]*sqltypes.Result{{
+			Fields: []*querypb.Field{
+				{Name: "id", Type: sqltypes.Int32},
+				{Name: "col", Type: sqltypes.Int32},
+			},
+			RowsAffected: 1,
+			InsertID:     0,
+			Rows: [][]sqltypes.Value{{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i%4))),
+			}},
+		}})
+		conns = append(conns, sbc)
+	}
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, 10)
+
+	query := "select id, col from user order by col desc"
+	gotResult, err := executorStream(executor, query)
+	if err != nil {
+		t.Error(err)
+	}
+
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           query,
+		BindVariables: map[string]interface{}{},
+	}}
+	for _, conn := range conns {
+		if !reflect.DeepEqual(conn.Queries, wantQueries) {
+			t.Errorf("conn.Queries = %#v, want %#v", conn.Queries, wantQueries)
+		}
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+			{Name: "col", Type: sqltypes.Int32},
+		},
+	}
+	for i := 0; i < 4; i++ {
+		row := []sqltypes.Value{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(3-i))),
+		}
+		wantResult.Rows = append(wantResult.Rows, row, row)
+	}
+	if !reflect.DeepEqual(gotResult, wantResult) {
+		t.Errorf("scatter order by:\n%v, want\n%v", gotResult, wantResult)
+	}
+}
+
+// TestSelectScatterOrderByFail will run an ORDER BY query that will scatter out to 8 shards, with
+// the order by column as VarChar, which is unsupported.
+func TestSelectScatterOrderByFail(t *testing.T) {
+	// Special setup: Don't use createExecutorEnv.
+	cell := "aa"
+	hc := discovery.NewFakeHealthCheck()
+	s := createSandbox("TestExecutor")
+	s.VSchema = executorVSchema
+	getSandbox(KsTestUnsharded).VSchema = unshardedVSchema
+	serv := new(sandboxTopo)
+	resolver := newTestResolver(hc, serv, cell)
+	shards := []string{"-20", "20-40", "40-60", "60-80", "80-a0", "a0-c0", "c0-e0", "e0-"}
+	for _, shard := range shards {
+		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
+		sbc.SetResults([]*sqltypes.Result{{
+			Fields: []*querypb.Field{
+				{Name: "id", Type: sqltypes.Int32},
+				{Name: "col", Type: sqltypes.Int32},
+			},
+			RowsAffected: 1,
+			InsertID:     0,
+			Rows: [][]sqltypes.Value{{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+				sqltypes.MakeTrusted(sqltypes.VarChar, []byte("aaa")),
+			}},
+		}})
+	}
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize)
+
+	_, err := executorExec(executor, "select id, col from user order by col asc", nil)
+	want := "text fields cannot be compared"
+	if err == nil || err.Error() != want {
+		t.Errorf("scatter order by error: %v, want %s", err, want)
+	}
+}
+
+// TestSelectScatterAggregate will run an aggregate query that will scatter out to 8 shards and return 4 aggregated rows.
+func TestSelectScatterAggregate(t *testing.T) {
+	// Special setup: Don't use createExecutorEnv.
+	cell := "aa"
+	hc := discovery.NewFakeHealthCheck()
+	s := createSandbox("TestExecutor")
+	s.VSchema = executorVSchema
+	getSandbox(KsTestUnsharded).VSchema = unshardedVSchema
+	serv := new(sandboxTopo)
+	resolver := newTestResolver(hc, serv, cell)
+	shards := []string{"-20", "20-40", "40-60", "60-80", "80-a0", "a0-c0", "c0-e0", "e0-"}
+	var conns []*sandboxconn.SandboxConn
+	for i, shard := range shards {
+		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
+		sbc.SetResults([]*sqltypes.Result{{
+			Fields: []*querypb.Field{
+				{Name: "col", Type: sqltypes.Int32},
+				{Name: "sum(foo)", Type: sqltypes.Int32},
+			},
+			RowsAffected: 1,
+			InsertID:     0,
+			Rows: [][]sqltypes.Value{{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i%4))),
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i))),
+			}},
+		}})
+		conns = append(conns, sbc)
+	}
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize)
+
+	query := "select col, sum(foo) from user group by col"
+	gotResult, err := executorExec(executor, query, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           query + " order by col asc",
+		BindVariables: map[string]interface{}{},
+	}}
+	for _, conn := range conns {
+		if !reflect.DeepEqual(conn.Queries, wantQueries) {
+			t.Errorf("conn.Queries = %#v, want %#v", conn.Queries, wantQueries)
+		}
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "col", Type: sqltypes.Int32},
+			{Name: "sum(foo)", Type: sqltypes.Int32},
+		},
+		RowsAffected: 4,
+		InsertID:     0,
+	}
+	for i := 0; i < 4; i++ {
+		row := []sqltypes.Value{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i))),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i*2+4))),
+		}
+		wantResult.Rows = append(wantResult.Rows, row)
+	}
+	if !reflect.DeepEqual(gotResult, wantResult) {
+		t.Errorf("scatter order by:\n%v, want\n%v", gotResult, wantResult)
+	}
+}
+
+func TestStreamSelectScatterAggregate(t *testing.T) {
+	// Special setup: Don't use createExecutorEnv.
+	cell := "aa"
+	hc := discovery.NewFakeHealthCheck()
+	s := createSandbox("TestExecutor")
+	s.VSchema = executorVSchema
+	getSandbox(KsTestUnsharded).VSchema = unshardedVSchema
+	serv := new(sandboxTopo)
+	resolver := newTestResolver(hc, serv, cell)
+	shards := []string{"-20", "20-40", "40-60", "60-80", "80-a0", "a0-c0", "c0-e0", "e0-"}
+	var conns []*sandboxconn.SandboxConn
+	for i, shard := range shards {
+		sbc := hc.AddTestTablet(cell, shard, 1, "TestExecutor", shard, topodatapb.TabletType_MASTER, true, 1, nil)
+		sbc.SetResults([]*sqltypes.Result{{
+			Fields: []*querypb.Field{
+				{Name: "col", Type: sqltypes.Int32},
+				{Name: "sum(foo)", Type: sqltypes.Int32},
+			},
+			RowsAffected: 1,
+			InsertID:     0,
+			Rows: [][]sqltypes.Value{{
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i%4))),
+				sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i))),
+			}},
+		}})
+		conns = append(conns, sbc)
+	}
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, 10)
+
+	query := "select col, sum(foo) from user group by col"
+	gotResult, err := executorStream(executor, query)
+	if err != nil {
+		t.Error(err)
+	}
+
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           query + " order by col asc",
+		BindVariables: map[string]interface{}{},
+	}}
+	for _, conn := range conns {
+		if !reflect.DeepEqual(conn.Queries, wantQueries) {
+			t.Errorf("conn.Queries = %#v, want %#v", conn.Queries, wantQueries)
+		}
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "col", Type: sqltypes.Int32},
+			{Name: "sum(foo)", Type: sqltypes.Int32},
+		},
+	}
+	for i := 0; i < 4; i++ {
+		row := []sqltypes.Value{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i))),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte(strconv.Itoa(i*2+4))),
+		}
+		wantResult.Rows = append(wantResult.Rows, row)
+	}
+	if !reflect.DeepEqual(gotResult, wantResult) {
+		t.Errorf("scatter order by:\n%v, want\n%v", gotResult, wantResult)
 	}
 }
 
@@ -882,6 +1244,7 @@ func TestSimpleJoin(t *testing.T) {
 		t.Errorf("result: %+v, want %+v", result, wantResult)
 	}
 }
+
 func TestJoinComments(t *testing.T) {
 	executor, sbc1, sbc2, _ := createExecutorEnv()
 	_, err := executorExec(executor, "select u1.id, u2.id from user u1 join user u2 where u1.id = 1 and u2.id = 3 /* trailing */", nil)
@@ -968,10 +1331,6 @@ func TestVarJoin(t *testing.T) {
 	if !reflect.DeepEqual(sbc1.Queries, wantQueries) {
 		t.Errorf("sbc1.Queries: %+v, want %+v\n", sbc1.Queries, wantQueries)
 	}
-	wantQueries = []querytypes.BoundQuery{{
-		Sql:           "select u2.id from user as u2 where u2.id = :u1_col",
-		BindVariables: map[string]interface{}{},
-	}}
 	// We have to use string representation because bindvars type is too complex.
 	got := fmt.Sprintf("%+v", sbc2.Queries)
 	want := "[{Sql:select u2.id from user as u2 where u2.id = :u1_col BindVariables:map[u1_col:3]}]"
@@ -1365,5 +1724,140 @@ func TestJoinErrors(t *testing.T) {
 	want = "INVALID_ARGUMENT error"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("err: %v, must contain %s", err, want)
+	}
+}
+
+func TestCrossShardSubquery(t *testing.T) {
+	executor, sbc1, sbc2, _ := createExecutorEnv()
+	result1 := []*sqltypes.Result{{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+			{Name: "col", Type: sqltypes.Int32},
+		},
+		RowsAffected: 1,
+		InsertID:     0,
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("3")),
+		}},
+	}}
+	sbc1.SetResults(result1)
+	result, err := executorExec(executor, "select id1 from (select u1.id id1, u2.id from user u1 join user u2 on u2.id = u1.col where u1.id = 1) as t", nil)
+	if err != nil {
+		t.Error(err)
+	}
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           "select u1.id as id1, u1.col from user as u1 where u1.id = 1",
+		BindVariables: map[string]interface{}{},
+	}}
+	if !reflect.DeepEqual(sbc1.Queries, wantQueries) {
+		t.Errorf("sbc1.Queries: %+v, want %+v\n", sbc1.Queries, wantQueries)
+	}
+	// We have to use string representation because bindvars type is too complex.
+	got := fmt.Sprintf("%+v", sbc2.Queries)
+	want := "[{Sql:select u2.id from user as u2 where u2.id = :u1_col BindVariables:map[u1_col:3]}]"
+	if got != want {
+		t.Errorf("sbc2.Queries: %s, want %s\n", got, want)
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+		},
+		RowsAffected: 1,
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+		}},
+	}
+	if !result.Equal(wantResult) {
+		t.Errorf("result: %+v, want %+v", result, wantResult)
+	}
+}
+
+func TestCrossShardSubqueryStream(t *testing.T) {
+	executor, sbc1, sbc2, _ := createExecutorEnv()
+	result1 := []*sqltypes.Result{{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+			{Name: "col", Type: sqltypes.Int32},
+		},
+		RowsAffected: 1,
+		InsertID:     0,
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("3")),
+		}},
+	}}
+	sbc1.SetResults(result1)
+	result, err := executorStream(executor, "select id1 from (select u1.id id1, u2.id from user u1 join user u2 on u2.id = u1.col where u1.id = 1) as t")
+	if err != nil {
+		t.Error(err)
+	}
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           "select u1.id as id1, u1.col from user as u1 where u1.id = 1",
+		BindVariables: map[string]interface{}{},
+	}}
+	if !reflect.DeepEqual(sbc1.Queries, wantQueries) {
+		t.Errorf("sbc1.Queries: %+v, want %+v\n", sbc1.Queries, wantQueries)
+	}
+	// We have to use string representation because bindvars type is too complex.
+	got := fmt.Sprintf("%+v", sbc2.Queries)
+	want := "[{Sql:select u2.id from user as u2 where u2.id = :u1_col BindVariables:map[u1_col:3]}]"
+	if got != want {
+		t.Errorf("sbc2.Queries: %s, want %s\n", got, want)
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+		},
+		Rows: [][]sqltypes.Value{{
+			sqltypes.MakeTrusted(sqltypes.Int32, []byte("1")),
+		}},
+	}
+	if !result.Equal(wantResult) {
+		t.Errorf("result: %+v, want %+v", result, wantResult)
+	}
+}
+
+func TestCrossShardSubqueryGetFields(t *testing.T) {
+	executor, sbc1, _, sbclookup := createExecutorEnv()
+	sbclookup.SetResults([]*sqltypes.Result{{
+		Fields: []*querypb.Field{
+			{Name: "col", Type: sqltypes.Int32},
+		},
+	}})
+	result1 := []*sqltypes.Result{{
+		Fields: []*querypb.Field{
+			{Name: "id", Type: sqltypes.Int32},
+			{Name: "col", Type: sqltypes.Int32},
+		},
+	}}
+	sbc1.SetResults(result1)
+	result, err := executorExec(executor, "select main1.col, t.id1 from main1 join (select u1.id id1, u2.id from user u1 join user u2 on u2.id = u1.col where u1.id = 1) as t", nil)
+	if err != nil {
+		t.Error(err)
+	}
+	wantQueries := []querytypes.BoundQuery{{
+		Sql:           "select u1.id as id1, u1.col from user as u1 where 1 != 1",
+		BindVariables: map[string]interface{}{},
+	}, {
+		Sql: "select u2.id from user as u2 where 1 != 1",
+		BindVariables: map[string]interface{}{
+			"u1_col": nil,
+		},
+	}}
+	if !reflect.DeepEqual(sbc1.Queries, wantQueries) {
+		t.Errorf("sbc1.Queries: %+v, want %+v\n", sbc1.Queries, wantQueries)
+	}
+
+	wantResult := &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "col", Type: sqltypes.Int32},
+			{Name: "id", Type: sqltypes.Int32},
+		},
+	}
+	if !result.Equal(wantResult) {
+		t.Errorf("result: %+v, want %+v", result, wantResult)
 	}
 }

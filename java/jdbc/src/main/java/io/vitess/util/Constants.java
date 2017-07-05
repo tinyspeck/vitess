@@ -38,13 +38,12 @@ public class Constants {
     public static final long CONNECTION_TIMEOUT = 30000;
     public static final String LITERAL_V = "v";
     public static final String LITERAL_SINGLE_QUOTE = "'";
-    public static final String SQL_SELECT = "select";
+    public static final String SQL_S = "s";
     public static final int DRIVER_MAJOR_VERSION = 1;
     public static final int DRIVER_MINOR_VERSION = 0;
     public static final int MAX_BUFFER_SIZE = 65535;
     //Default Timeout in miliseconds
     public static final int DEFAULT_TIMEOUT = 30000;
-    public static final String SQL_SHOW = "show";
     public static final String VITESS_KEYSPACE = "Keyspace name in Vitess Server";
     public static final Constants.QueryExecuteType DEFAULT_EXECUTE_TYPE = QueryExecuteType.SIMPLE;
     public static final String EXECUTE_TYPE_DESC = "Query execution type: simple or stream \n";
@@ -60,7 +59,6 @@ public class Constants {
         public static final String CONN_CLOSED = "Connection is Closed";
         public static final String INIT_FAILED = "Failed to Initialize Vitess JDBC Driver";
         public static final String INVALID_CONN_URL = "Connection URL is invalid";
-        public static final String READ_ONLY = "Read Only mode is not supported";
         public static final String STMT_CLOSED = "Statement is closed";
         public static final String SQL_FEATURE_NOT_SUPPORTED = "SQL Feature Not Supported";
         public static final String TIMEOUT_NEGATIVE = "Timeout value cannot be negative";
@@ -108,6 +106,8 @@ public class Constants {
         public static final String NO_KEYSPACE =
             "Querying Database Information without providing keyspace";
         public static final String QUERY_FAILED = "One or more queries failed in batch execution";
+        public static final String READ_ONLY =
+            "Connection has been set to read only and an update was attempted";
     }
 
 

@@ -58,7 +58,7 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 		}
 		innerRoute, ok := bldr.(*route)
 		if !ok {
-			return nil, errors.New("unsupported: complex join in insert")
+			return nil, errors.New("unsupported: cross-shard join in insert")
 		}
 		if innerRoute.ERoute.Keyspace.Name != eRoute.Keyspace.Name {
 			return nil, errors.New("unsupported: cross-keyspace select in insert")
@@ -74,7 +74,7 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 			return nil, errors.New("unsupported: subquery in insert values")
 		}
 	default:
-		panic("unexpected construct in insert")
+		panic(fmt.Sprintf("BUG: unexpected construct in insert: %T", rows))
 	}
 	if eRoute.Table.AutoIncrement == nil {
 		eRoute.Query = generateQuery(ins)
@@ -126,7 +126,7 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 			return nil, errors.New("unsupported: subquery in insert values")
 		}
 	default:
-		panic("unexpected construct in insert")
+		panic(fmt.Sprintf("BUG: unexpected construct in insert: %T", rows))
 	}
 	for _, value := range values {
 		if len(ins.Columns) != len(value) {
