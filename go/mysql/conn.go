@@ -250,6 +250,9 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
 
 	var header [4]byte
 	if _, err := io.ReadFull(c.reader, header[:]); err != nil {
+		if err == io.EOF {
+			return nil, err
+		}
 		return nil, fmt.Errorf("io.ReadFull(header size) failed: %v", err)
 	}
 
@@ -603,16 +606,6 @@ func (c *Conn) writeComQuit() error {
 // RemoteAddr returns the underlying socket RemoteAddr().
 func (c *Conn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
-}
-
-// ID returns the MySQL connection ID for this connection.
-func (c *Conn) ID() int64 {
-	return int64(c.ConnectionID)
-}
-
-// IDENTITY with IP info for diagnostics
-func (c *Conn) Ident() string {
-	return fmt.Sprintf("client %v (%s)", c.ConnectionID, c.RemoteAddr().String())
 }
 
 // Close closes the connection. It can be called from a different go

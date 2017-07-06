@@ -68,6 +68,9 @@ type DB struct {
 	// processing the next query. This will trigger a MySQL client error with
 	// errno 2013 ("server lost").
 	shouldClose bool
+	// AllowAll: if set to true, ComQuery returns an empty result
+	// for all queries. This flag is used for benchmarking.
+	AllowAll bool
 	// data maps tolower(query) to a result.
 	data map[string]*ExpectedResult
 	// rejectedData maps tolower(query) to an error.
@@ -215,7 +218,9 @@ func (db *DB) NewConnection(c *mysql.Conn) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.t.Logf("NewConnection(%v): client %v", db.name, c.ConnectionID)
+	if db.t != nil {
+		db.t.Logf("NewConnection(%v): client %v", db.name, c.ConnectionID)
+	}
 
 	if db.isConnFail {
 		panic(fmt.Errorf("simulating a connection failure"))
@@ -232,7 +237,9 @@ func (db *DB) ConnectionClosed(c *mysql.Conn) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.t.Logf("ConnectionClosed(%v): client %v", db.name, c.ConnectionID)
+	if db.t != nil {
+		db.t.Logf("ConnectionClosed(%v): client %v", db.name, c.ConnectionID)
+	}
 
 	if _, ok := db.connections[c.ConnectionID]; !ok {
 		db.t.Fatalf("BUG: Cannot delete connection from list of open connections because it is not registered. ID: %v Conn: %v", c.ConnectionID, c)
@@ -241,9 +248,15 @@ func (db *DB) ConnectionClosed(c *mysql.Conn) {
 }
 
 // ComQuery is part of the mysql.Handler interface.
-func (db *DB) ComQuery(c *mysql.Conn, q []byte) (*sqltypes.Result, error) {
+func (db *DB) ComQuery(c *mysql.Conn, q []byte, callback func(*sqltypes.Result) error) error {
+	if db.AllowAll {
+		return callback(&sqltypes.Result{})
+	}
+
 	query := string(q)
-	db.t.Logf("ComQuery(%v): client %v: %v", db.name, c.ConnectionID, query)
+	if db.t != nil {
+		db.t.Logf("ComQuery(%v): client %v: %v", db.name, c.ConnectionID, query)
+	}
 
 	key := strings.ToLower(query)
 	db.mu.Lock()
@@ -253,19 +266,21 @@ func (db *DB) ComQuery(c *mysql.Conn, q []byte) (*sqltypes.Result, error) {
 	// Check if we should close the connection and provoke errno 2013.
 	if db.shouldClose {
 		c.Close()
-		return &sqltypes.Result{}, nil
+		callback(&sqltypes.Result{})
+		return nil
 	}
 
 	// Using special handling for 'SET NAMES utf8'.  The driver
 	// may send this at connection time, and we don't want it to
 	// interfere.
 	if key == "set names utf8" {
-		return &sqltypes.Result{}, nil
+		callback(&sqltypes.Result{})
+		return nil
 	}
 
 	// check if we should reject it.
 	if err, ok := db.rejectedData[key]; ok {
-		return nil, err
+		return err
 	}
 
 	// Check explicit queries from AddQuery().
@@ -274,18 +289,18 @@ func (db *DB) ComQuery(c *mysql.Conn, q []byte) (*sqltypes.Result, error) {
 		if f := result.BeforeFunc; f != nil {
 			f()
 		}
-		return result.Result, nil
+		return callback(result.Result)
 	}
 
 	// Check query patterns from AddQueryPattern().
 	for _, pat := range db.patternData {
 		if pat.expr.MatchString(query) {
-			return pat.result, nil
+			return callback(pat.result)
 		}
 	}
 
 	// Nothing matched.
-	return nil, fmt.Errorf("query: '%s' is not supported on %v", query, db.name)
+	return fmt.Errorf("query: '%s' is not supported on %v", query, db.name)
 }
 
 //

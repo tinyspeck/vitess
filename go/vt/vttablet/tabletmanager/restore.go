@@ -44,8 +44,10 @@ var (
 // an error in case of a non-recoverable error.
 // It takes the action lock so no RPC interferes.
 func (agent *ActionAgent) RestoreData(ctx context.Context, logger logutil.Logger, deleteBeforeRestore bool) error {
-	agent.actionMutex.Lock()
-	defer agent.actionMutex.Unlock()
+	if err := agent.lock(ctx); err != nil {
+		return err
+	}
+	defer agent.unlock()
 	return agent.restoreDataLocked(ctx, logger, deleteBeforeRestore)
 }
 
@@ -171,7 +173,7 @@ func (agent *ActionAgent) startReplication(ctx context.Context, pos mysql.Positi
 	}
 
 	// Set master and start slave.
-	cmds, err = agent.MysqlDaemon.SetMasterCommands(ti.Hostname, int(ti.PortMap["mysql"]))
+	cmds, err = agent.MysqlDaemon.SetMasterCommands(topoproto.MysqlHostname(ti.Tablet), int(topoproto.MysqlPort(ti.Tablet)))
 	if err != nil {
 		return fmt.Errorf("MysqlDaemon.SetMasterCommands failed: %v", err)
 	}

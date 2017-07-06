@@ -41,6 +41,9 @@ var (
 		Name: "id",
 		Type: sqltypes.VarBinary,
 	}, {
+		Name: "time_scheduled",
+		Type: sqltypes.Int64,
+	}, {
 		Name: "message",
 		Type: sqltypes.VarBinary,
 	}}
@@ -87,7 +90,7 @@ func newTestReceiver(size int) *testReceiver {
 		tr.count.Add(1)
 		select {
 		case tr.ch <- qr:
-		case <-time.After(10 * time.Second):
+		case <-time.After(20 * time.Second):
 			panic("test may be hung")
 		}
 		return nil
@@ -223,7 +226,8 @@ func TestMessageManagerSend(t *testing.T) {
 		t.Errorf("Received: %v, want %v", got, want)
 	}
 	// Set the channel to verify call to Postpone.
-	ch := make(chan string)
+	// Make it buffered so the thread doesn't block on repeated calls.
+	ch := make(chan string, 20)
 	tsv.SetChannel(ch)
 	mm.Add(&MessageRow{Row: []sqltypes.Value{sqltypes.MakeString([]byte("1")), sqltypes.NULL}})
 	want = &sqltypes.Result{
@@ -240,8 +244,6 @@ func TestMessageManagerSend(t *testing.T) {
 	if got := <-ch; got != mmTable.Name.String() {
 		t.Errorf("Postpone: %s, want %v", got, mmTable.Name)
 	}
-	// Set the channel back to nil so we don't block any more.
-	tsv.SetChannel(nil)
 
 	// Verify item has been removed from cache.
 	if _, ok := mm.cache.messages["1"]; ok {
@@ -315,9 +317,10 @@ func TestMessageManagerPoller(t *testing.T) {
 	db := fakesqldb.New(t)
 	defer db.Close()
 	db.AddQueryPattern(
-		"select time_next, epoch, id, message from foo.*",
+		"select time_next, epoch, id, time_scheduled, message from foo.*",
 		&sqltypes.Result{
 			Fields: []*querypb.Field{
+				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
@@ -327,16 +330,19 @@ func TestMessageManagerPoller(t *testing.T) {
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("0")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("10")),
 				sqltypes.MakeString([]byte("01")),
 			}, {
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("2")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("0")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("2")),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("20")),
 				sqltypes.MakeString([]byte("02")),
 			}, {
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("3")),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("30")),
 				sqltypes.MakeString([]byte("11")),
 			}},
 		},
@@ -353,12 +359,15 @@ func TestMessageManagerPoller(t *testing.T) {
 	mm.pollerTicks.Trigger()
 	want := [][]sqltypes.Value{{
 		sqltypes.MakeTrusted(sqltypes.Int64, []byte("2")),
+		sqltypes.MakeTrusted(sqltypes.Int64, []byte("20")),
 		sqltypes.MakeString([]byte("02")),
 	}, {
 		sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
+		sqltypes.MakeTrusted(sqltypes.Int64, []byte("10")),
 		sqltypes.MakeString([]byte("01")),
 	}, {
 		sqltypes.MakeTrusted(sqltypes.Int64, []byte("3")),
+		sqltypes.MakeTrusted(sqltypes.Int64, []byte("30")),
 		sqltypes.MakeString([]byte("11")),
 	}}
 	var got [][]sqltypes.Value
@@ -389,9 +398,10 @@ func TestMessagesPending1(t *testing.T) {
 	db := fakesqldb.New(t)
 	defer db.Close()
 	db.AddQueryPattern(
-		"select time_next, epoch, id, message from foo.*",
+		"select time_next, epoch, id, time_scheduled, message from foo.*",
 		&sqltypes.Result{
 			Fields: []*querypb.Field{
+				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
@@ -401,6 +411,7 @@ func TestMessagesPending1(t *testing.T) {
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("0")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("a")),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("10")),
 				sqltypes.MakeString([]byte("a")),
 			}},
 		},
@@ -454,9 +465,10 @@ func TestMessagesPending2(t *testing.T) {
 	db := fakesqldb.New(t)
 	defer db.Close()
 	db.AddQueryPattern(
-		"select time_next, epoch, id, message from foo.*",
+		"select time_next, epoch, id, time_scheduled, message from foo.*",
 		&sqltypes.Result{
 			Fields: []*querypb.Field{
+				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
@@ -466,6 +478,7 @@ func TestMessagesPending2(t *testing.T) {
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("1")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("0")),
 				sqltypes.MakeTrusted(sqltypes.Int64, []byte("a")),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("10")),
 				sqltypes.MakeString([]byte("a")),
 			}},
 		},
@@ -505,7 +518,9 @@ func TestMessageManagerPurge(t *testing.T) {
 	db := fakesqldb.New(t)
 	defer db.Close()
 	tsv := newFakeTabletServer()
-	ch := make(chan string)
+
+	// Make a buffered channel so the thread doesn't block on repeated calls.
+	ch := make(chan string, 20)
 	tsv.SetChannel(ch)
 
 	ti := newMMTable()
@@ -517,7 +532,6 @@ func TestMessageManagerPurge(t *testing.T) {
 	if got := <-ch; got != mmTable.Name.String() {
 		t.Errorf("Postpone: %s, want %v", got, mmTable.Name)
 	}
-	tsv.SetChannel(nil)
 }
 
 func TestMMGenerate(t *testing.T) {

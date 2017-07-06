@@ -195,15 +195,13 @@ enum Type {
   // GEOMETRY specifies a GEOMETRY type.
   // Properties: 29, IsQuoted.
   GEOMETRY = 2077;
-  // JSON specified a JSON type.
+  // JSON specifies a JSON type.
   // Properties: 30, IsQuoted.
   JSON = 2078;
-
-  // SQL specifies a SQL expression. This is not exposed, as it is only
-  // used in binlog parsing. There is no way to reserve a value in enums,
-  // so just using a comment here.
-  // Properties: 245, None.
-  // SQL = 245;
+  // EXPRESSION specifies a SQL expression.
+  // This type is for internal use only.
+  // Properties: 31, None.
+  EXPRESSION = 31;
 }
 
 // Value represents a typed value.
@@ -258,6 +256,20 @@ message ExecuteOptions {
   // rows found instead of rows affected. Behavior is defined
   // by MySQL's CLIENT_FOUND_ROWS flag.
   bool client_found_rows = 5;
+
+  enum Workload {
+    UNSPECIFIED = 0;
+    OLTP = 1;
+    OLAP = 2;
+  }
+
+  // workload specifies the type of workload:
+  // OLTP: DMLs allowed, results have row count limit, and
+  // query timeouts are shorter.
+  // OLAP: DMLS not allowed, no limit on row count, timeouts
+  // can be as high as desired.
+  Workload workload = 6;
+
 }
 
 // Field describes a single column returned by a query
