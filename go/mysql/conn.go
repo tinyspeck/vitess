@@ -126,6 +126,10 @@ type Conn struct {
 	// server-side connections.
 	ServerVersion string
 
+	// flavor contains the auto-detected flavor for this client
+	// connection. It is unused for server-side connections.
+	flavor flavor
+
 	// StatusFlags are the status flags we will base our returned flags on.
 	// This is a bit field, with values documented in constants.go.
 	// An interesting value here would be ServerStatusAutocommit.
@@ -614,7 +618,7 @@ func (c *Conn) ID() int64 {
 }
 
 // Ident returns a useful identification string for error logging
-func (c *Conn) Ident() string {
+func (c *Conn) String() string {
 	return fmt.Sprintf("client %v (%s)", c.ConnectionID, c.RemoteAddr().String())
 }
 
