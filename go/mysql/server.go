@@ -22,11 +22,9 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"time"
 
 	log "github.com/golang/glog"
 	"github.com/youtube/vitess/go/sqltypes"
-	"github.com/youtube/vitess/go/stats"
 	"github.com/youtube/vitess/go/tb"
 )
 
@@ -34,22 +32,6 @@ const (
 	// DefaultServerVersion is the default server version we're sending to the client.
 	// Can be changed.
 	DefaultServerVersion = "5.5.10-Vitess"
-
-	// timing metric keys
-	connectTimingKey = "Connect"
-	queryTimingKey   = "Query"
-)
-
-var (
-	// Metrics
-	timings    = stats.NewTimings("MysqlServerTimings")
-	connCount  = stats.NewInt("MysqlServerConnCount")
-	connAccept = stats.NewInt("MysqlServerConnAccepted")
-	connSlow   = stats.NewInt("MysqlServerConnSlow")
-
-	// SlowConnectWarnThreshold if non-nil, specifies an amount of time
-	// beyond which a warning is logged to identify the slow connection
-	SlowConnectWarnThreshold *time.Duration
 )
 
 // A Handler is an interface used by Listener to send queries.
@@ -147,22 +129,17 @@ func (l *Listener) Accept() {
 			return
 		}
 
-		acceptTime := time.Now()
-
 		connectionID := l.connectionID
 		l.connectionID++
 
-		connCount.Add(1)
-		connAccept.Add(1)
-
-		go l.handle(conn, connectionID, acceptTime)
+		go l.handle(conn, connectionID)
 	}
 }
 
 // handle is called in a go routine for each client connection.
 // FIXME(alainjobart) handle per-connection logs in a way that makes sense.
 // FIXME(alainjobart) add an idle timeout for the connection.
-func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Time) {
+func (l *Listener) handle(conn net.Conn, connectionID uint32) {
 	c := newConn(conn)
 	c.ConnectionID = connectionID
 
@@ -178,13 +155,10 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 	l.handler.NewConnection(c)
 	defer l.handler.ConnectionClosed(c)
 
-	// Adjust the count of open connections
-	defer connCount.Add(-1)
-
 	// First build and send the server handshake packet.
 	salt, err := c.writeHandshakeV10(l.ServerVersion, l.authServer, l.TLSConfig != nil)
 	if err != nil {
-		log.Errorf("Cannot send HandshakeV10 packet to %s: %v", c.Ident(), err)
+		log.Errorf("Cannot send HandshakeV10 packet: %v", err)
 		return
 	}
 
@@ -192,27 +166,26 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 	// so we don't buffer the TLS negotiation packets.
 	response, err := c.readPacketDirect()
 	if err != nil {
-		log.Errorf("Cannot read client handshake response from %s: %v", c.Ident(), err)
+		log.Errorf("Cannot read client handshake response: %v", err)
 		return
 	}
 	user, authMethod, authResponse, err := l.parseClientHandshakePacket(c, true, response)
 	if err != nil {
-		log.Errorf("Cannot parse client handshake response from %s: %v", c.Ident(), err)
+		log.Errorf("Cannot parse client handshake response: %v", err)
 		return
 	}
-
 	if c.Capabilities&CapabilityClientSSL > 0 {
 		// SSL was enabled. We need to re-read the auth packet.
 		response, err = c.readEphemeralPacket()
 		if err != nil {
-			log.Errorf("Cannot read post-SSL client handshake response from %s: %v", c.Ident(), err)
+			log.Errorf("Cannot read post-SSL client handshake response: %v", err)
 			return
 		}
 
 		// Returns copies of the data, so we can recycle the buffer.
 		user, authMethod, authResponse, err = l.parseClientHandshakePacket(c, false, response)
 		if err != nil {
-			log.Errorf("Cannot parse post-SSL client handshake response from %s: %v", c.Ident(), err)
+			log.Errorf("Cannot parse post-SSL client handshake response: %v", err)
 			return
 		}
 		c.recycleReadPacket()
@@ -262,7 +235,7 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 			data = authServerDialogSwitchData()
 		}
 		if err := c.writeAuthSwitchRequest(authServerMethod, data); err != nil {
-			log.Errorf("Error writing auth switch packet for %s: %v", c.Ident(), err)
+			log.Errorf("Error write auth switch packet for client %v: %v", c.ConnectionID, err)
 			return
 		}
 
@@ -279,18 +252,8 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 
 	// Negotiation worked, send OK packet.
 	if err := c.writeOKPacket(0, 0, c.StatusFlags, 0); err != nil {
-		log.Errorf("Cannot write OK packet to %s: %v", c.Ident(), err)
+		log.Errorf("Cannot write OK packet: %v", err)
 		return
-	}
-
-	// Record how long we took to establish the connection
-	timings.Record(connectTimingKey, acceptTime)
-
-	// Log a warning if it took too long to connect
-	connectTime := time.Since(acceptTime)
-	if SlowConnectWarnThreshold != nil && connectTime > *SlowConnectWarnThreshold {
-		connSlow.Add(1)
-		log.Warningf("Slow connection from %s: %v", c.Ident(), connectTime)
 	}
 
 	for {
@@ -299,7 +262,7 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 		if err != nil {
 			// Don't log EOF errors. They cause too much spam.
 			if err != io.EOF {
-				log.Errorf("Error reading packet from %s: %v", c.Ident(), err)
+				log.Errorf("Error reading packet from client %v: %v", c.ConnectionID, err)
 			}
 			return
 		}
@@ -313,11 +276,10 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 			c.recycleReadPacket()
 			c.SchemaName = db
 			if err := c.writeOKPacket(0, 0, c.StatusFlags, 0); err != nil {
-				log.Errorf("Error writing ComInitDB result to %s: %v", c.Ident(), err)
+				log.Errorf("Error writing ComInitDB result to client %v: %v", c.ConnectionID, err)
 				return
 			}
 		case ComQuery:
-			queryStart := time.Now()
 			query := c.parseComQuery(data)
 			fieldSent := false
 			// sendFinished is set if a response has completed and
@@ -354,7 +316,7 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 				}
 				if werr := c.writeErrorPacketFromError(err); werr != nil {
 					// If we can't even write the error, we're done.
-					log.Errorf("Error writing query error to %s: %v", c.Ident(), werr)
+					log.Errorf("Error writing query error to client %v: %v", c.ConnectionID, werr)
 					return
 				}
 				continue
@@ -363,32 +325,29 @@ func (l *Listener) handle(conn net.Conn, connectionID uint32, acceptTime time.Ti
 			if err != nil {
 				// We can't send an error in the middle of a stream.
 				// All we can do is abort the send, which will cause a 2013.
-				log.Errorf("Error in the middle of a stream to %s: %v", c.Ident(), err)
+				log.Errorf("Error in the middle of a stream to client %v: %v", c.ConnectionID, err)
 				return
 			}
 
 			// Send the end packet only is sendFinished is false (not a DML).
 			if !sendFinished {
 				if err := c.writeEndResult(); err != nil {
-					log.Errorf("Error writing result to %s: %v", c.Ident(), err)
+					log.Errorf("Error writing result to client %v: %v", c.ConnectionID, err)
 					return
 				}
 			}
-
-			timings.Record(queryTimingKey, queryStart)
-
 		case ComPing:
 			// No payload to that one, just return OKPacket.
 			c.recycleReadPacket()
 			if err := c.writeOKPacket(0, 0, c.StatusFlags, 0); err != nil {
-				log.Errorf("Error writing ComPing result to %s: %v", c.Ident(), err)
+				log.Errorf("Error writing ComPing result to client %v: %v", c.ConnectionID, err)
 				return
 			}
 		default:
-			log.Errorf("Got unhandled packet from %s, returning error: %v", c.Ident(), data)
+			log.Errorf("Got unhandled packet from client %v, returning error: %v", c.ConnectionID, data)
 			c.recycleReadPacket()
 			if err := c.writeErrorPacket(ERUnknownComError, SSUnknownComError, "command handling not implemented yet: %v", data[0]); err != nil {
-				log.Errorf("Error writing error packet to %s: %s", c.Ident(), err)
+				log.Errorf("Error writing error packet to client: %v", err)
 				return
 			}
 
