@@ -96,21 +96,28 @@ var testVSchemaStr = `
 }
 `
 
+var testSchemaStr = `
+CREATE TABLE t1 (
+  id bigint(20) unsigned NOT NULL,
+  val bigint(20) unsigned NOT NULL,
+  PRIMARY KEY (id)
+);
+`
+
 func init() {
 	Init(testVSchemaStr)
 }
 
 func TestUnsharded(t *testing.T) {
-	schemaStr := ""
-
 	sqlStr := `
 select * from t1;
-insert into t1 (c1,c2) values (1,2);
-update t1 set c1 = 10;
-delete from t1 where c2 = 100;
+insert into t1 (id,val) values (1,2);
+update t1 set val = 10;
+delete from t1 where id = 100;
+insert into t1 (id,val) values (1,2) on duplicate key update val=3 /* vtexplain: update */ ;
 `
 
-	plans, err := Run(sqlStr, schemaStr)
+	plans, err := Run(sqlStr, testSchemaStr)
 	if err != nil {
 		t.Error(err)
 	}

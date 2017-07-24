@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package vtexplain analyzes a set of sql statements and returns the
-// corresponding vtgate and vttablet query plans that will be executed
-// on the given statements
 package vtexplain
 
 import (
