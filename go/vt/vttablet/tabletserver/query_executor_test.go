@@ -856,8 +856,8 @@ func TestQueryExecutorPlanPassSelectWithLockOutsideATransaction(t *testing.T) {
 	defer tsv.StopService()
 	checkPlanID(t, planbuilder.PlanSelectLock, qre.plan.PlanID)
 	_, err := qre.Execute()
-	if err != nil {
-		t.Fatalf("qre.Execute: should not get %v", vterrors.Code(err))
+	if code := vterrors.Code(err); code != vtrpcpb.Code_INVALID_ARGUMENT {
+		t.Fatalf("qre.Execute: %v, want %v", code, vtrpcpb.Code_INVALID_ARGUMENT)
 	}
 }
 
