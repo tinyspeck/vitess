@@ -31,7 +31,7 @@ import (
 	topodatapb "github.com/youtube/vitess/go/vt/proto/topodata"
 )
 
-func fakeTabletExecute(sql string, bindVars map[string]interface{}) ([]string, error) {
+func fakeTabletExecute(sql string, bindVars map[string]*querypb.BindVariable) ([]string, error) {
 	db := newFakeDB()
 	defer db.Close()
 
