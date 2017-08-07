@@ -571,7 +571,7 @@ func TestInsertLookupOwned(t *testing.T) {
 		t.Errorf("sbc.Queries:\n%+v, want\n%+v\n", sbc.Queries, wantQueries)
 	}
 	wantQueries = []querytypes.BoundQuery{{
-		Sql: "insert into music_user_map(music_id, user_id) values (:music_id0, :user_id0)",
+		Sql: "insert ignore into music_user_map(music_id, user_id) values (:music_id0, :user_id0)",
 		BindVariables: map[string]interface{}{
 			"music_id0": int64(3),
 			"user_id0":  uint64(2),
