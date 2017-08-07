@@ -121,7 +121,7 @@ func TestLookupUniqueCreate(t *testing.T) {
 		t.Error(err)
 	}
 	wantQuery := &querytypes.BoundQuery{
-		Sql: "insert into t(fromc,toc) values(:fromc0,:toc0)",
+		Sql: "insert ignore into t(fromc,toc) values(:fromc0,:toc0)",
 		BindVariables: map[string]interface{}{
 			"fromc0": 1,
 			"toc0":   []byte("test"),
@@ -219,7 +219,7 @@ func TestLookupNonUniqueCreate(t *testing.T) {
 		t.Error(err)
 	}
 	wantQuery := &querytypes.BoundQuery{
-		Sql: "insert into t(fromc,toc) values(:fromc0,:toc0)",
+		Sql: "insert ignore into t(fromc,toc) values(:fromc0,:toc0)",
 		BindVariables: map[string]interface{}{
 			"fromc0": 1,
 			"toc0":   []byte("test"),
