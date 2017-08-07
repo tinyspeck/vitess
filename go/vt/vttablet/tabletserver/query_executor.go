@@ -653,7 +653,7 @@ func (qre *QueryExecutor) getAppConnPool() (pool *connpool.Pool) {
 		pool = qre.tsv.qe.conns
 
 	}
-	return qre.tsv.qe.debugConns
+	return pool
 }
 
 func (qre *QueryExecutor) getConn(pool *connpool.Pool) (*connpool.DBConn, error) {

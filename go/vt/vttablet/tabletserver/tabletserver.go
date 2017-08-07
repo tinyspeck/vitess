@@ -1456,7 +1456,8 @@ func newSplitQuerySQLExecuter(
 		queryExecutor: queryExecutor,
 	}
 	var err error
-	result.conn, err = queryExecutor.getConn(queryExecutor.tsv.qe.conns)
+	pool := queryExecutor.getAppConnPool()
+	result.conn, err = queryExecutor.getConn(pool)
 	if err != nil {
 		return nil, err
 	}
