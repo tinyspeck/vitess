@@ -347,7 +347,7 @@ func TestInsertSharded(t *testing.T) {
 		t.Errorf("sbc2.Queries: %+v, want nil\n", sbc2.Queries)
 	}
 	wantQueries = []querytypes.BoundQuery{{
-		Sql: "insert into name_user_map(name, user_id) values (:name0, :user_id0)",
+		Sql: "insert ignore into name_user_map(name, user_id) values (:name0, :user_id0)",
 		BindVariables: map[string]interface{}{
 			"name0":    []byte("myname"),
 			"user_id0": uint64(1),
@@ -378,7 +378,7 @@ func TestInsertSharded(t *testing.T) {
 		t.Errorf("sbc1.Queries: %+v, want nil\n", sbc1.Queries)
 	}
 	wantQueries = []querytypes.BoundQuery{{
-		Sql: "insert into name_user_map(name, user_id) values (:name0, :user_id0)",
+		Sql: "insert ignore into name_user_map(name, user_id) values (:name0, :user_id0)",
 		BindVariables: map[string]interface{}{
 			"name0":    []byte("myname2"),
 			"user_id0": uint64(3),
@@ -411,7 +411,7 @@ func TestInsertComments(t *testing.T) {
 		t.Errorf("sbc2.Queries: %+v, want nil\n", sbc2.Queries)
 	}
 	wantQueries = []querytypes.BoundQuery{{
-		Sql: "insert into name_user_map(name, user_id) values (:name0, :user_id0) /* trailing */",
+		Sql: "insert ignore into name_user_map(name, user_id) values (:name0, :user_id0) /* trailing */",
 		BindVariables: map[string]interface{}{
 			"name0":    []byte("myname"),
 			"user_id0": uint64(1),
@@ -451,7 +451,7 @@ func TestInsertGeneratorSharded(t *testing.T) {
 		Sql:           "select next :n values from user_seq",
 		BindVariables: map[string]interface{}{"n": int64(1)},
 	}, {
-		Sql: "insert into name_user_map(name, user_id) values (:name0, :user_id0)",
+		Sql: "insert ignore into name_user_map(name, user_id) values (:name0, :user_id0)",
 		BindVariables: map[string]interface{}{
 			"name0":    []byte("myname"),
 			"user_id0": uint64(1),
@@ -611,7 +611,7 @@ func TestInsertLookupOwnedGenerator(t *testing.T) {
 		Sql:           "select next :n values from user_seq",
 		BindVariables: map[string]interface{}{"n": int64(1)},
 	}, {
-		Sql: "insert into music_user_map(music_id, user_id) values (:music_id0, :user_id0)",
+		Sql: "insert ignore into music_user_map(music_id, user_id) values (:music_id0, :user_id0)",
 		BindVariables: map[string]interface{}{
 			"music_id0": int64(4),
 			"user_id0":  uint64(2),
@@ -880,7 +880,7 @@ func TestMultiInsertSharded(t *testing.T) {
 	}
 
 	wantQueries1 = []querytypes.BoundQuery{{
-		Sql: "insert into name_user_map(name, user_id) values (:name0, :user_id0), (:name1, :user_id1)",
+		Sql: "insert ignore into name_user_map(name, user_id) values (:name0, :user_id0), (:name1, :user_id1)",
 		BindVariables: map[string]interface{}{
 			"name0":    []byte("myname1"),
 			"user_id0": uint64(1),
@@ -918,7 +918,7 @@ func TestMultiInsertSharded(t *testing.T) {
 		t.Errorf("sbc2.Queries: %+v, want nil\n", sbc2.Queries)
 	}
 	wantQueries = []querytypes.BoundQuery{{
-		Sql: "insert into name_user_map(name, user_id) values (:name0, :user_id0), (:name1, :user_id1)",
+		Sql: "insert ignore into name_user_map(name, user_id) values (:name0, :user_id0), (:name1, :user_id1)",
 		BindVariables: map[string]interface{}{
 			"name0":    []byte("myname1"),
 			"user_id0": uint64(1),
@@ -964,7 +964,7 @@ func TestMultiInsertGenerator(t *testing.T) {
 		Sql:           "select next :n values from user_seq",
 		BindVariables: map[string]interface{}{"n": int64(2)},
 	}, {
-		Sql: "insert into music_user_map(music_id, user_id) values (:music_id0, :user_id0), (:music_id1, :user_id1)",
+		Sql: "insert ignore into music_user_map(music_id, user_id) values (:music_id0, :user_id0), (:music_id1, :user_id1)",
 		BindVariables: map[string]interface{}{
 			"user_id0":  uint64(2),
 			"music_id0": int64(1),
@@ -1018,7 +1018,7 @@ func TestMultiInsertGeneratorSparse(t *testing.T) {
 		Sql:           "select next :n values from user_seq",
 		BindVariables: map[string]interface{}{"n": int64(2)},
 	}, {
-		Sql: "insert into music_user_map(music_id, user_id) values (:music_id0, :user_id0), (:music_id1, :user_id1), (:music_id2, :user_id2)",
+		Sql: "insert ignore into music_user_map(music_id, user_id) values (:music_id0, :user_id0), (:music_id1, :user_id1), (:music_id2, :user_id2)",
 		BindVariables: map[string]interface{}{
 			"user_id0":  uint64(2),
 			"music_id0": int64(1),
