@@ -62,7 +62,8 @@ var (
 type TxPool struct {
 	// conns is the 'regular' pool. By default, connections
 	// are pulled from here for starting transactions.
-	conns *connpool.Pool
+	conns      *connpool.Pool
+	debugConns *connpool.Pool
 	// foundRowsPool is the alternate pool that creates
 	// connections with CLIENT_FOUND_ROWS flag set. A separate
 	// pool is needed because this option can only be set at
@@ -88,6 +89,7 @@ func NewTxPool(
 	checker connpool.MySQLChecker) *TxPool {
 	axp := &TxPool{
 		conns:         connpool.New(prefix+"TransactionPool", capacity, idleTimeout, checker),
+		debugConns:    connpool.New(prefix+"DebugTransactionPool", capacity, idleTimeout, checker),
 		foundRowsPool: connpool.New(prefix+"FoundRowsPool", foundRowsCapacity, idleTimeout, checker),
 		activePool:    pools.NewNumbered(),
 		lastID:        sync2.NewAtomicInt64(time.Now().UnixNano()),
@@ -105,9 +107,10 @@ func NewTxPool(
 
 // Open makes the TxPool operational. This also starts the transaction killer
 // that will kill long-running transactions.
-func (axp *TxPool) Open(appParams, dbaParams *mysql.ConnParams) {
+func (axp *TxPool) Open(appParams, appDebugParams, dbaParams *mysql.ConnParams) {
 	log.Infof("Starting transaction id: %d", axp.lastID)
 	axp.conns.Open(appParams, dbaParams)
+	axp.debugConns.Open(appDebugParams, dbaParams)
 	foundRowsParam := *appParams
 	foundRowsParam.EnableClientFoundRows()
 	axp.foundRowsPool.Open(&foundRowsParam, dbaParams)
@@ -167,7 +170,10 @@ func (axp *TxPool) WaitForEmpty() {
 func (axp *TxPool) Begin(ctx context.Context, useFoundRows bool) (int64, error) {
 	var conn *connpool.DBConn
 	var err error
-	if useFoundRows {
+	callerID := callerid.ImmediateCallerIDFromContext(ctx)
+	if callerID != nil && callerID.Username == "appDebug" {
+		conn, err = axp.debugConns.Get(ctx)
+	} else if useFoundRows {
 		conn, err = axp.foundRowsPool.Get(ctx)
 	} else {
 		conn, err = axp.conns.Get(ctx)
