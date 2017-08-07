@@ -24,8 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/golang/glog"
-
 	"github.com/youtube/vitess/go/sqltypes"
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
 	"github.com/youtube/vitess/go/vt/sqlannotation"
@@ -883,13 +881,6 @@ func (route *Route) handleNonPrimary(vcursor VCursor, vindexKeys []interface{}, 
 		}
 		err := colVindex.Vindex.(vindexes.Lookup).Create(vcursor, vindexKeys, ksids)
 		if err != nil {
-			// XXX/demmer ignore all duplicate key errors as a stopgap until
-			// the real bug is fixed
-			if (strings.Contains(err.Error(), "AlreadyExists")) {
-				log.Errorf("ignoring vindex create error: %s", err)
-				return nil
-			}
-
 			return err
 		}
 	} else {
