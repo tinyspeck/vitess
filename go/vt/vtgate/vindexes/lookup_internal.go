@@ -44,7 +44,7 @@ func (lkp *lookup) Init(lookupQueryParams map[string]string, isHashed bool) {
 	lkp.To = toCol
 	lkp.sel = fmt.Sprintf("select %s from %s where %s = :%s", toCol, table, fromCol, fromCol)
 	lkp.ver = fmt.Sprintf("select %s from %s where %s = :%s and %s = :%s", fromCol, table, fromCol, fromCol, toCol, toCol)
-	lkp.ins = fmt.Sprintf("insert into %s(%s, %s) values", table, fromCol, toCol)
+	lkp.ins = fmt.Sprintf("insert ignore into %s(%s, %s) values", table, fromCol, toCol)
 	lkp.del = fmt.Sprintf("delete from %s where %s = :%s and %s = :%s", table, fromCol, fromCol, toCol, toCol)
 	lkp.isHashedIndex = isHashed
 }
@@ -160,7 +160,7 @@ func (lkp *lookup) Create(vcursor VCursor, ids []interface{}, ksids [][]byte) er
 		return fmt.Errorf("lookup.Create:length of ids %v doesn't match length of ksids %v", len(ids), len(ksids))
 	}
 	val := make([]interface{}, len(ksids))
-	insBuffer.WriteString("insert into ")
+	insBuffer.WriteString("insert ignore into ")
 	insBuffer.WriteString(lkp.Table)
 	insBuffer.WriteString("(")
 	insBuffer.WriteString(lkp.From)
