@@ -171,7 +171,9 @@ func (axp *TxPool) Begin(ctx context.Context, useFoundRows bool) (int64, error) 
 	var conn *connpool.DBConn
 	var err error
 	callerID := callerid.ImmediateCallerIDFromContext(ctx)
-	if callerID != nil && callerID.Username == "appDebug" {
+	if callerID != nil && callerID.Username == "appDebug" && useFoundRows {
+		err = vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: cannot use appdebug user and useFoundRows simultaneously")
+	} else if callerID != nil && callerID.Username == "appDebug" {
 		conn, err = axp.debugConns.Get(ctx)
 	} else if useFoundRows {
 		conn, err = axp.foundRowsPool.Get(ctx)
