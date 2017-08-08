@@ -74,7 +74,7 @@ func TestLookupHashUniqueCreate(t *testing.T) {
 		t.Error(err)
 	}
 	wantQuery := &querypb.BoundQuery{
-		Sql: "insert into t(fromc,toc) values(:fromc0,:toc0)",
+		Sql: "insert ignore into t(fromc,toc) values(:fromc0,:toc0)",
 		BindVariables: map[string]*querypb.BindVariable{
 			"fromc0": sqltypes.Int64BindVariable(1),
 			"toc0":   sqltypes.Uint64BindVariable(1),
