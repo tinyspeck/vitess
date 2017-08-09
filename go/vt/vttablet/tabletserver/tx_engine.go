@@ -53,6 +53,7 @@ func NewTxEngine(checker connpool.MySQLChecker, config tabletenv.TabletConfig) *
 	te.txPool = NewTxPool(
 		config.PoolNamePrefix,
 		config.TransactionCap,
+		config.AppDebugPoolSize,
 		config.FoundRowsPoolSize,
 		time.Duration(config.TransactionTimeout*1e9),
 		time.Duration(config.IdleTimeout*1e9),
@@ -203,7 +204,7 @@ outer:
 		if txid > maxid {
 			maxid = txid
 		}
-		conn, err := te.txPool.LocalBegin(ctx, false)
+		conn, err := te.txPool.LocalBegin(ctx, false, false)
 		if err != nil {
 			allErr.RecordError(err)
 			continue

@@ -206,7 +206,7 @@ func (qre *QueryExecutor) execDmlAutoCommit() (reply *sqltypes.Result, err error
 }
 
 func (qre *QueryExecutor) execAsTransaction(f func(conn *TxConnection) (*sqltypes.Result, error)) (reply *sqltypes.Result, err error) {
-	conn, err := qre.tsv.te.txPool.LocalBegin(qre.ctx, qre.options.GetClientFoundRows())
+	conn, err := qre.tsv.te.txPool.LocalBegin(qre.ctx, qre.options.GetClientFoundRows(), qre.isCallerIDAppDebug())
 	if err != nil {
 		return nil, err
 	}
@@ -645,13 +645,16 @@ func (qre *QueryExecutor) execSet() (*sqltypes.Result, error) {
 	return qre.dbConnFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, false)
 }
 
-func (qre *QueryExecutor) getAppConnPool() (pool *connpool.Pool) {
+func (qre *QueryExecutor) isCallerIDAppDebug() bool {
 	callerID := callerid.ImmediateCallerIDFromContext(qre.ctx)
-	if callerID != nil && callerID.Username == "appDebug" {
+	return callerID != nil && callerID.Username == qre.tsv.appDebugUsername
+}
+
+func (qre *QueryExecutor) getAppConnPool() (pool *connpool.Pool) {
+	if qre.isCallerIDAppDebug() {
 		pool = qre.tsv.qe.debugConns
 	} else {
 		pool = qre.tsv.qe.conns
-
 	}
 	return pool
 }

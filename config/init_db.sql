@@ -45,7 +45,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, PROCESS, FILE,
   ON *.* TO 'vt_app'@'localhost';
 
 # User for app debug traffic, with global read access.
-GRANT SHOW DATABASES, PROCESS ON *.* TO 'vt_appdebug'@'localhost';
+GRANT SELECT, SHOW DATABASES, PROCESS ON *.* TO 'vt_appdebug'@'localhost';
 
 # User for administrative operations that need to be executed as non-SUPER.
 # Same permissions as vt_app here.

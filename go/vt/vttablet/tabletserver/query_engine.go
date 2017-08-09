@@ -174,7 +174,7 @@ func NewQueryEngine(checker connpool.MySQLChecker, se *schema.Engine, config tab
 	)
 	qe.debugConns = connpool.New(
 		config.PoolNamePrefix+"DebugConnPool",
-		config.PoolSize,
+		config.AppDebugPoolSize,
 		time.Duration(config.IdleTimeout*1e9),
 		checker,
 	)

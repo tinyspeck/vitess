@@ -89,6 +89,11 @@ func main() {
 		log.Warning(err)
 	}
 
+	if appDebugUsername := Config.AppDebugUsername; appDebugUsername != "" && dbcfgs.IsAppDebugZero() {
+		err = fmt.Errorf("app debug username is present (%v), however there is no config for this user. Make suer db-config-appdebug is set", appDebugUsername)
+		log.Exitf("invalid config: %v", err)
+	}
+
 	// creates and registers the query service
 	ts := topo.Open()
 	qsc := tabletserver.NewServer(ts, *tabletAlias)

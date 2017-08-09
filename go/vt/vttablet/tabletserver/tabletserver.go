@@ -37,6 +37,7 @@ import (
 	"github.com/youtube/vitess/go/sync2"
 	"github.com/youtube/vitess/go/tb"
 	"github.com/youtube/vitess/go/vt/binlog"
+	"github.com/youtube/vitess/go/vt/callerid"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/dbconnpool"
 	"github.com/youtube/vitess/go/vt/logutil"
@@ -158,6 +159,10 @@ type TabletServer struct {
 
 	// alias is used for identifying this tabletserver in healthcheck responses.
 	alias topodatapb.TabletAlias
+
+	// User that will identify the debug user. When present in the CallerID, the debug conn pool
+	// will be used to talk to MySQL
+	appDebugUsername string
 }
 
 // RegisterFunction is a callback type to be called when we
@@ -195,6 +200,7 @@ func NewTabletServer(config tabletenv.TabletConfig, topoServer topo.Server, alia
 		history:                history.New(10),
 		topoServer:             topoServer,
 		alias:                  alias,
+		appDebugUsername:       config.AppDebugUsername,
 	}
 	tsv.se = schema.NewEngine(tsv, config)
 	tsv.qe = NewQueryEngine(tsv, tsv.se, config)
@@ -653,7 +659,10 @@ func (tsv *TabletServer) Begin(ctx context.Context, target *querypb.Target, opti
 				// TODO(erez): I think this should be RESOURCE_EXHAUSTED.
 				return vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "Transaction throttled")
 			}
-			transactionID, err = tsv.te.txPool.Begin(ctx, options.GetClientFoundRows())
+
+			callerID := callerid.ImmediateCallerIDFromContext(ctx)
+			useAppDebug := callerID != nil && callerID.Username == tsv.appDebugUsername
+			transactionID, err = tsv.te.txPool.Begin(ctx, options.GetClientFoundRows(), useAppDebug)
 			logStats.TransactionID = transactionID
 			return err
 		},

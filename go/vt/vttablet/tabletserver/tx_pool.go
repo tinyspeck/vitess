@@ -62,7 +62,8 @@ var (
 type TxPool struct {
 	// conns is the 'regular' pool. By default, connections
 	// are pulled from here for starting transactions.
-	conns      *connpool.Pool
+	conns *connpool.Pool
+	// debugConns is a pool that gets used when CallerID is app-debug user
 	debugConns *connpool.Pool
 	// foundRowsPool is the alternate pool that creates
 	// connections with CLIENT_FOUND_ROWS flag set. A separate
@@ -83,13 +84,14 @@ type TxPool struct {
 func NewTxPool(
 	prefix string,
 	capacity int,
+	appDebugCapacity int,
 	foundRowsCapacity int,
 	timeout time.Duration,
 	idleTimeout time.Duration,
 	checker connpool.MySQLChecker) *TxPool {
 	axp := &TxPool{
 		conns:         connpool.New(prefix+"TransactionPool", capacity, idleTimeout, checker),
-		debugConns:    connpool.New(prefix+"DebugTransactionPool", capacity, idleTimeout, checker),
+		debugConns:    connpool.New(prefix+"DebugTransactionPool", appDebugCapacity, idleTimeout, checker),
 		foundRowsPool: connpool.New(prefix+"FoundRowsPool", foundRowsCapacity, idleTimeout, checker),
 		activePool:    pools.NewNumbered(),
 		lastID:        sync2.NewAtomicInt64(time.Now().UnixNano()),
@@ -167,13 +169,12 @@ func (axp *TxPool) WaitForEmpty() {
 
 // Begin begins a transaction, and returns the associated transaction id.
 // Subsequent statements can access the connection through the transaction id.
-func (axp *TxPool) Begin(ctx context.Context, useFoundRows bool) (int64, error) {
+func (axp *TxPool) Begin(ctx context.Context, useFoundRows, useAppDebug bool) (int64, error) {
 	var conn *connpool.DBConn
 	var err error
-	callerID := callerid.ImmediateCallerIDFromContext(ctx)
-	if callerID != nil && callerID.Username == "appDebug" && useFoundRows {
+	if useAppDebug && useFoundRows {
 		err = vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: cannot use appdebug user and useFoundRows simultaneously")
-	} else if callerID != nil && callerID.Username == "appDebug" {
+	} else if useAppDebug {
 		conn, err = axp.debugConns.Get(ctx)
 	} else if useFoundRows {
 		conn, err = axp.foundRowsPool.Get(ctx)
@@ -239,8 +240,8 @@ func (axp *TxPool) Get(transactionID int64, reason string) (*TxConnection, error
 // LocalBegin is equivalent to Begin->Get.
 // It's used for executing transactions within a request. It's safe
 // to always call LocalConclude at the end.
-func (axp *TxPool) LocalBegin(ctx context.Context, useFoundRows bool) (*TxConnection, error) {
-	transactionID, err := axp.Begin(ctx, useFoundRows)
+func (axp *TxPool) LocalBegin(ctx context.Context, useFoundRows, useAppDebug bool) (*TxConnection, error) {
+	transactionID, err := axp.Begin(ctx, useFoundRows, useAppDebug)
 	if err != nil {
 		return nil, err
 	}
