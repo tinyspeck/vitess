@@ -173,7 +173,7 @@ func (axp *TxPool) Begin(ctx context.Context, useFoundRows, useAppDebug bool) (i
 	var conn *connpool.DBConn
 	var err error
 	if useAppDebug && useFoundRows {
-		err = vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: cannot use appdebug user and useFoundRows simultaneously")
+		err = vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: can not use useFoundRows and useAppDebug simultaneously")
 	} else if useAppDebug {
 		conn, err = axp.debugConns.Get(ctx)
 	} else if useFoundRows {

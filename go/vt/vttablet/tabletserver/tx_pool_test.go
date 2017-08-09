@@ -199,6 +199,16 @@ func TestTxPoolAddDebug(t *testing.T) {
 	if got, want := txPool.debugConns.Available(), startAppDebugSize; got != want {
 		t.Errorf("debugConns pool size: %d, want %d", got, want)
 	}
+
+	// It can't use foundRows and appDebug simultaneously
+
+	want := "unsupported: can not use"
+
+	_, err = txPool.Begin(ctx, true, true)
+
+	if err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("Error: %v, want prefix %s", err, want)
+	}
 }
 
 func TestTxPoolClientRowsFound(t *testing.T) {
