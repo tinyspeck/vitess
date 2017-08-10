@@ -204,7 +204,7 @@ outer:
 		if txid > maxid {
 			maxid = txid
 		}
-		conn, err := te.txPool.LocalBegin(ctx, false, false)
+		conn, err := te.txPool.LocalBegin(ctx, false)
 		if err != nil {
 			allErr.RecordError(err)
 			continue

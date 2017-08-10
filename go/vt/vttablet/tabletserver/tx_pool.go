@@ -35,6 +35,7 @@ import (
 	"github.com/youtube/vitess/go/vt/callerid"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/connpool"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/messager"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
@@ -169,9 +170,10 @@ func (axp *TxPool) WaitForEmpty() {
 
 // Begin begins a transaction, and returns the associated transaction id.
 // Subsequent statements can access the connection through the transaction id.
-func (axp *TxPool) Begin(ctx context.Context, useFoundRows, useAppDebug bool) (int64, error) {
+func (axp *TxPool) Begin(ctx context.Context, useFoundRows bool) (int64, error) {
 	var conn *connpool.DBConn
 	var err error
+	useAppDebug := debuguserinfo.GetUseAppDebug(ctx)
 	if useAppDebug && useFoundRows {
 		err = vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: can not use useFoundRows and useAppDebug simultaneously")
 	} else if useAppDebug {
@@ -240,8 +242,8 @@ func (axp *TxPool) Get(transactionID int64, reason string) (*TxConnection, error
 // LocalBegin is equivalent to Begin->Get.
 // It's used for executing transactions within a request. It's safe
 // to always call LocalConclude at the end.
-func (axp *TxPool) LocalBegin(ctx context.Context, useFoundRows, useAppDebug bool) (*TxConnection, error) {
-	transactionID, err := axp.Begin(ctx, useFoundRows, useAppDebug)
+func (axp *TxPool) LocalBegin(ctx context.Context, useFoundRows bool) (*TxConnection, error) {
+	transactionID, err := axp.Begin(ctx, useFoundRows)
 	if err != nil {
 		return nil, err
 	}

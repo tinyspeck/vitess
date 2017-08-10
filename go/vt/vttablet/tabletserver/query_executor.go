@@ -34,6 +34,7 @@ import (
 	"github.com/youtube/vitess/go/vt/tableacl"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/connpool"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/messager"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/planbuilder"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/rules"
@@ -206,7 +207,8 @@ func (qre *QueryExecutor) execDmlAutoCommit() (reply *sqltypes.Result, err error
 }
 
 func (qre *QueryExecutor) execAsTransaction(f func(conn *TxConnection) (*sqltypes.Result, error)) (reply *sqltypes.Result, err error) {
-	conn, err := qre.tsv.te.txPool.LocalBegin(qre.ctx, qre.options.GetClientFoundRows(), qre.isCallerIDAppDebug())
+	newCtx := debuguserinfo.SetUseAppDebug(qre.ctx, qre.tsv.appDebugUsername)
+	conn, err := qre.tsv.te.txPool.LocalBegin(newCtx, qre.options.GetClientFoundRows())
 	if err != nil {
 		return nil, err
 	}
@@ -645,13 +647,8 @@ func (qre *QueryExecutor) execSet() (*sqltypes.Result, error) {
 	return qre.dbConnFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, false)
 }
 
-func (qre *QueryExecutor) isCallerIDAppDebug() bool {
-	callerID := callerid.ImmediateCallerIDFromContext(qre.ctx)
-	return callerID != nil && callerID.Username == qre.tsv.appDebugUsername
-}
-
 func (qre *QueryExecutor) getAppConnPool() (pool *connpool.Pool) {
-	if qre.isCallerIDAppDebug() {
+	if debuguserinfo.IsCallerIDAppDebug(qre.ctx, qre.tsv.appDebugUsername) {
 		pool = qre.tsv.qe.debugConns
 	} else {
 		pool = qre.tsv.qe.conns

@@ -28,7 +28,9 @@ import (
 	"github.com/youtube/vitess/go/mysql"
 	"github.com/youtube/vitess/go/mysql/fakesqldb"
 	"github.com/youtube/vitess/go/sqltypes"
+	"github.com/youtube/vitess/go/vt/callerid"
 	"github.com/youtube/vitess/go/vt/vterrors"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
 	vtrpcpb "github.com/youtube/vitess/go/vt/proto/vtrpc"
@@ -46,7 +48,7 @@ func TestTxPoolExecuteRollback(t *testing.T) {
 	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
-	transactionID, err := txPool.Begin(ctx, false, false)
+	transactionID, err := txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,11 +75,11 @@ func TestTxPoolRollbackNonBusy(t *testing.T) {
 	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
-	txid1, err := txPool.Begin(ctx, false, false)
+	txid1, err := txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = txPool.Begin(ctx, false, false)
+	_, err = txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +114,7 @@ func TestTxPoolTransactionKiller(t *testing.T) {
 	defer txPool.Close()
 	ctx := context.Background()
 	killCount := tabletenv.KillStats.Counts()["Transactions"]
-	transactionID, err := txPool.Begin(ctx, false, false)
+	transactionID, err := txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +146,7 @@ func TestTxPoolAddDebug(t *testing.T) {
 
 	// Start a 'normal' transaction. It should take a connection
 	// for the normal 'conns' pool.
-	id1, err := txPool.Begin(ctx, false, false)
+	id1, err := txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +162,12 @@ func TestTxPoolAddDebug(t *testing.T) {
 
 	// Start a 'appDebug' transaction. It should take a connection
 	// from the appDebug pool.
-	id2, err := txPool.Begin(ctx, false, true)
+
+	im := callerid.NewImmediateCallerID("debugUsername")
+	ecid := callerid.NewEffectiveCallerID("p", "c", "sc")
+	newCtx := callerid.NewContext(ctx, ecid, im)
+	newCtx = debuguserinfo.SetUseAppDebug(newCtx, "debugUsername")
+	id2, err := txPool.Begin(newCtx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +211,7 @@ func TestTxPoolAddDebug(t *testing.T) {
 
 	want := "unsupported: can not use"
 
-	_, err = txPool.Begin(ctx, true, true)
+	_, err = txPool.Begin(newCtx, true)
 
 	if err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("Error: %v, want prefix %s", err, want)
@@ -224,7 +231,7 @@ func TestTxPoolClientRowsFound(t *testing.T) {
 
 	// Start a 'normal' transaction. It should take a connection
 	// for the normal 'conns' pool.
-	id1, err := txPool.Begin(ctx, false, false)
+	id1, err := txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +244,7 @@ func TestTxPoolClientRowsFound(t *testing.T) {
 
 	// Start a 'foundRows' transaction. It should take a connection
 	// from the foundRows pool.
-	id2, err := txPool.Begin(ctx, true, false)
+	id2, err := txPool.Begin(ctx, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +295,7 @@ func TestTxPoolBeginWithPoolConnectionError_Errno2006_Transient(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	txConn, err := txPool.LocalBegin(ctx, false, false)
+	txConn, err := txPool.LocalBegin(ctx, false)
 	if err != nil {
 		t.Fatalf("Begin should have succeeded after the retry in DBConn.Exec(): %v", err)
 	}
@@ -319,7 +326,7 @@ func TestTxPoolBeginWithPoolConnectionError_Errno2006_Permanent(t *testing.T) {
 	// After that, vttablet will automatically try to reconnect and this fail.
 	// DBConn.Exec() will return the reconnect error as final error and not the
 	// initial connection error.
-	_, err = txPool.LocalBegin(context.Background(), false, false)
+	_, err = txPool.LocalBegin(context.Background(), false)
 	if err == nil || !strings.Contains(err.Error(), "(errno 2013)") {
 		t.Fatalf("Begin did not return the reconnect error: %v", err)
 	}
@@ -345,7 +352,7 @@ func TestTxPoolBeginWithPoolConnectionError_Errno2013(t *testing.T) {
 	db.EnableShouldClose()
 
 	// 2013 is not retryable. DBConn.Exec() fails after the first attempt.
-	_, err = txPool.Begin(context.Background(), false, false)
+	_, err = txPool.Begin(context.Background(), false)
 	if err == nil || !strings.Contains(err.Error(), "(errno 2013)") {
 		t.Fatalf("Begin must return connection error with MySQL errno 2013: %v", err)
 	}
@@ -368,7 +375,7 @@ func primeTxPoolWithConnection(t *testing.T) (*fakesqldb.DB, *TxPool, error) {
 	db.AddQuery("begin", &sqltypes.Result{})
 	db.AddQuery("rollback", &sqltypes.Result{})
 	ctx := context.Background()
-	txConn, err := txPool.LocalBegin(ctx, false, false)
+	txConn, err := txPool.LocalBegin(ctx, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -385,7 +392,7 @@ func TestTxPoolBeginWithError(t *testing.T) {
 	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
-	_, err := txPool.Begin(ctx, false, false)
+	_, err := txPool.Begin(ctx, false)
 	want := "error: rejected"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("Begin: %v, want %s", err, want)
@@ -407,7 +414,7 @@ func TestTxPoolRollbackFail(t *testing.T) {
 	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
-	transactionID, err := txPool.Begin(ctx, false, false)
+	transactionID, err := txPool.Begin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,7 +459,7 @@ func TestTxPoolExecFailDueToConnFail_Errno2006(t *testing.T) {
 	ctx := context.Background()
 
 	// Start the transaction.
-	txConn, err := txPool.LocalBegin(ctx, false, false)
+	txConn, err := txPool.LocalBegin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,7 +497,7 @@ func TestTxPoolExecFailDueToConnFail_Errno2013(t *testing.T) {
 	ctx := context.Background()
 
 	// Start the transaction.
-	txConn, err := txPool.LocalBegin(ctx, false, false)
+	txConn, err := txPool.LocalBegin(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -521,7 +528,7 @@ func TestTxPoolCloseKillsStrayTransactions(t *testing.T) {
 	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 
 	// Start stray transaction.
-	_, err := txPool.Begin(context.Background(), false, false)
+	_, err := txPool.Begin(context.Background(), false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -37,7 +37,6 @@ import (
 	"github.com/youtube/vitess/go/sync2"
 	"github.com/youtube/vitess/go/tb"
 	"github.com/youtube/vitess/go/vt/binlog"
-	"github.com/youtube/vitess/go/vt/callerid"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/dbconnpool"
 	"github.com/youtube/vitess/go/vt/logutil"
@@ -659,10 +658,7 @@ func (tsv *TabletServer) Begin(ctx context.Context, target *querypb.Target, opti
 				// TODO(erez): I think this should be RESOURCE_EXHAUSTED.
 				return vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "Transaction throttled")
 			}
-
-			callerID := callerid.ImmediateCallerIDFromContext(ctx)
-			useAppDebug := callerID != nil && callerID.Username == tsv.appDebugUsername
-			transactionID, err = tsv.te.txPool.Begin(ctx, options.GetClientFoundRows(), useAppDebug)
+			transactionID, err = tsv.te.txPool.Begin(ctx, options.GetClientFoundRows())
 			logStats.TransactionID = transactionID
 			return err
 		},
