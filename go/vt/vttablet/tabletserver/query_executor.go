@@ -642,9 +642,10 @@ func (qre *QueryExecutor) execSet() (*sqltypes.Result, error) {
 	conn, err := qre.getConn(pool)
 	if err != nil {
 		return nil, err
+	} else {
+		defer conn.Recycle()
+		return qre.dbConnFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, false)
 	}
-	defer conn.Recycle()
-	return qre.dbConnFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, false)
 }
 
 func (qre *QueryExecutor) getAppConnPool() (pool *connpool.Pool) {

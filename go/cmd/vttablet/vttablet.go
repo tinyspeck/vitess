@@ -90,7 +90,7 @@ func main() {
 		log.Warning(err)
 	}
 
-	if appDebugUsername := tabletenv.Config.AppDebugUsername; appDebugUsername != "" && dbcfgs.IsAppDebugZero() {
+	if appDebugUsername := tabletenv.Config.AppDebugUsername; appDebugUsername != "" && !dbcfgs.HasAppDebugUname() {
 		err := fmt.Errorf("app debug username is present (%v), however there is no config for this user. Make sure db-config-appdebug is set", appDebugUsername)
 		log.Exitf("invalid config: %v", err)
 	}

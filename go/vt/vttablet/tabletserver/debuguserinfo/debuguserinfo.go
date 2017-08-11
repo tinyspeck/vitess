@@ -24,12 +24,12 @@ import (
 )
 
 const (
-	appDebubUsernameKey string = "appdebug_username"
+	appDebugUsernameKey string = "appdebug_username"
 )
 
 // Get value for useAppDebug
 func GetUseAppDebug(ctx context.Context) bool {
-	useAppDebug, ok := ctx.Value(appDebubUsernameKey).(bool)
+	useAppDebug, ok := ctx.Value(appDebugUsernameKey).(bool)
 	if ok {
 		return useAppDebug
 	}
@@ -44,6 +44,6 @@ func IsCallerIDAppDebug(ctx context.Context, appDebugUsername string) bool {
 // Set if it should use AppDebug in the context
 func SetUseAppDebug(ctx context.Context, appDebugUsername string) context.Context {
 	useAppDebug := IsCallerIDAppDebug(ctx, appDebugUsername)
-	newCtx := context.WithValue(ctx, appDebubUsernameKey, useAppDebug)
+	newCtx := context.WithValue(ctx, appDebugUsernameKey, useAppDebug)
 	return newCtx
 }

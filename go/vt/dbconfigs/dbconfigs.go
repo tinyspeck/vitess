@@ -166,8 +166,8 @@ func (dbcfgs *DBConfigs) IsZero() bool {
 	return dbcfgs.App.Uname == ""
 }
 
-func (dbcfgs *DBConfigs) IsAppDebugZero() bool {
-	return dbcfgs.AppDebug.Uname == ""
+func (dbcfgs *DBConfigs) HasAppDebugUname() bool {
+	return dbcfgs.AppDebug.Uname != ""
 }
 
 // Init will initialize app, allprivs, dba, filtered and repl configs.
