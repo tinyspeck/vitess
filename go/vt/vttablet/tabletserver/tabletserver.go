@@ -48,6 +48,7 @@ import (
 	"github.com/youtube/vitess/go/vt/vttablet/heartbeat"
 	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/connpool"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/messager"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/planbuilder"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/querytypes"
@@ -658,7 +659,8 @@ func (tsv *TabletServer) Begin(ctx context.Context, target *querypb.Target, opti
 				// TODO(erez): I think this should be RESOURCE_EXHAUSTED.
 				return vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "Transaction throttled")
 			}
-			transactionID, err = tsv.te.txPool.Begin(ctx, options.GetClientFoundRows())
+			newCtx := debuguserinfo.SetUseAppDebug(ctx, tsv.appDebugUsername)
+			transactionID, err = tsv.te.txPool.Begin(newCtx, options.GetClientFoundRows())
 			logStats.TransactionID = transactionID
 			return err
 		},

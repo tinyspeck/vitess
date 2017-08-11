@@ -652,10 +652,21 @@ func TestAppDebugRequest(t *testing.T) {
 		&vtrpcpb.CallerID{},
 		&querypb.VTGateCallerID{Username: "vt_appdebug"})
 
+	want := "Access denied for user 'vt_appdebug'@'localhost'"
+
 	client.SetCtx(ctx)
 
-	want := "Access denied for user 'vt_appdebug'@'localhost'"
+	// Start a transaction. This test the other flow that a client can use to insert a value.
+	client.Begin(false)
 	_, err := client.Execute("insert into vitess_test_debuguser(intval, charval) values(124, 'aa')", nil)
+
+	if err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("Error: %v, want prefix %s", err, want)
+	}
+
+	// Normal flow, when a client is trying to insert a value and the insert is not in the
+	// context of another transaction.
+	_, err = client.Execute("insert into vitess_test_debuguser(intval, charval) values(124, 'aa')", nil)
 
 	if err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Errorf("Error: %v, want prefix %s", err, want)
