@@ -30,9 +30,9 @@ import (
 	vschemapb "github.com/youtube/vitess/go/vt/proto/vschema"
 )
 
-// vtExplainTopo satisfies the SrvTopoServer interface.
+// VTExplainTopo satisfies the SrvTopoServer interface.
 // modeled after the vtgate test sandboxTopo
-type vtExplainTopo struct {
+type VTExplainTopo struct {
 	// Map of keyspace name to vschema
 	Keyspaces map[string]*vschemapb.Keyspace
 
@@ -43,7 +43,7 @@ type vtExplainTopo struct {
 	Lock sync.Mutex
 }
 
-func (et *vtExplainTopo) getSrvVSchema() *vschemapb.SrvVSchema {
+func (et *VTExplainTopo) getSrvVSchema() *vschemapb.SrvVSchema {
 	et.Lock.Lock()
 	defer et.Lock.Unlock()
 
@@ -53,7 +53,7 @@ func (et *vtExplainTopo) getSrvVSchema() *vschemapb.SrvVSchema {
 }
 
 // GetSrvKeyspaceNames is part of SrvTopoServer.
-func (et *vtExplainTopo) GetSrvKeyspaceNames(ctx context.Context, cell string) ([]string, error) {
+func (et *VTExplainTopo) GetSrvKeyspaceNames(ctx context.Context, cell string) ([]string, error) {
 	et.Lock.Lock()
 	defer et.Lock.Unlock()
 
@@ -65,7 +65,7 @@ func (et *vtExplainTopo) GetSrvKeyspaceNames(ctx context.Context, cell string) (
 }
 
 // GetSrvKeyspace is part of SrvTopoServer.
-func (et *vtExplainTopo) GetSrvKeyspace(ctx context.Context, cell, keyspace string) (*topodatapb.SrvKeyspace, error) {
+func (et *VTExplainTopo) GetSrvKeyspace(ctx context.Context, cell, keyspace string) (*topodatapb.SrvKeyspace, error) {
 	et.Lock.Lock()
 	defer et.Lock.Unlock()
 
@@ -142,7 +142,7 @@ func (et *vtExplainTopo) GetSrvKeyspace(ctx context.Context, cell, keyspace stri
 }
 
 // WatchSrvVSchema is part of SrvTopoServer.
-func (et *vtExplainTopo) WatchSrvVSchema(ctx context.Context, cell string) (*topo.WatchSrvVSchemaData, <-chan *topo.WatchSrvVSchemaData, topo.CancelFunc) {
+func (et *VTExplainTopo) WatchSrvVSchema(ctx context.Context, cell string) (*topo.WatchSrvVSchemaData, <-chan *topo.WatchSrvVSchemaData, topo.CancelFunc) {
 	return &topo.WatchSrvVSchemaData{
 		Value: et.getSrvVSchema(),
 	}, make(chan *topo.WatchSrvVSchemaData), func() {}

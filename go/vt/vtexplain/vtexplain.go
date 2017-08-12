@@ -21,11 +21,14 @@ package vtexplain
 
 // XXX TODO:
 //
-// 1. Add full grammar support for CREATE TABLE
-// 2. Parse schema to set up the fakesqldb information schema results
-// 3. For DML queries handle comments to indicate whether rows exist or not
-// 4. Human-friendly and json output modes
-// 5. Options for RBR/SBR, 2PC transactions, autocommit, etc
+// Add full grammar support for CREATE TABLE
+//   - reserved vs non-reserved keywords
+//   - enum type support
+//   - partitioned tables
+//   - length on index columns
+// For DML queries handle comments to indicate whether rows exist or not
+// Human-friendly and json output modes
+// Options for RBR/SBR, 2PC transactions, autocommit, etc
 
 import (
 	"encoding/json"
@@ -33,21 +36,11 @@ import (
 	"strings"
 
 	log "github.com/golang/glog"
-	"golang.org/x/net/context"
 
-	"github.com/youtube/vitess/go/vt/discovery"
-	"github.com/youtube/vitess/go/vt/key"
 	"github.com/youtube/vitess/go/vt/sqlparser"
-	"github.com/youtube/vitess/go/vt/topo"
-	"github.com/youtube/vitess/go/vt/vtgate"
 	"github.com/youtube/vitess/go/vt/vtgate/engine"
-	"github.com/youtube/vitess/go/vt/vtgate/gateway"
-	"github.com/youtube/vitess/go/vt/vttablet/sandboxconn"
 
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
-	topodatapb "github.com/youtube/vitess/go/vt/proto/topodata"
-	vschemapb "github.com/youtube/vitess/go/vt/proto/vschema"
-	vtgatepb "github.com/youtube/vitess/go/vt/proto/vtgate"
 )
 
 type TabletQuery struct {
@@ -55,10 +48,28 @@ type TabletQuery struct {
 	Sql string
 
 	// BindVars sent with the command
-	BindVars map[string]interface{}
+	BindVars map[string]*querypb.BindVariable
 
 	// The actual queries executed by mysql
 	MysqlQueries []string
+}
+
+func (tq *TabletQuery) MarshalJSON() ([]byte, error) {
+	// Convert Bindvars to strings for nicer output
+	bindVars := make(map[string]string)
+	for k, v := range tq.BindVars {
+		bindVars[k] = v.String()
+	}
+
+	return json.Marshal(&struct {
+		Sql          string
+		BindVars     map[string]string
+		MysqlQueries []string
+	}{
+		Sql:          tq.Sql,
+		BindVars:     bindVars,
+		MysqlQueries: tq.MysqlQueries,
+	})
 }
 
 type Plan struct {
@@ -69,21 +80,11 @@ type Plan struct {
 	Plans []*engine.Plan
 
 	// list of queries / bind vars sent to each tablet
-	TabletQueries map[string][]TabletQuery
+	TabletQueries map[string][]*TabletQuery
 }
-
-var (
-	explainTopo     *vtExplainTopo
-	vtgateExecutor  *vtgate.Executor
-	fakeHealthCheck *discovery.FakeHealthCheck
-)
 
 var executeOptions = &querypb.ExecuteOptions{
 	IncludedFields: querypb.ExecuteOptions_TYPE_ONLY,
-}
-
-var masterSession = &vtgatepb.Session{
-	TargetString: "@master",
 }
 
 const (
@@ -93,73 +94,67 @@ const (
 	NUM_SHARDS = 2
 )
 
-func BuildTopo(vschemaStr string) error {
-	explainTopo.Lock.Lock()
-	defer explainTopo.Lock.Unlock()
-
-	explainTopo.Keyspaces = make(map[string]*vschemapb.Keyspace)
-	err := json.Unmarshal([]byte(vschemaStr), &explainTopo.Keyspaces)
+// Sets up the fake execution environment
+func Init(vSchemaStr, sqlSchema string) error {
+	err := initVtgateExecutor(vSchemaStr)
 	if err != nil {
-		return err
+		return fmt.Errorf("initVtgateExecutor: %v", err)
 	}
 
-	explainTopo.TabletConns = make(map[string]*sandboxconn.SandboxConn)
-	for ks, vschema := range explainTopo.Keyspaces {
-		num_shards := 1
-		if vschema.Sharded {
-			num_shards = NUM_SHARDS
-		}
-		for i := 0; i < num_shards; i++ {
-			kr, err := key.EvenShardsKeyRange(i, num_shards)
-			if err != nil {
-				return err
-			}
-			shard := key.KeyRangeString(kr)
-			hostname := fmt.Sprintf("%s/%s", ks, shard)
-			log.Infof("registering test tablet %s for keyspace %s shard %s", hostname, ks, shard)
-			sc := fakeHealthCheck.AddTestTablet(CELL, hostname, 1, ks, shard, topodatapb.TabletType_MASTER, true, 1, nil)
-			explainTopo.TabletConns[hostname] = sc
-		}
-	}
-
-	return err
-}
-
-func newFakeResolver(hc discovery.HealthCheck, serv topo.SrvTopoServer, cell string) *vtgate.Resolver {
-	gw := gateway.GetCreator()(hc, topo.Server{}, serv, cell, 3)
-	gw.WaitForTablets(context.Background(), []topodatapb.TabletType{topodatapb.TabletType_REPLICA})
-	tc := vtgate.NewTxConn(gw, vtgatepb.TransactionMode_MULTI)
-	sc := vtgate.NewScatterConn("", tc, gw)
-	return vtgate.NewResolver(serv, cell, sc)
-}
-
-// Set up the fake execution environment for the given vschema
-func Init(vSchemaStr string) error {
-	explainTopo = new(vtExplainTopo)
-	fakeHealthCheck = discovery.NewFakeHealthCheck()
-
-	resolver := newFakeResolver(fakeHealthCheck, explainTopo, CELL)
-
-	err := BuildTopo(vSchemaStr)
+	parsedDDLs, err := parseSchema(sqlSchema)
 	if err != nil {
-		return err
+		return fmt.Errorf("parseSchema: %v", err)
 	}
 
-	normalize := false
-	streamSize := 10
-	vtgateExecutor = vtgate.NewExecutor(context.Background(), explainTopo, CELL, "", resolver, normalize, streamSize)
+	err = initTabletEnvironment(parsedDDLs)
+	if err != nil {
+		return fmt.Errorf("initTabletEnvironment: %v", err)
+	}
 
 	return nil
 }
 
+func parseSchema(sqlSchema string) ([]*sqlparser.DDL, error) {
+	parsedDDLs := make([]*sqlparser.DDL, 0, 16)
+	for _, sql := range strings.Split(sqlSchema, ";") {
+		s := sqlparser.StripLeadingComments(sql)
+		s, _ = sqlparser.SplitTrailingComments(sql)
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+
+		stmt, err := sqlparser.Parse(sql)
+		if err != nil {
+			log.Errorf("ERROR: failed to parse sql: %s, got error: %v", sql, err)
+			continue
+		}
+		ddl, ok := stmt.(*sqlparser.DDL)
+		if !ok {
+			log.Infof("ignoring non-DDL statement: %s", sql)
+			continue
+		}
+		if ddl.Action != sqlparser.CreateStr {
+			log.Infof("ignoring %s table statement", ddl.Action)
+			continue
+		}
+		if ddl.TableSpec == nil {
+			log.Errorf("invalid create table statement: %s", sql)
+			continue
+		}
+		parsedDDLs = append(parsedDDLs, ddl)
+	}
+	return parsedDDLs, nil
+}
+
 // Run the explain analysis on the given queries
-func Run(sqlStr, schemaStr string) ([]*Plan, error) {
+func Run(sqlStr string) ([]*Plan, error) {
 	plans := make([]*Plan, 0, 16)
 
 	for _, sql := range strings.Split(sqlStr, ";") {
 		s := strings.TrimSpace(sql)
 		if s != "" {
-			plan, err := GetPlan(s, schemaStr)
+			plan, err := GetPlan(s)
 			if err != nil {
 				return nil, err
 			}
@@ -170,67 +165,30 @@ func Run(sqlStr, schemaStr string) ([]*Plan, error) {
 	return plans, nil
 }
 
-func GetPlan(sql, schema string) (*Plan, error) {
-	plan := Plan{}
-	plan.Sql = sql
-
-	_, err := sqlparser.Parse(plan.Sql)
+func GetPlan(sql string) (*Plan, error) {
+	_, err := sqlparser.Parse(sql)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing sql: %s", err)
+		return nil, fmt.Errorf("error parsing sql: %v", err)
 	}
 
-	parsedSchema, err := sqlparser.Parse(schema)
+	plans, tabletQueries, err := vtgateExecute(sql)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing schema: %s", err)
+		return nil, fmt.Errorf("vtgateExecute: %v", err)
 	}
-	fmt.Printf("schema: %v\n", parsedSchema)
-
-	_, err = vtgateExecutor.Execute(context.Background(), masterSession, sql, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// use the plan cache to get the set of plans used for this query, then
-	// clear afterwards for the next run
-	planCache := vtgateExecutor.Plans()
-	plan.Plans = make([]*engine.Plan, 0, 4)
-	for _, item := range planCache.Items() {
-		plan.Plans = append(plan.Plans, item.Value.(*engine.Plan))
-	}
-	planCache.Clear()
-
-	// track each query sent to the tablet and what it ended up actually
-	// executing in mysql
-	plan.TabletQueries = make(map[string][]TabletQuery)
-	for tablet, tc := range explainTopo.TabletConns {
-		if len(tc.Queries) == 0 {
-			continue
-		}
-
-		queries := make([]TabletQuery, 0, 16)
-		for _, bq := range tc.Queries {
-			tq := TabletQuery{Sql: bq.Sql, BindVars: make(map[string]interface{})}
-
-			// convert []byte values into strings for easier human consumption
-			for name, val := range bq.BindVariables {
-				switch v := val.(type) {
-				case []byte:
-					tq.BindVars[name] = string(v)
-				default:
-					tq.BindVars[name] = v
-				}
-			}
-
-			mqs, err := fakeTabletExecute(tq.Sql, bq.BindVariables)
+	for _, tqs := range tabletQueries {
+		for _, tq := range tqs {
+			mqs, err := fakeTabletExecute(tq.Sql, tq.BindVars)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error in fakeTabletExecute: %v", err)
 			}
 			tq.MysqlQueries = mqs
-			queries = append(queries, tq)
 		}
-		plan.TabletQueries[tablet] = queries
-		tc.Queries = nil
+
 	}
 
-	return &plan, nil
+	return &Plan{
+		Sql:           sql,
+		Plans:         plans,
+		TabletQueries: tabletQueries,
+	}, nil
 }

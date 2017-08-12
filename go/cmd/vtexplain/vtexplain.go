@@ -130,9 +130,12 @@ func parseAndRun() error {
 	_, cancel := context.WithTimeout(context.Background(), *waitTime)
 	installSignalHandlers(cancel)
 
-	vtexplain.Init(vschema)
+	err = vtexplain.Init(vschema, schema)
+	if err != nil {
+		return err
+	}
 
-	plans, err := vtexplain.Run(sql, schema)
+	plans, err := vtexplain.Run(sql)
 	if err != nil {
 		return err
 	}
