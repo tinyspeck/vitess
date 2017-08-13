@@ -624,6 +624,7 @@ type ColumnType struct {
 	NotNull       BoolVal
 	Autoincrement BoolVal
 	Default       *SQLVal
+	Comment       *SQLVal
 
 	// Numeric field options
 	Length   *SQLVal
@@ -634,6 +635,9 @@ type ColumnType struct {
 	// Text field options
 	Charset string
 	Collate string
+
+	// Enum values
+	EnumValues []string
 
 	// Key specification
 	KeyOpt ColumnKeyOption
@@ -648,6 +652,10 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 
 	} else if ct.Length != nil {
 		buf.Myprintf("(%v)", ct.Length)
+	}
+
+	if ct.EnumValues != nil {
+		buf.Myprintf("(%s)", strings.Join(ct.EnumValues, ", "))
 	}
 
 	opts := make([]string, 0, 16)
@@ -671,6 +679,9 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 	}
 	if ct.Autoincrement {
 		opts = append(opts, keywordStrings[AUTO_INCREMENT])
+	}
+	if ct.Comment != nil {
+		opts = append(opts, keywordStrings[COMMENT_KEYWORD], String(ct.Comment))
 	}
 	if ct.KeyOpt == ColKeyPrimary {
 		opts = append(opts, keywordStrings[PRIMARY], keywordStrings[KEY])
@@ -753,10 +764,45 @@ func (ct *ColumnType) SqlType() querypb.Type {
 		return sqltypes.Text
 	case keywordStrings[LONGTEXT]:
 		return sqltypes.Text
+	case keywordStrings[BLOB]:
+		return sqltypes.Blob
+	case keywordStrings[TINYBLOB]:
+		return sqltypes.Blob
+	case keywordStrings[MEDIUMBLOB]:
+		return sqltypes.Blob
+	case keywordStrings[LONGBLOB]:
+		return sqltypes.Blob
+	case keywordStrings[CHAR]:
+		return sqltypes.Char
 	case keywordStrings[VARCHAR]:
 		return sqltypes.VarChar
+	case keywordStrings[BINARY]:
+		return sqltypes.Binary
+	case keywordStrings[VARBINARY]:
+		return sqltypes.VarBinary
+	case keywordStrings[DATE]:
+		return sqltypes.Date
+	case keywordStrings[TIME]:
+		return sqltypes.Time
+	case keywordStrings[DATETIME]:
+		return sqltypes.Datetime
+	case keywordStrings[TIMESTAMP]:
+		return sqltypes.Timestamp
+	case keywordStrings[YEAR]:
+		return sqltypes.Year
+	case keywordStrings[FLOAT]:
+		return sqltypes.Float32
+	case keywordStrings[DOUBLE]:
+		return sqltypes.Float64
+	case keywordStrings[DECIMAL]:
+		return sqltypes.Decimal
+	case keywordStrings[BIT]:
+		return sqltypes.Bit
+	case keywordStrings[ENUM]:
+		return sqltypes.Enum
+	case keywordStrings[JSON]:
+		return sqltypes.TypeJSON
 	}
-
 	panic("unimplemented type " + ct.Type)
 }
 
@@ -768,7 +814,7 @@ func (node *ColumnType) WalkSubtree(visit Visit) error {
 // IndexDefinition describes an index in a CREATE TABLE statement
 type IndexDefinition struct {
 	Info    *IndexInfo
-	Columns Columns
+	Columns []*IndexColumn
 }
 
 // IndexInfo describes the name and type of an index in a CREATE TABLE statement
@@ -778,12 +824,13 @@ type IndexInfo struct {
 	Unique  bool
 }
 
-func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
-	cols := make([]string, 0, 4)
-	for _, col := range idx.Columns {
-		cols = append(cols, col.String())
-	}
+// IndexColumn describes a column in an index definition with optional length
+type IndexColumn struct {
+	Column ColIdent
+	Length *SQLVal
+}
 
+func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 	if idx.Info.Primary {
 		buf.Myprintf("%s %s", keywordStrings[PRIMARY], keywordStrings[KEY])
 	} else if idx.Info.Unique {
@@ -791,7 +838,19 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 	} else {
 		buf.Myprintf("%s %v", keywordStrings[KEY], idx.Info.Name)
 	}
-	buf.Myprintf(" (%s)", strings.Join(cols, ", "))
+
+	buf.Myprintf(" (")
+	for i, col := range idx.Columns {
+		if i != 0 {
+			buf.Myprintf(", %s", col.Column.String())
+		} else {
+			buf.Myprintf("%s", col.Column.String())
+		}
+		if col.Length != nil {
+			buf.Myprintf("(%v)", col.Length)
+		}
+	}
+	buf.Myprintf(")")
 }
 
 func (node *IndexDefinition) WalkSubtree(visit Visit) error {
@@ -800,7 +859,7 @@ func (node *IndexDefinition) WalkSubtree(visit Visit) error {
 	}
 
 	for _, n := range node.Columns {
-		if err := Walk(visit, n); err != nil {
+		if err := Walk(visit, n.Column); err != nil {
 			return err
 		}
 	}
