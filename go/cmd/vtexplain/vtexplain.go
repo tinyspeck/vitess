@@ -22,42 +22,80 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	log "github.com/golang/glog"
 	"github.com/youtube/vitess/go/exit"
 	"github.com/youtube/vitess/go/vt/logutil"
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/vtexplain"
-	"golang.org/x/net/context"
 )
 
 var (
-	waitTime        = flag.Duration("wait-time", 24*time.Hour, "time to wait on an action")
 	sqlFlag         = flag.String("sql", "", "A list of semicolon-delimited SQL commands to analyze")
 	sqlFileFlag     = flag.String("sql-file", "", "Identifies the file that contains the SQL commands to analyze")
 	schemaFlag      = flag.String("schema", "", "The SQL table schema")
-	schemaFileFlag  = flag.String("schema_file", "", "Identifies the file that contains the SQL table schema")
+	schemaFileFlag  = flag.String("schema-file", "", "Identifies the file that contains the SQL table schema")
 	vschemaFlag     = flag.String("vschema", "", "Identifies the VTGate routing schema")
-	vschemaFileFlag = flag.String("vschema_file", "", "Identifies the VTGate routing schema file")
+	vschemaFileFlag = flag.String("vschema-file", "", "Identifies the VTGate routing schema file")
+	numShards       = flag.Int("shards", 2, "Number of shards per keyspace")
+	replicationMode = flag.String("replication-mode", "", "The replication mode to simulate -- must be set to either ROW or STATEMENT")
+	normalize       = flag.Bool("normalize", false, "Whether to enable vtgate normalization")
+
+	// vtexplainFlags lists all the flags that should show in usage
+	vtexplainFlags = []string{
+		"normalize",
+		"shards",
+		"replication-mode",
+		"schema",
+		"schema-file",
+		"sql",
+		"sql-file",
+		"vschema",
+		"vschema-file",
+	}
 )
+
+func usage() {
+	fmt.Printf("usage of vtexplain:\n")
+	for _, name := range vtexplainFlags {
+		f := flag.Lookup(name)
+		if f == nil {
+			panic("unkown flag " + name)
+		}
+		flagUsage(f)
+	}
+}
+
+// Cloned from the source to print out the usage for a given flag
+func flagUsage(f *flag.Flag) {
+	s := fmt.Sprintf("  -%s", f.Name) // Two spaces before -; see next two comments.
+	name, usage := flag.UnquoteUsage(f)
+	if len(name) > 0 {
+		s += " " + name
+	}
+	// Boolean flags of one ASCII letter are so common we
+	// treat them specially, putting their usage on the same line.
+	if len(s) <= 4 { // space, space, '-', 'x'.
+		s += "\t"
+	} else {
+		// Four spaces before the tab triggers good alignment
+		// for both 4- and 8-space tab stops.
+		s += "\n    \t"
+	}
+	s += usage
+	if name == "string" {
+		// put quotes on the value
+		s += fmt.Sprintf(" (default %q)", f.DefValue)
+	} else {
+		s += fmt.Sprintf(" (default %v)", f.DefValue)
+	}
+	fmt.Printf(s + "\n")
+}
 
 func init() {
 	logger := logutil.NewConsoleLogger()
 	flag.CommandLine.SetOutput(logutil.NewLoggerWriter(logger))
-}
-
-// signal handling, centralized here
-func installSignalHandlers(cancel func()) {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		<-sigChan
-		// we got a signal, cancel the current ctx
-		cancel()
-	}()
+	flag.Usage = usage
 }
 
 // getFileParam returns a string containing either flag is not "",
@@ -121,16 +159,17 @@ func parseAndRun() error {
 		return err
 	}
 
-	servenv.FireRunHooks()
+	opts := &vtexplain.Options{
+		ReplicationMode: *replicationMode,
+		NumShards:       *numShards,
+		Normalize:       *normalize,
+	}
 
 	log.V(100).Infof("sql %s\n", sql)
 	log.V(100).Infof("schema %s\n", schema)
 	log.V(100).Infof("vschema %s\n", vschema)
 
-	_, cancel := context.WithTimeout(context.Background(), *waitTime)
-	installSignalHandlers(cancel)
-
-	err = vtexplain.Init(vschema, schema)
+	err = vtexplain.Init(vschema, schema, opts)
 	if err != nil {
 		return err
 	}
@@ -145,8 +184,6 @@ func parseAndRun() error {
 		return err
 	}
 	fmt.Printf(string(planJson))
-	//	fmt.Printf("%d", plans[0].Route.Opcode)
 
-	cancel()
 	return nil
 }
