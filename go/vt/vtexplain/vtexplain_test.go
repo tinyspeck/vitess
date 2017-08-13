@@ -24,7 +24,20 @@ import (
 	"github.com/yudai/gojsondiff/formatter"
 )
 
-func testExplain(sqlStr, expected string, t *testing.T) {
+func defaultTestOpts() *Options {
+	return &Options{
+		ReplicationMode: "ROW",
+		NumShards:       2,
+		Normalize:       false,
+	}
+}
+
+func testExplain(sqlStr, expected string, opts *Options, t *testing.T) {
+	err := Init(testVSchemaStr, testSchemaStr, opts)
+	if err != nil {
+		t.Fatalf("vtexplain Init error: %v", err)
+	}
+
 	plans, err := Run(sqlStr)
 	if err != nil {
 		t.Fatalf("vtexplain error: %v", err)
@@ -136,34 +149,31 @@ var testVSchemaStr = `
 
 var testSchemaStr = `
 create table t1 (
-  id bigint(20) unsigned not null,
-  val bigint(20) unsigned not null default 0,
-  primary key (id)
+	id bigint(20) unsigned not null,
+	val bigint(20) unsigned not null default 0,
+	primary key (id)
 );
 
 create table user (
-  id bigint,
-  name varchar(64),
-  primary key (id)
+	id bigint,
+	name varchar(64),
+	email varchar(64),
+	primary key (id)
 ) Engine=InnoDB;
 
 create table name_user_map (
-  name varchar(64),
-  user_id bigint,
-  primary key (name, user_id)
+	name varchar(64),
+	user_id bigint,
+	primary key (name, user_id)
 ) Engine=InnoDB;
 
 create table music (
-  user_id bigint,
-  id bigint,
-  song varchar(64),
-  primary key (user_id, id)
+	user_id bigint,
+	id bigint,
+	song varchar(64),
+	primary key (user_id, id)
 ) Engine=InnoDB;
 `
-
-func init() {
-	Init(testVSchemaStr, testSchemaStr)
-}
 
 func TestUnsharded(t *testing.T) {
 	sqlStr := `
@@ -331,7 +341,7 @@ insert into t1 (id,val) values (1,2) on duplicate key update val=3;
         }
     }
 ]`
-	testExplain(sqlStr, expected, t)
+	testExplain(sqlStr, expected, defaultTestOpts(), t)
 }
 
 func TestSelectSharded(t *testing.T) {
@@ -482,7 +492,7 @@ select * from user where name = 'bob' /* vindex lookup */;
 ]
 `
 
-	testExplain(sqlStr, expected, t)
+	testExplain(sqlStr, expected, defaultTestOpts(), t)
 }
 
 func TestInsertSharded(t *testing.T) {
@@ -743,5 +753,178 @@ insert ignore into user (id, name) values(2, "bob");
     }
 ]
 `
-	testExplain(sqlStr, expected, t)
+	testExplain(sqlStr, expected, defaultTestOpts(), t)
+}
+
+func TestOptions(t *testing.T) {
+	sqlStr := `
+select * from user where email="null@void.com";
+insert into user (id, name) values(2, "bob") on duplicate key update name="bob";
+`
+
+	expected := `
+[
+    {
+        "Sql": "select * from user where email=\"null@void.com\"",
+        "Plans": [
+            {
+                "Original": "select * from user where email = :vtg1",
+                "Instructions": {
+                    "Opcode": "SelectScatter",
+                    "Keyspace": {
+                        "Name": "ks_sharded",
+                        "Sharded": true
+                    },
+                    "Query": "select * from user where email = :vtg1",
+                    "FieldQuery": "select * from user where 1 != 1"
+                }
+            }
+        ],
+        "TabletQueries": {
+            "ks_sharded/-40": [
+                {
+                    "Sql": "select * from user where email = :vtg1",
+                    "BindVars": {
+                        "#maxLimit": "type:INT64 value:\"10001\" ",
+                        "vtg1": "type:VARBINARY value:\"null@void.com\" "
+                    },
+                    "MysqlQueries": [
+                        "select * from user where email = 'null@void.com' limit 10001"
+                    ]
+                }
+            ],
+            "ks_sharded/40-80": [
+                {
+                    "Sql": "select * from user where email = :vtg1",
+                    "BindVars": {
+                        "#maxLimit": "type:INT64 value:\"10001\" ",
+                        "vtg1": "type:VARBINARY value:\"null@void.com\" "
+                    },
+                    "MysqlQueries": [
+                        "select * from user where email = 'null@void.com' limit 10001"
+                    ]
+                }
+            ],
+            "ks_sharded/80-c0": [
+                {
+                    "Sql": "select * from user where email = :vtg1",
+                    "BindVars": {
+                        "#maxLimit": "type:INT64 value:\"10001\" ",
+                        "vtg1": "type:VARBINARY value:\"null@void.com\" "
+                    },
+                    "MysqlQueries": [
+                        "select * from user where email = 'null@void.com' limit 10001"
+                    ]
+                }
+            ],
+            "ks_sharded/c0-": [
+                {
+                    "Sql": "select * from user where email = :vtg1",
+                    "BindVars": {
+                        "#maxLimit": "type:INT64 value:\"10001\" ",
+                        "vtg1": "type:VARBINARY value:\"null@void.com\" "
+                    },
+                    "MysqlQueries": [
+                        "select * from user where email = 'null@void.com' limit 10001"
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "Sql": "insert into user (id, name) values(2, \"bob\") on duplicate key update name=\"bob\"",
+        "Plans": [
+            {
+                "Original": "insert into name_user_map(name, user_id) values (:name0, :user_id0)",
+                "Instructions": {
+                    "Opcode": "InsertSharded",
+                    "Keyspace": {
+                        "Name": "ks_sharded",
+                        "Sharded": true
+                    },
+                    "Query": "insert into name_user_map(name, user_id) values (:_name0, :user_id0)",
+                    "Values": [
+                        [
+                            ":name0"
+                        ]
+                    ],
+                    "Table": "name_user_map",
+                    "Prefix": "insert into name_user_map(name, user_id) values ",
+                    "Mid": [
+                        "(:_name0, :user_id0)"
+                    ]
+                }
+            },
+            {
+                "Original": "insert into user(id, name) values (:vtg1, :vtg2) on duplicate key update name = :vtg2",
+                "Instructions": {
+                    "Opcode": "InsertSharded",
+                    "Keyspace": {
+                        "Name": "ks_sharded",
+                        "Sharded": true
+                    },
+                    "Query": "insert into user(id, name) values (:_id0, :_name0) on duplicate key update name = :vtg2",
+                    "Values": [
+                        [
+                            ":vtg1"
+                        ],
+                        [
+                            ":vtg2"
+                        ]
+                    ],
+                    "Table": "user",
+                    "Prefix": "insert into user(id, name) values ",
+                    "Mid": [
+                        "(:_id0, :_name0)"
+                    ],
+                    "Suffix": " on duplicate key update name = :vtg2"
+                }
+            }
+        ],
+        "TabletQueries": {
+            "ks_sharded/-40": [
+                {
+                    "Sql": "insert into user(id, name) values (:_id0, :_name0) on duplicate key update name = :vtg2 /* vtgate:: keyspace_id:06e7ea22ce92708f */",
+                    "BindVars": {
+                        "#maxLimit": "type:INT64 value:\"10001\" ",
+                        "_id0": "type:INT64 value:\"2\" ",
+                        "_name0": "type:VARBINARY value:\"bob\" ",
+                        "vtg1": "type:INT64 value:\"2\" ",
+                        "vtg2": "type:VARBINARY value:\"bob\" "
+                    },
+                    "MysqlQueries": [
+                        "begin",
+                        "insert into user(id, name) values (2, 'bob') /* _stream user (id ) (2 ); */",
+                        "commit"
+                    ]
+                }
+            ],
+            "ks_sharded/c0-": [
+                {
+                    "Sql": "insert into name_user_map(name, user_id) values (:_name0, :user_id0) /* vtgate:: keyspace_id:da8a82595aa28154c17717955ffeed8b */",
+                    "BindVars": {
+                        "#maxLimit": "type:INT64 value:\"10001\" ",
+                        "_name0": "type:VARBINARY value:\"bob\" ",
+                        "name0": "type:VARBINARY value:\"bob\" ",
+                        "user_id0": "type:UINT64 value:\"2\" "
+                    },
+                    "MysqlQueries": [
+                        "begin",
+                        "insert into name_user_map(name, user_id) values ('bob', 2) /* _stream name_user_map (name user_id ) ('Ym9i' 2 ); */",
+                        "commit"
+                    ]
+                }
+            ]
+        }
+    }
+]
+`
+
+	opts := &Options{
+		ReplicationMode: "STATEMENT",
+		NumShards:       4,
+		Normalize:       true,
+	}
+
+	testExplain(sqlStr, expected, opts, t)
 }

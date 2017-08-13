@@ -85,7 +85,7 @@ func fakeTabletExecute(sql string, bindVars map[string]*querypb.BindVariable) ([
 	return queries, nil
 }
 
-func initTabletEnvironment(ddls []*sqlparser.DDL) error {
+func initTabletEnvironment(ddls []*sqlparser.DDL, opts *Options) error {
 	schemaQueries = map[string]*sqltypes.Result{
 		"select unix_timestamp()": {
 			Fields: []*querypb.Field{{
@@ -132,7 +132,7 @@ func initTabletEnvironment(ddls []*sqlparser.DDL) error {
 			RowsAffected: 1,
 			Rows: [][]sqltypes.Value{{
 				sqltypes.MakeString([]byte("binlog_format")),
-				sqltypes.MakeString([]byte("ROW")),
+				sqltypes.MakeString([]byte(opts.ReplicationMode)),
 			}},
 		},
 	}
@@ -161,10 +161,10 @@ func initTabletEnvironment(ddls []*sqlparser.DDL) error {
 		indexRows := make([][]sqltypes.Value, 0, 4)
 		for _, idx := range ddl.TableSpec.Indexes {
 			for i, col := range idx.Columns {
-				row := mysql.ShowIndexFromTableRow(table, idx.Info.Unique, idx.Info.Name.String(), i+1, col.String(), false)
+				row := mysql.ShowIndexFromTableRow(table, idx.Info.Unique, idx.Info.Name.String(), i+1, col.Column.String(), false)
 				indexRows = append(indexRows, row)
 				if idx.Info.Primary {
-					pkColumns[col.String()] = true
+					pkColumns[col.Column.String()] = true
 				}
 			}
 		}

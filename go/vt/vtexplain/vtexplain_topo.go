@@ -41,6 +41,9 @@ type VTExplainTopo struct {
 
 	// Synchronization lock
 	Lock sync.Mutex
+
+	// Number of shards for sharded keyspaces
+	NumShards int
 }
 
 func (et *VTExplainTopo) getSrvVSchema() *vschemapb.SrvVSchema {
@@ -75,9 +78,9 @@ func (et *VTExplainTopo) GetSrvKeyspace(ctx context.Context, cell, keyspace stri
 	}
 
 	if vschema.Sharded {
-		shards := make([]*topodatapb.ShardReference, 0, NUM_SHARDS)
-		for i := 0; i < NUM_SHARDS; i++ {
-			kr, err := key.EvenShardsKeyRange(i, NUM_SHARDS)
+		shards := make([]*topodatapb.ShardReference, 0, et.NumShards)
+		for i := 0; i < et.NumShards; i++ {
+			kr, err := key.EvenShardsKeyRange(i, et.NumShards)
 			if err != nil {
 				return nil, err
 			}

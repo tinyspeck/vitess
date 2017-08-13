@@ -45,25 +45,25 @@ var (
 	healthCheck    *discovery.FakeHealthCheck
 
 	vtgateSession = &vtgatepb.Session{
-		TargetString: "@master",
-		Autocommit:   true,
+		TargetString:    "@master",
+		Autocommit:      true,
+		TransactionMode: vtgatepb.TransactionMode_TWOPC,
 	}
 )
 
-func initVtgateExecutor(vSchemaStr string) error {
-	explainTopo = new(VTExplainTopo)
+func initVtgateExecutor(vSchemaStr string, opts *Options) error {
+	explainTopo = &VTExplainTopo{NumShards: opts.NumShards}
 	healthCheck = discovery.NewFakeHealthCheck()
 
 	resolver := newFakeResolver(healthCheck, explainTopo, CELL)
 
-	err := buildTopology(vSchemaStr)
+	err := buildTopology(vSchemaStr, opts.NumShards)
 	if err != nil {
 		return err
 	}
 
-	normalize := false
 	streamSize := 10
-	vtgateExecutor = vtgate.NewExecutor(context.Background(), explainTopo, CELL, "", resolver, normalize, streamSize)
+	vtgateExecutor = vtgate.NewExecutor(context.Background(), explainTopo, CELL, "", resolver, opts.Normalize, streamSize)
 
 	return nil
 }
@@ -76,7 +76,7 @@ func newFakeResolver(hc discovery.HealthCheck, serv topo.SrvTopoServer, cell str
 	return vtgate.NewResolver(serv, cell, sc)
 }
 
-func buildTopology(vschemaStr string) error {
+func buildTopology(vschemaStr string, numShardsPerKeyspace int) error {
 	explainTopo.Lock.Lock()
 	defer explainTopo.Lock.Unlock()
 
@@ -90,7 +90,7 @@ func buildTopology(vschemaStr string) error {
 	for ks, vschema := range explainTopo.Keyspaces {
 		num_shards := 1
 		if vschema.Sharded {
-			num_shards = NUM_SHARDS
+			num_shards = numShardsPerKeyspace
 		}
 		for i := 0; i < num_shards; i++ {
 			kr, err := key.EvenShardsKeyRange(i, num_shards)

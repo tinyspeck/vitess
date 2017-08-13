@@ -23,12 +23,9 @@ package vtexplain
 //
 // Add full grammar support for CREATE TABLE
 //   - reserved vs non-reserved keywords
-//   - enum type support
-//   - partitioned tables
-//   - length on index columns
 // For DML queries handle comments to indicate whether rows exist or not
 // Human-friendly and json output modes
-// Options for RBR/SBR, 2PC transactions, autocommit, etc
+// Fix TabletQuery to pre-render BindVariables
 
 import (
 	"encoding/json"
@@ -42,6 +39,19 @@ import (
 
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
 )
+
+// Options to control the explain process
+type Options struct {
+	// NumShards indicates the number of shards in the topology
+	NumShards int
+
+	// ReplicationMode must be set to either "ROW" or "STATEMENT" before
+	// initialization
+	ReplicationMode string
+
+	// Normalize controls whether or not vtgate does query normalization
+	Normalize bool
+}
 
 type TabletQuery struct {
 	// Sql command sent to the given tablet
@@ -83,20 +93,18 @@ type Plan struct {
 	TabletQueries map[string][]*TabletQuery
 }
 
-var executeOptions = &querypb.ExecuteOptions{
-	IncludedFields: querypb.ExecuteOptions_TYPE_ONLY,
-}
-
 const (
 	CELL = "explainCell"
-
-	// currently we only use two shards -- maybe make this parameterizable?
-	NUM_SHARDS = 2
 )
 
 // Sets up the fake execution environment
-func Init(vSchemaStr, sqlSchema string) error {
-	err := initVtgateExecutor(vSchemaStr)
+func Init(vSchemaStr, sqlSchema string, opts *Options) error {
+	// Verify options
+	if opts.ReplicationMode != "ROW" && opts.ReplicationMode != "STATEMENT" {
+		return fmt.Errorf("invalid replication mode \"%s\"", opts.ReplicationMode)
+	}
+
+	err := initVtgateExecutor(vSchemaStr, opts)
 	if err != nil {
 		return fmt.Errorf("initVtgateExecutor: %v", err)
 	}
@@ -106,7 +114,7 @@ func Init(vSchemaStr, sqlSchema string) error {
 		return fmt.Errorf("parseSchema: %v", err)
 	}
 
-	err = initTabletEnvironment(parsedDDLs)
+	err = initTabletEnvironment(parsedDDLs, opts)
 	if err != nil {
 		return fmt.Errorf("initTabletEnvironment: %v", err)
 	}
