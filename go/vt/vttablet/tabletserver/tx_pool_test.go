@@ -28,7 +28,9 @@ import (
 	"github.com/youtube/vitess/go/mysql"
 	"github.com/youtube/vitess/go/mysql/fakesqldb"
 	"github.com/youtube/vitess/go/sqltypes"
+	"github.com/youtube/vitess/go/vt/callerid"
 	"github.com/youtube/vitess/go/vt/vterrors"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
 	vtrpcpb "github.com/youtube/vitess/go/vt/proto/vtrpc"
@@ -43,7 +45,7 @@ func TestTxPoolExecuteRollback(t *testing.T) {
 	db.AddQuery("rollback", &sqltypes.Result{})
 
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 	transactionID, err := txPool.Begin(ctx, false)
@@ -70,7 +72,7 @@ func TestTxPoolRollbackNonBusy(t *testing.T) {
 	db.AddQuery("rollback", &sqltypes.Result{})
 
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 	txid1, err := txPool.Begin(ctx, false)
@@ -108,7 +110,7 @@ func TestTxPoolTransactionKiller(t *testing.T) {
 	txPool := newTxPool()
 	// make sure transaction killer will run frequent enough
 	txPool.SetTimeout(1 * time.Millisecond)
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 	killCount := tabletenv.KillStats.Counts()["Transactions"]
@@ -130,12 +132,98 @@ func TestTxPoolTransactionKiller(t *testing.T) {
 	}
 }
 
+func TestTxPoolAddDebug(t *testing.T) {
+	db := fakesqldb.New(t)
+	defer db.Close()
+	db.AddQuery("begin", &sqltypes.Result{})
+	txPool := newTxPool()
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
+	ctx := context.Background()
+
+	startNormalSize := txPool.conns.Available()
+	startFoundRowsSize := txPool.foundRowsPool.Available()
+	startAppDebugSize := txPool.debugConns.Available()
+
+	// Start a 'normal' transaction. It should take a connection
+	// for the normal 'conns' pool.
+	id1, err := txPool.Begin(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := txPool.conns.Available(), startNormalSize-1; got != want {
+		t.Errorf("Normal pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.foundRowsPool.Available(), startFoundRowsSize; got != want {
+		t.Errorf("foundRows pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.debugConns.Available(), startAppDebugSize; got != want {
+		t.Errorf("debugConns pool size: %d, want %d", got, want)
+	}
+
+	// Start a 'appDebug' transaction. It should take a connection
+	// from the appDebug pool.
+
+	im := callerid.NewImmediateCallerID("debugUsername")
+	ecid := callerid.NewEffectiveCallerID("p", "c", "sc")
+	newCtx := callerid.NewContext(ctx, ecid, im)
+	newCtx = debuguserinfo.SetUseAppDebug(newCtx, "debugUsername")
+	id2, err := txPool.Begin(newCtx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := txPool.conns.Available(), startNormalSize-1; got != want {
+		t.Errorf("Normal pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.foundRowsPool.Available(), startFoundRowsSize; got != want {
+		t.Errorf("foundRows pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.debugConns.Available(), startAppDebugSize-1; got != want {
+		t.Errorf("debugConns pool size: %d, want %d", got, want)
+	}
+
+	// Rollback the first transaction. The conn should be returned to
+	// the conns pool.
+	txPool.Rollback(ctx, id1)
+	if got, want := txPool.conns.Available(), startNormalSize; got != want {
+		t.Errorf("Normal pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.foundRowsPool.Available(), startFoundRowsSize; got != want {
+		t.Errorf("foundRows pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.debugConns.Available(), startAppDebugSize-1; got != want {
+		t.Errorf("debugConns pool size: %d, want %d", got, want)
+	}
+
+	// Rollback the second transaction. The conn should be returned to
+	// the foundRows pool.
+	txPool.Rollback(ctx, id2)
+	if got, want := txPool.conns.Available(), startNormalSize; got != want {
+		t.Errorf("Normal pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.foundRowsPool.Available(), startFoundRowsSize; got != want {
+		t.Errorf("foundRows pool size: %d, want %d", got, want)
+	}
+	if got, want := txPool.debugConns.Available(), startAppDebugSize; got != want {
+		t.Errorf("debugConns pool size: %d, want %d", got, want)
+	}
+
+	// It can't use foundRows and appDebug simultaneously
+
+	want := "unsupported: can not use"
+
+	_, err = txPool.Begin(newCtx, true)
+
+	if err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("Error: %v, want prefix %s", err, want)
+	}
+}
+
 func TestTxPoolClientRowsFound(t *testing.T) {
 	db := fakesqldb.New(t)
 	defer db.Close()
 	db.AddQuery("begin", &sqltypes.Result{})
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	ctx := context.Background()
 
 	startNormalSize := txPool.conns.Available()
@@ -280,7 +368,7 @@ func primeTxPoolWithConnection(t *testing.T) (*fakesqldb.DB, *TxPool, error) {
 	txPool := newTxPool()
 	// Set the capacity to 1 to ensure that the db connection is reused.
 	txPool.conns.SetCapacity(1)
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 
 	// Run a query to trigger a database connection. That connection will be
 	// reused by subsequent transactions.
@@ -301,7 +389,7 @@ func TestTxPoolBeginWithError(t *testing.T) {
 	defer db.Close()
 	db.AddRejectedQuery("begin", errRejected)
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 	_, err := txPool.Begin(ctx, false)
@@ -323,7 +411,7 @@ func TestTxPoolRollbackFail(t *testing.T) {
 	db.AddRejectedQuery("rollback", errRejected)
 
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 	transactionID, err := txPool.Begin(ctx, false)
@@ -351,7 +439,7 @@ func TestTxPoolGetConnNonExistentTransaction(t *testing.T) {
 	db := fakesqldb.New(t)
 	defer db.Close()
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	_, err := txPool.Get(12345, "for query")
 	want := "transaction 12345: not found"
@@ -366,7 +454,7 @@ func TestTxPoolExecFailDueToConnFail_Errno2006(t *testing.T) {
 	db.AddQuery("begin", &sqltypes.Result{})
 
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 
@@ -404,7 +492,7 @@ func TestTxPoolExecFailDueToConnFail_Errno2013(t *testing.T) {
 	db.AddQuery("begin", &sqltypes.Result{})
 
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 	defer txPool.Close()
 	ctx := context.Background()
 
@@ -437,7 +525,7 @@ func TestTxPoolCloseKillsStrayTransactions(t *testing.T) {
 	db.AddQuery("begin", &sqltypes.Result{})
 
 	txPool := newTxPool()
-	txPool.Open(db.ConnParams(), db.ConnParams())
+	txPool.Open(db.ConnParams(), db.ConnParams(), db.ConnParams())
 
 	// Start stray transaction.
 	_, err := txPool.Begin(context.Background(), false)
@@ -463,6 +551,7 @@ func newTxPool() *TxPool {
 	idleTimeout := time.Duration(30 * time.Second)
 	return NewTxPool(
 		poolName,
+		transactionCap,
 		transactionCap,
 		transactionCap,
 		transactionTimeout,

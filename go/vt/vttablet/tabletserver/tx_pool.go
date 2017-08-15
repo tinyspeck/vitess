@@ -35,6 +35,7 @@ import (
 	"github.com/youtube/vitess/go/vt/callerid"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/connpool"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/messager"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
@@ -63,6 +64,8 @@ type TxPool struct {
 	// conns is the 'regular' pool. By default, connections
 	// are pulled from here for starting transactions.
 	conns *connpool.Pool
+	// debugConns is a pool that gets used when CallerID is app-debug user
+	debugConns *connpool.Pool
 	// foundRowsPool is the alternate pool that creates
 	// connections with CLIENT_FOUND_ROWS flag set. A separate
 	// pool is needed because this option can only be set at
@@ -82,12 +85,14 @@ type TxPool struct {
 func NewTxPool(
 	prefix string,
 	capacity int,
+	appDebugCapacity int,
 	foundRowsCapacity int,
 	timeout time.Duration,
 	idleTimeout time.Duration,
 	checker connpool.MySQLChecker) *TxPool {
 	axp := &TxPool{
 		conns:         connpool.New(prefix+"TransactionPool", capacity, idleTimeout, checker),
+		debugConns:    connpool.New(prefix+"DebugTransactionPool", appDebugCapacity, idleTimeout, checker),
 		foundRowsPool: connpool.New(prefix+"FoundRowsPool", foundRowsCapacity, idleTimeout, checker),
 		activePool:    pools.NewNumbered(),
 		lastID:        sync2.NewAtomicInt64(time.Now().UnixNano()),
@@ -105,9 +110,10 @@ func NewTxPool(
 
 // Open makes the TxPool operational. This also starts the transaction killer
 // that will kill long-running transactions.
-func (axp *TxPool) Open(appParams, dbaParams *mysql.ConnParams) {
+func (axp *TxPool) Open(appParams, appDebugParams, dbaParams *mysql.ConnParams) {
 	log.Infof("Starting transaction id: %d", axp.lastID)
 	axp.conns.Open(appParams, dbaParams)
+	axp.debugConns.Open(appDebugParams, dbaParams)
 	foundRowsParam := *appParams
 	foundRowsParam.EnableClientFoundRows()
 	axp.foundRowsPool.Open(&foundRowsParam, dbaParams)
@@ -167,7 +173,12 @@ func (axp *TxPool) WaitForEmpty() {
 func (axp *TxPool) Begin(ctx context.Context, useFoundRows bool) (int64, error) {
 	var conn *connpool.DBConn
 	var err error
-	if useFoundRows {
+	useAppDebug := debuguserinfo.GetUseAppDebug(ctx)
+	if useAppDebug && useFoundRows {
+		err = vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: can not use useFoundRows and useAppDebug simultaneously")
+	} else if useAppDebug {
+		conn, err = axp.debugConns.Get(ctx)
+	} else if useFoundRows {
 		conn, err = axp.foundRowsPool.Get(ctx)
 	} else {
 		conn, err = axp.conns.Get(ctx)

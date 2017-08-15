@@ -48,6 +48,7 @@ import (
 	"github.com/youtube/vitess/go/vt/vttablet/heartbeat"
 	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/connpool"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/messager"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/planbuilder"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/querytypes"
@@ -158,6 +159,10 @@ type TabletServer struct {
 
 	// alias is used for identifying this tabletserver in healthcheck responses.
 	alias topodatapb.TabletAlias
+
+	// User that will identify the debug user. When present in the CallerID, the debug conn pool
+	// will be used to talk to MySQL
+	appDebugUsername string
 }
 
 // RegisterFunction is a callback type to be called when we
@@ -195,6 +200,7 @@ func NewTabletServer(config tabletenv.TabletConfig, topoServer topo.Server, alia
 		history:                history.New(10),
 		topoServer:             topoServer,
 		alias:                  alias,
+		appDebugUsername:       config.AppDebugUsername,
 	}
 	tsv.se = schema.NewEngine(tsv, config)
 	tsv.qe = NewQueryEngine(tsv, tsv.se, config)
@@ -653,7 +659,8 @@ func (tsv *TabletServer) Begin(ctx context.Context, target *querypb.Target, opti
 				// TODO(erez): I think this should be RESOURCE_EXHAUSTED.
 				return vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "Transaction throttled")
 			}
-			transactionID, err = tsv.te.txPool.Begin(ctx, options.GetClientFoundRows())
+			newCtx := debuguserinfo.SetUseAppDebug(ctx, tsv.appDebugUsername)
+			transactionID, err = tsv.te.txPool.Begin(newCtx, options.GetClientFoundRows())
 			logStats.TransactionID = transactionID
 			return err
 		},
@@ -1456,7 +1463,8 @@ func newSplitQuerySQLExecuter(
 		queryExecutor: queryExecutor,
 	}
 	var err error
-	result.conn, err = queryExecutor.getConn(queryExecutor.tsv.qe.conns)
+	pool := queryExecutor.getAppConnPool()
+	result.conn, err = queryExecutor.getConn(pool)
 	if err != nil {
 		return nil, err
 	}

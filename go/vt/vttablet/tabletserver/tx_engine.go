@@ -53,6 +53,7 @@ func NewTxEngine(checker connpool.MySQLChecker, config tabletenv.TabletConfig) *
 	te.txPool = NewTxPool(
 		config.PoolNamePrefix,
 		config.TransactionCap,
+		config.AppDebugPoolSize,
 		config.FoundRowsPoolSize,
 		time.Duration(config.TransactionTimeout*1e9),
 		time.Duration(config.IdleTimeout*1e9),
@@ -104,7 +105,7 @@ func (te *TxEngine) Open(dbconfigs dbconfigs.DBConfigs) {
 	if te.isOpen {
 		return
 	}
-	te.txPool.Open(&dbconfigs.App, &dbconfigs.Dba)
+	te.txPool.Open(&dbconfigs.App, &dbconfigs.AppDebug, &dbconfigs.Dba)
 	if !te.twopcEnabled {
 		te.isOpen = true
 		return

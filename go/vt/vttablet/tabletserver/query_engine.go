@@ -118,6 +118,7 @@ type QueryEngine struct {
 
 	// Pools
 	conns       *connpool.Pool
+	debugConns  *connpool.Pool
 	streamConns *connpool.Pool
 
 	// Services
@@ -168,6 +169,12 @@ func NewQueryEngine(checker connpool.MySQLChecker, se *schema.Engine, config tab
 	qe.conns = connpool.New(
 		config.PoolNamePrefix+"ConnPool",
 		config.PoolSize,
+		time.Duration(config.IdleTimeout*1e9),
+		checker,
+	)
+	qe.debugConns = connpool.New(
+		config.PoolNamePrefix+"DebugConnPool",
+		config.AppDebugPoolSize,
 		time.Duration(config.IdleTimeout*1e9),
 		checker,
 	)
@@ -259,6 +266,7 @@ func (qe *QueryEngine) Open(dbconfigs dbconfigs.DBConfigs) error {
 		return err
 	}
 
+	qe.debugConns.Open(&qe.dbconfigs.AppDebug, &qe.dbconfigs.Dba)
 	qe.streamConns.Open(&qe.dbconfigs.App, &qe.dbconfigs.Dba)
 	qe.se.RegisterNotifier("qe", qe.schemaChanged)
 	return nil
@@ -273,6 +281,7 @@ func (qe *QueryEngine) Close() {
 	qe.queries.Clear()
 	qe.tables = make(map[string]*schema.Table)
 	qe.streamConns.Close()
+	qe.debugConns.Close()
 	qe.conns.Close()
 }
 

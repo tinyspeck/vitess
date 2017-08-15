@@ -34,6 +34,7 @@ import (
 	"github.com/youtube/vitess/go/vt/tableacl"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/connpool"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/debuguserinfo"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/messager"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/planbuilder"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/rules"
@@ -135,7 +136,8 @@ func (qre *QueryExecutor) Execute() (reply *sqltypes.Result, err error) {
 		case planbuilder.PlanSet:
 			return qre.execSet()
 		case planbuilder.PlanOtherRead:
-			conn, connErr := qre.getConn(qre.tsv.qe.conns)
+			pool := qre.getAppConnPool()
+			conn, connErr := qre.getConn(pool)
 			if connErr != nil {
 				return nil, connErr
 			}
@@ -205,7 +207,8 @@ func (qre *QueryExecutor) execDmlAutoCommit() (reply *sqltypes.Result, err error
 }
 
 func (qre *QueryExecutor) execAsTransaction(f func(conn *TxConnection) (*sqltypes.Result, error)) (reply *sqltypes.Result, err error) {
-	conn, err := qre.tsv.te.txPool.LocalBegin(qre.ctx, qre.options.GetClientFoundRows())
+	newCtx := debuguserinfo.SetUseAppDebug(qre.ctx, qre.tsv.appDebugUsername)
+	conn, err := qre.tsv.te.txPool.LocalBegin(newCtx, qre.options.GetClientFoundRows())
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +441,8 @@ func (qre *QueryExecutor) execSelect() (*sqltypes.Result, error) {
 		newResult.Fields = qre.plan.Fields
 		return &newResult, nil
 	}
-	conn, err := qre.getConn(qre.tsv.qe.conns)
+	pool := qre.getAppConnPool()
+	conn, err := qre.getConn(pool)
 	if err != nil {
 		return nil, err
 	}
@@ -634,12 +638,23 @@ func (qre *QueryExecutor) execDMLPKRows(conn *TxConnection, query *sqlparser.Par
 }
 
 func (qre *QueryExecutor) execSet() (*sqltypes.Result, error) {
-	conn, err := qre.getConn(qre.tsv.qe.conns)
+	pool := qre.getAppConnPool()
+	conn, err := qre.getConn(pool)
 	if err != nil {
 		return nil, err
+	} else {
+		defer conn.Recycle()
+		return qre.dbConnFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, false)
 	}
-	defer conn.Recycle()
-	return qre.dbConnFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, false)
+}
+
+func (qre *QueryExecutor) getAppConnPool() (pool *connpool.Pool) {
+	if debuguserinfo.IsCallerIDAppDebug(qre.ctx, qre.tsv.appDebugUsername) {
+		pool = qre.tsv.qe.debugConns
+	} else {
+		pool = qre.tsv.qe.conns
+	}
+	return pool
 }
 
 func (qre *QueryExecutor) getConn(pool *connpool.Pool) (*connpool.DBConn, error) {
@@ -668,7 +683,8 @@ func (qre *QueryExecutor) qFetch(logStats *tabletenv.LogStats, parsedQuery *sqlp
 	if ok {
 		defer q.Broadcast()
 		waitingForConnectionStart := time.Now()
-		conn, err := qre.tsv.qe.conns.Get(qre.ctx)
+		pool := qre.getAppConnPool()
+		conn, err := qre.getConn(pool)
 		logStats.WaitingForConnection += time.Now().Sub(waitingForConnectionStart)
 		if err != nil {
 			q.Err = err
