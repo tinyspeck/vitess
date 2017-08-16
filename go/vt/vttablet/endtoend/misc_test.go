@@ -644,8 +644,6 @@ func TestAppDebugRequest(t *testing.T) {
 		&vtrpcpb.CallerID{},
 		&querypb.VTGateCallerID{Username: "dev"})
 
-	defer client.SetCtx(ctx)
-
 	// Set vt_appdebug
 	ctx = callerid.NewContext(
 		context.Background(),
