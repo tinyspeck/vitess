@@ -170,12 +170,14 @@ func NewQueryEngine(checker connpool.MySQLChecker, se *schema.Engine, config tab
 		config.PoolSize,
 		time.Duration(config.IdleTimeout*1e9),
 		checker,
+		config.AppDebugUsername,
 	)
 	qe.streamConns = connpool.New(
 		config.PoolNamePrefix+"StreamConnPool",
 		config.StreamPoolSize,
 		time.Duration(config.IdleTimeout*1e9),
 		checker,
+		config.AppDebugUsername,
 	)
 
 	qe.consolidator = sync2.NewConsolidator()
@@ -244,7 +246,7 @@ func NewQueryEngine(checker connpool.MySQLChecker, se *schema.Engine, config tab
 // Open must be called before sending requests to QueryEngine.
 func (qe *QueryEngine) Open(dbconfigs dbconfigs.DBConfigs) error {
 	qe.dbconfigs = dbconfigs
-	qe.conns.Open(&qe.dbconfigs.App, &qe.dbconfigs.Dba)
+	qe.conns.Open(&qe.dbconfigs.App, &qe.dbconfigs.Dba, &qe.dbconfigs.AppDebug)
 
 	conn, err := qe.conns.Get(tabletenv.LocalContext())
 	if err != nil {
@@ -259,7 +261,7 @@ func (qe *QueryEngine) Open(dbconfigs dbconfigs.DBConfigs) error {
 		return err
 	}
 
-	qe.streamConns.Open(&qe.dbconfigs.App, &qe.dbconfigs.Dba)
+	qe.streamConns.Open(&qe.dbconfigs.App, &qe.dbconfigs.Dba, &qe.dbconfigs.AppDebug)
 	qe.se.RegisterNotifier("qe", qe.schemaChanged)
 	return nil
 }
