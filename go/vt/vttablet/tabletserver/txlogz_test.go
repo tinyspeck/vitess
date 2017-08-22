@@ -32,6 +32,14 @@ func testHandler(req *http.Request, t *testing.T) {
 	response := httptest.NewRecorder()
 	tabletenv.TxLogger.Send("test msg")
 	txlogzHandler(response, req)
+
+	if !strings.Contains(response.Body.String(), "Redacted") {
+		t.Fatalf("should have been redacted")
+	}
+
+	// skip the rest of the test since it is now always redacted
+	return
+
 	if !strings.Contains(response.Body.String(), "error") {
 		t.Fatalf("should show an error page since transaction log format is invalid.")
 	}
