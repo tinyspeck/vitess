@@ -466,6 +466,9 @@ func (tsv *TabletServer) serveNewType() (err error) {
 		tsv.te.Close(true)
 		tsv.watcher.Open(tsv.dbconfigs, tsv.mysqld)
 		tsv.txThrottler.Close()
+
+		// Reset the sequences.
+		tsv.se.MakeNonMaster()
 	}
 	tsv.transition(StateServing)
 	return nil
@@ -554,19 +557,27 @@ func (tsv *TabletServer) setTimeBomb() chan struct{} {
 	return done
 }
 
-// IsHealthy returns nil if the query service is healthy (able to
-// connect to the database and serving traffic) or an error explaining
+// IsHealthy returns nil for non-serving types or if the query service is healthy (able to
+// connect to the database and serving traffic), or an error explaining
 // the unhealthiness otherwise.
 func (tsv *TabletServer) IsHealthy() error {
-	_, err := tsv.Execute(
-		tabletenv.LocalContext(),
-		nil,
-		"select 1 from dual",
-		nil,
-		0,
-		nil,
-	)
-	return err
+	tsv.mu.Lock()
+	tabletType := tsv.target.TabletType
+	tsv.mu.Unlock()
+	switch tabletType {
+	case topodatapb.TabletType_MASTER, topodatapb.TabletType_REPLICA, topodatapb.TabletType_BATCH, topodatapb.TabletType_EXPERIMENTAL:
+		_, err := tsv.Execute(
+			tabletenv.LocalContext(),
+			nil,
+			"/* health */ select 1 from dual",
+			nil,
+			0,
+			nil,
+		)
+		return err
+	default:
+		return nil
+	}
 }
 
 // CheckMySQL initiates a check to see if MySQL is reachable.
@@ -849,7 +860,7 @@ func (tsv *TabletServer) Execute(ctx context.Context, target *querypb.Target, sq
 				bindVariables = make(map[string]*querypb.BindVariable)
 			}
 			query, comments := sqlparser.SplitTrailingComments(sql)
-			plan, err := tsv.qe.GetPlan(ctx, logStats, query)
+			plan, err := tsv.qe.GetPlan(ctx, logStats, query, skipQueryPlanCache(options))
 			if err != nil {
 				return err
 			}
@@ -921,7 +932,28 @@ func (tsv *TabletServer) ExecuteBatch(ctx context.Context, target *querypb.Targe
 		return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "cannot start a new transaction in the scope of an existing one")
 	}
 
+	if tsv.enableHotRowProtection && asTransaction && len(queries) == 1 {
+		// Serialize transactions which target the same hot row range.
+		// NOTE: We put this intentionally at this place *before* tsv.startRequest()
+		// gets called below. Otherwise, the startRequest()/endRequest() section from
+		// below would overlap with the startRequest()/endRequest() section executed
+		// by tsv.beginWaitForSameRangeTransactions().
+		txDone, err := tsv.beginWaitForSameRangeTransactions(ctx, target, options, queries[0].Sql, queries[0].BindVariables)
+		if err != nil {
+			return nil, err
+		}
+		if txDone != nil {
+			defer txDone()
+		}
+	}
+
 	allowOnShutdown := (transactionID != 0)
+	// TODO(sougou): Convert startRequest/endRequest pattern to use wrapper
+	// function tsv.execRequest() instead.
+	// Note that below we always return "err" right away and do not call
+	// tsv.convertAndLogError. That's because the methods which returned "err",
+	// e.g. tsv.Execute(), already called that function and therefore already
+	// converted and logged the error.
 	if err = tsv.startRequest(ctx, target, false, allowOnShutdown); err != nil {
 		return nil, err
 	}
@@ -931,7 +963,7 @@ func (tsv *TabletServer) ExecuteBatch(ctx context.Context, target *querypb.Targe
 	if asTransaction {
 		transactionID, err = tsv.Begin(ctx, target, options)
 		if err != nil {
-			return nil, tsv.convertAndLogError(ctx, "batch", nil, err, nil)
+			return nil, err
 		}
 		// If transaction was not committed by the end, it means
 		// that there was an error, roll it back.
@@ -945,14 +977,14 @@ func (tsv *TabletServer) ExecuteBatch(ctx context.Context, target *querypb.Targe
 	for _, bound := range queries {
 		localReply, err := tsv.Execute(ctx, target, bound.Sql, bound.BindVariables, transactionID, options)
 		if err != nil {
-			return nil, tsv.convertAndLogError(ctx, "batch", nil, err, nil)
+			return nil, err
 		}
 		results = append(results, *localReply)
 	}
 	if asTransaction {
 		if err = tsv.Commit(ctx, target, transactionID); err != nil {
 			transactionID = 0
-			return nil, tsv.convertAndLogError(ctx, "batch", nil, err, nil)
+			return nil, err
 		}
 		transactionID = 0
 	}
@@ -1027,7 +1059,7 @@ func (tsv *TabletServer) beginWaitForSameRangeTransactions(ctx context.Context, 
 func (tsv *TabletServer) computeTxSerializerKey(ctx context.Context, logStats *tabletenv.LogStats, sql string, bindVariables map[string]*querypb.BindVariable) (string, string) {
 	// Strip trailing comments so we don't pollute the query cache.
 	sql, _ = sqlparser.SplitTrailingComments(sql)
-	plan, err := tsv.qe.GetPlan(ctx, logStats, sql)
+	plan, err := tsv.qe.GetPlan(ctx, logStats, sql, false /* skipQueryPlanCache */)
 	if err != nil {
 		logComputeRowSerializerKey.Errorf("failed to get plan for query: %v err: %v", sql, err)
 		return "", ""
@@ -1057,6 +1089,8 @@ func (tsv *TabletServer) computeTxSerializerKey(ctx context.Context, logStats *t
 
 // BeginExecuteBatch combines Begin and ExecuteBatch.
 func (tsv *TabletServer) BeginExecuteBatch(ctx context.Context, target *querypb.Target, queries []*querypb.BoundQuery, asTransaction bool, options *querypb.ExecuteOptions) ([]sqltypes.Result, int64, error) {
+	// TODO(mberlin): Integrate hot row protection here as we did for BeginExecute()
+	// and ExecuteBatch(asTransaction=true).
 	transactionID, err := tsv.Begin(ctx, target, options)
 	if err != nil {
 		return nil, 0, err
@@ -1283,83 +1317,27 @@ func (tsv *TabletServer) convertAndLogError(ctx context.Context, sql string, bin
 	if err == nil {
 		return nil
 	}
-	err = tsv.convertError(ctx, sql, bindVariables, err)
 
-	if logStats != nil {
-		logStats.Error = err
-	}
-	errCode := vterrors.Code(err)
+	errCode := tsv.convertErrorCode(err)
 	tabletenv.ErrorStats.Add(errCode.String(), 1)
 
-	logMethod := log.Errorf
+	logMethod := tabletenv.Errorf
 	// Suppress or demote some errors in logs.
 	switch errCode {
 	case vtrpcpb.Code_FAILED_PRECONDITION, vtrpcpb.Code_ALREADY_EXISTS:
-		return err
+		logMethod = nil
 	case vtrpcpb.Code_RESOURCE_EXHAUSTED:
 		logMethod = logTxPoolFull.Errorf
 	case vtrpcpb.Code_ABORTED:
-		logMethod = log.Warningf
+		logMethod = tabletenv.Warningf
 	case vtrpcpb.Code_INVALID_ARGUMENT, vtrpcpb.Code_DEADLINE_EXCEEDED:
-		logMethod = log.Infof
-	}
-	logMethod("%v: %v", err, queryAsString(sql, bindVariables))
-	return err
-}
-
-func formatErrorWithCallerID(ctx context.Context, err error) error {
-	if err == nil {
-		return nil
-	}
-	callerID := callerid.ImmediateCallerIDFromContext(ctx)
-	if callerID == nil {
-		return err
-	}
-	return vterrors.Errorf(vterrors.Code(err), "%v, CallerID: %s", err, callerID.Username)
-}
-
-func (tsv *TabletServer) convertError(ctx context.Context, sql string, bindVariables map[string]*querypb.BindVariable, err error) error {
-	sqlErr, ok := err.(*mysql.SQLError)
-	if !ok {
-		return formatErrorWithCallerID(ctx, err)
+		logMethod = tabletenv.Infof
 	}
 
-	errCode := vterrors.Code(err)
-	errstr := err.Error()
-	errnum := sqlErr.Number()
-	sqlState := sqlErr.SQLState()
-	switch errnum {
-	case mysql.EROptionPreventsStatement:
-		// Special-case this error code. It's probably because
-		// there was a failover and there are old clients still connected.
-		if strings.Contains(errstr, "read-only") {
-			errCode = vtrpcpb.Code_FAILED_PRECONDITION
-		}
-	case 1227: // Google internal failover error code.
-		if strings.Contains(errstr, "failover in progress") {
-			errCode = vtrpcpb.Code_FAILED_PRECONDITION
-		}
-	case mysql.ERDupEntry:
-		errCode = vtrpcpb.Code_ALREADY_EXISTS
-	case mysql.ERDataTooLong, mysql.ERDataOutOfRange, mysql.ERBadNullError, mysql.ERSyntaxError, mysql.ERUpdateTableUsed, mysql.ERTooBigSet,
-		mysql.ERWrongDbName, mysql.ERWrongTableName, mysql.ERInvalidGroupFuncUse, mysql.ERTooManyFields, mysql.ERTooManyTables,
-		mysql.ERTableNameNotAllowedHere, mysql.ERDerivedMustHaveAlias, mysql.ERIllegalReference, mysql.ERCyclicReference, mysql.ERTruncatedWrongValueForField:
-		errCode = vtrpcpb.Code_INVALID_ARGUMENT
-	case mysql.ERLockWaitTimeout:
-		errCode = vtrpcpb.Code_DEADLINE_EXCEEDED
-	case mysql.ERLockDeadlock:
-		// A deadlock rolls back the transaction.
-		errCode = vtrpcpb.Code_ABORTED
-	case mysql.CRServerLost:
-		// Query was killed.
-		errCode = vtrpcpb.Code_DEADLINE_EXCEEDED
-	case mysql.CRServerGone, mysql.ERServerShutdown:
-		errCode = vtrpcpb.Code_UNAVAILABLE
-	case mysql.ERBadFieldError, mysql.ERUnknownTable, mysql.ERNoSuchTable:
-		errCode = vtrpcpb.Code_NOT_FOUND
-	case mysql.ERNoReferencedRow, mysql.ErNoReferencedRow2, mysql.ERRowIsReferenced, mysql.ERRowIsReferenced2, mysql.ERTableNotLockedForWrite,
-		mysql.ERSubqueryNo1Row, mysql.EROperandColumns, mysql.ERCantDoThisDuringAnTransaction:
-		errCode = vtrpcpb.Code_FAILED_PRECONDITION
+	origErr := err
+	err = formatErrorWithCallerID(ctx, vterrors.New(errCode, err.Error()))
+	if logMethod != nil {
+		logMethod("%v: %v", err, queryAsString(sql, bindVariables))
 	}
 
 	// If TerseErrors is on, strip the error message returned by MySQL and only
@@ -1374,9 +1352,105 @@ func (tsv *TabletServer) convertError(ctx context.Context, sql string, bindVaria
 	// If so, we don't want to suppress the error. This will allow VTGate to
 	// detect and perform buffering during failovers.
 	if tsv.TerseErrors && len(bindVariables) != 0 && errCode != vtrpcpb.Code_FAILED_PRECONDITION {
-		errstr = fmt.Sprintf("(errno %d) (sqlstate %s) during query: %s", errnum, sqlState, sqlparser.TruncateForLog(sql))
+		sqlErr, ok := origErr.(*mysql.SQLError)
+		if ok {
+			sqlState := sqlErr.SQLState()
+			errnum := sqlErr.Number()
+			err = vterrors.Errorf(errCode, "(errno %d) (sqlstate %s) during query: %s", errnum, sqlState, sqlparser.TruncateForLog(sql))
+			err = formatErrorWithCallerID(ctx, err)
+		}
 	}
-	return formatErrorWithCallerID(ctx, vterrors.New(errCode, errstr))
+
+	if logStats != nil {
+		logStats.Error = err
+	}
+
+	return err
+}
+
+func formatErrorWithCallerID(ctx context.Context, err error) error {
+	if err == nil {
+		return nil
+	}
+	callerID := callerid.ImmediateCallerIDFromContext(ctx)
+	if callerID == nil {
+		return err
+	}
+	return vterrors.Errorf(vterrors.Code(err), "%v, CallerID: %s", err, callerID.Username)
+}
+
+func (tsv *TabletServer) convertErrorCode(err error) vtrpcpb.Code {
+	errCode := vterrors.Code(err)
+	sqlErr, ok := err.(*mysql.SQLError)
+	if !ok {
+		return errCode
+	}
+
+	errstr := err.Error()
+	errnum := sqlErr.Number()
+	switch errnum {
+	case mysql.ERNotSupportedYet:
+		errCode = vtrpcpb.Code_UNIMPLEMENTED
+	case mysql.ERDiskFull, mysql.EROutOfMemory, mysql.EROutOfSortMemory, mysql.ERConCount, mysql.EROutOfResources, mysql.ERRecordFileFull, mysql.ERHostIsBlocked,
+		mysql.ERCantCreateThread, mysql.ERTooManyDelayedThreads, mysql.ERNetPacketTooLarge, mysql.ERTooManyUserConnections, mysql.ERLockTableFull, mysql.ERUserLimitReached, mysql.ERVitessMaxRowsExceeded:
+		errCode = vtrpcpb.Code_RESOURCE_EXHAUSTED
+	case mysql.ERLockWaitTimeout:
+		errCode = vtrpcpb.Code_DEADLINE_EXCEEDED
+	case mysql.CRServerGone, mysql.ERServerShutdown:
+		errCode = vtrpcpb.Code_UNAVAILABLE
+	case mysql.ERFormNotFound, mysql.ERKeyNotFound, mysql.ERBadFieldError, mysql.ERNoSuchThread, mysql.ERUnknownTable, mysql.ERCantFindUDF, mysql.ERNonExistingGrant,
+		mysql.ERNoSuchTable, mysql.ERNonExistingTableGrant, mysql.ERKeyDoesNotExist:
+		errCode = vtrpcpb.Code_NOT_FOUND
+	case mysql.ERDBAccessDenied, mysql.ERAccessDeniedError, mysql.ERKillDenied, mysql.ERNoPermissionToCreateUsers:
+		errCode = vtrpcpb.Code_PERMISSION_DENIED
+	case mysql.ERNoDb, mysql.ERNoSuchIndex, mysql.ERCantDropFieldOrKey, mysql.ERTableNotLockedForWrite, mysql.ERTableNotLocked, mysql.ERTooBigSelect, mysql.ERNotAllowedCommand,
+		mysql.ERTooLongString, mysql.ERDelayedInsertTableLocked, mysql.ERDupUnique, mysql.ERRequiresPrimaryKey, mysql.ERCantDoThisDuringAnTransaction, mysql.ERReadOnlyTransaction,
+		mysql.ERCannotAddForeign, mysql.ERNoReferencedRow, mysql.ERRowIsReferenced, mysql.ERCantUpdateWithReadLock, mysql.ERNoDefault, mysql.EROperandColumns,
+		mysql.ERSubqueryNo1Row, mysql.ERNonUpdateableTable, mysql.ERFeatureDisabled, mysql.ERDuplicatedValueInType, mysql.ERRowIsReferenced2,
+		mysql.ErNoReferencedRow2:
+		errCode = vtrpcpb.Code_FAILED_PRECONDITION
+	case mysql.EROptionPreventsStatement:
+		// Special-case this error code. It's probably because
+		// there was a failover and there are old clients still connected.
+		if strings.Contains(errstr, "read-only") {
+			errCode = vtrpcpb.Code_FAILED_PRECONDITION
+		}
+	case mysql.ERTableExists, mysql.ERDupEntry, mysql.ERFileExists, mysql.ERUDFExists:
+		errCode = vtrpcpb.Code_ALREADY_EXISTS
+	case mysql.ERGotSignal, mysql.ERForcingClose, mysql.ERAbortingConnection, mysql.ERLockDeadlock:
+		// For ERLockDeadlock, a deadlock rolls back the transaction.
+		errCode = vtrpcpb.Code_ABORTED
+	case mysql.ERUnknownComError, mysql.ERBadNullError, mysql.ERBadDb, mysql.ERBadTable, mysql.ERNonUniq, mysql.ERWrongFieldWithGroup, mysql.ERWrongGroupField,
+		mysql.ERWrongSumSelect, mysql.ERWrongValueCount, mysql.ERTooLongIdent, mysql.ERDupFieldName, mysql.ERDupKeyName, mysql.ERWrongFieldSpec, mysql.ERParseError,
+		mysql.EREmptyQuery, mysql.ERNonUniqTable, mysql.ERInvalidDefault, mysql.ERMultiplePriKey, mysql.ERTooManyKeys, mysql.ERTooManyKeyParts, mysql.ERTooLongKey,
+		mysql.ERKeyColumnDoesNotExist, mysql.ERBlobUsedAsKey, mysql.ERTooBigFieldLength, mysql.ERWrongAutoKey, mysql.ERWrongFieldTerminators, mysql.ERBlobsAndNoTerminated,
+		mysql.ERTextFileNotReadable, mysql.ERWrongSubKey, mysql.ERCantRemoveAllFields, mysql.ERUpdateTableUsed, mysql.ERNoTablesUsed, mysql.ERTooBigSet,
+		mysql.ERBlobCantHaveDefault, mysql.ERWrongDbName, mysql.ERWrongTableName, mysql.ERUnknownProcedure, mysql.ERWrongParamCountToProcedure,
+		mysql.ERWrongParametersToProcedure, mysql.ERFieldSpecifiedTwice, mysql.ERInvalidGroupFuncUse, mysql.ERTableMustHaveColumns, mysql.ERUnknownCharacterSet,
+		mysql.ERTooManyTables, mysql.ERTooManyFields, mysql.ERTooBigRowSize, mysql.ERWrongOuterJoin, mysql.ERNullColumnInIndex, mysql.ERFunctionNotDefined,
+		mysql.ERWrongValueCountOnRow, mysql.ERInvalidUseOfNull, mysql.ERRegexpError, mysql.ERMixOfGroupFuncAndFields, mysql.ERIllegalGrantForTable, mysql.ERSyntaxError,
+		mysql.ERWrongColumnName, mysql.ERWrongKeyColumn, mysql.ERBlobKeyWithoutLength, mysql.ERPrimaryCantHaveNull, mysql.ERTooManyRows, mysql.ERUnknownSystemVariable,
+		mysql.ERSetConstantsOnly, mysql.ERWrongArguments, mysql.ERWrongUsage, mysql.ERWrongNumberOfColumnsInSelect, mysql.ERDupArgument, mysql.ERLocalVariable,
+		mysql.ERGlobalVariable, mysql.ERWrongValueForVar, mysql.ERWrongTypeForVar, mysql.ERVarCantBeRead, mysql.ERCantUseOptionHere, mysql.ERIncorrectGlobalLocalVar,
+		mysql.ERWrongFKDef, mysql.ERKeyRefDoNotMatchTableRef, mysql.ERCyclicReference, mysql.ERCollationCharsetMismatch, mysql.ERCantAggregate2Collations,
+		mysql.ERCantAggregate3Collations, mysql.ERCantAggregateNCollations, mysql.ERVariableIsNotStruct, mysql.ERUnknownCollation, mysql.ERWrongNameForIndex,
+		mysql.ERWrongNameForCatalog, mysql.ERBadFTColumn, mysql.ERTruncatedWrongValue, mysql.ERTooMuchAutoTimestampCols, mysql.ERInvalidOnUpdate, mysql.ERUnknownTimeZone,
+		mysql.ERInvalidCharacterString, mysql.ERIllegalReference, mysql.ERDerivedMustHaveAlias, mysql.ERTableNameNotAllowedHere, mysql.ERDataTooLong, mysql.ERDataOutOfRange,
+		mysql.ERTruncatedWrongValueForField:
+		errCode = vtrpcpb.Code_INVALID_ARGUMENT
+	case mysql.ERSpecifiedAccessDenied:
+		// This code is also utilized for Google internal failover error code.
+		if strings.Contains(errstr, "failover in progress") {
+			errCode = vtrpcpb.Code_FAILED_PRECONDITION
+		} else {
+			errCode = vtrpcpb.Code_PERMISSION_DENIED
+		}
+	case mysql.CRServerLost:
+		// Query was killed.
+		errCode = vtrpcpb.Code_DEADLINE_EXCEEDED
+	}
+
+	return errCode
 }
 
 // validateSplitQueryParameters perform some validations on the SplitQuery parameters
@@ -1724,7 +1798,7 @@ func (tsv *TabletServer) endRequest(isTx bool) {
 
 // GetPlan is only used from vtexplain
 func (tsv *TabletServer) GetPlan(ctx context.Context, logStats *tabletenv.LogStats, sql string) (*TabletPlan, error) {
-	return tsv.qe.GetPlan(ctx, logStats, sql)
+	return tsv.qe.GetPlan(ctx, logStats, sql, false /* skipQueryPlanCache */)
 }
 
 func (tsv *TabletServer) registerDebugHealthHandler() {
@@ -1735,7 +1809,7 @@ func (tsv *TabletServer) registerDebugHealthHandler() {
 		}
 		w.Header().Set("Content-Type", "text/plain")
 		if err := tsv.IsHealthy(); err != nil {
-			w.Write([]byte("not ok"))
+			http.Error(w, fmt.Sprintf("not ok: %v", err), http.StatusInternalServerError)
 			return
 		}
 		w.Write([]byte("ok"))
@@ -1868,13 +1942,13 @@ func (tsv *TabletServer) MaxDMLRows() int {
 // and also truncates data if it's too long
 func queryAsString(sql string, bindVariables map[string]*querypb.BindVariable) string {
 	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "Sql: %q, BindVars: {", sqlparser.TruncateForLog(sql))
+	fmt.Fprintf(buf, "Sql: %q, BindVars: {", sql)
 	for k, v := range bindVariables {
 		valString := fmt.Sprintf("%v", v)
-		fmt.Fprintf(buf, "%s: %q", k, sqlparser.TruncateForLog(valString))
+		fmt.Fprintf(buf, "%s: %q", k, valString)
 	}
 	fmt.Fprintf(buf, "}")
-	return string(buf.Bytes())
+	return sqlparser.TruncateForLog(string(buf.Bytes()))
 }
 
 // withTimeout returns a context based on the specified timeout.
@@ -1885,4 +1959,12 @@ func withTimeout(ctx context.Context, timeout time.Duration, options *querypb.Ex
 		return ctx, func() {}
 	}
 	return context.WithTimeout(ctx, timeout)
+}
+
+// skipQueryPlanCache returns true if the query plan should be cached
+func skipQueryPlanCache(options *querypb.ExecuteOptions) bool {
+	if options == nil {
+		return false
+	}
+	return options.SkipQueryPlanCache
 }

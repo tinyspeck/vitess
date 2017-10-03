@@ -281,6 +281,12 @@ func TestExecutorSet(t *testing.T) {
 	}, {
 		in:  "set net_read_timeout = 600",
 		out: &vtgatepb.Session{},
+	}, {
+		in:  "set skip_query_plan_cache = 1",
+		out: &vtgatepb.Session{Options: &querypb.ExecuteOptions{SkipQueryPlanCache: true}},
+	}, {
+		in:  "set skip_query_plan_cache = 0",
+		out: &vtgatepb.Session{Options: &querypb.ExecuteOptions{}},
 	}}
 	for _, tcase := range testcases {
 		session := &vtgatepb.Session{}
@@ -423,6 +429,26 @@ func TestExecutorShow(t *testing.T) {
 			buildVarCharRow("TestXBadSharding/e0-"),
 		},
 		RowsAffected: 25,
+	}
+	if !reflect.DeepEqual(qr, wantqr) {
+		t.Errorf("show databases:\n%+v, want\n%+v", qr, wantqr)
+	}
+
+	// Make sure it still works when one of the keyspaces is in a bad state
+	getSandbox("TestExecutor").SrvKeyspaceMustFail++
+	qr, err = executor.Execute(context.Background(), session, "show vitess_shards", nil)
+	if err != nil {
+		t.Error(err)
+	}
+	// Just test for first & last.
+	qr.Rows = [][]sqltypes.Value{qr.Rows[0], qr.Rows[len(qr.Rows)-1]}
+	wantqr = &sqltypes.Result{
+		Fields: buildVarCharFields("Shards"),
+		Rows: [][]sqltypes.Value{
+			buildVarCharRow("TestSharded/-20"),
+			buildVarCharRow("TestXBadSharding/e0-"),
+		},
+		RowsAffected: 17,
 	}
 	if !reflect.DeepEqual(qr, wantqr) {
 		t.Errorf("show databases:\n%+v, want\n%+v", qr, wantqr)
@@ -707,11 +733,11 @@ func TestGetPlanUnnormalized(t *testing.T) {
 	unshardedvc := newVCursorImpl(context.Background(), nil, querypb.Target{Keyspace: KsTestUnsharded}, "", r)
 
 	query1 := "select * from music_user_map where id = 1"
-	plan1, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{})
+	plan1, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
-	plan2, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{})
+	plan2, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -724,14 +750,14 @@ func TestGetPlanUnnormalized(t *testing.T) {
 	if keys := r.plans.Keys(); !reflect.DeepEqual(keys, want) {
 		t.Errorf("Plan keys: %s, want %s", keys, want)
 	}
-	plan3, err := r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{})
+	plan3, err := r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
 	if plan1 == plan3 {
 		t.Errorf("getPlan(query1, ks): plans must not be equal: %p %p", plan1, plan3)
 	}
-	plan4, err := r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{})
+	plan4, err := r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -747,6 +773,47 @@ func TestGetPlanUnnormalized(t *testing.T) {
 	}
 }
 
+func TestGetPlanCacheUnnormalized(t *testing.T) {
+	r, _, _, _ := createExecutorEnv()
+	emptyvc := newVCursorImpl(context.Background(), nil, querypb.Target{}, "", r)
+	query1 := "select * from music_user_map where id = 1"
+	_, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, true /* skipQueryPlanCache */)
+	if err != nil {
+		t.Error(err)
+	}
+	if r.plans.Size() != 0 {
+		t.Errorf("getPlan() expected cache to have size 0, but got: %b", r.plans.Size())
+	}
+	_, err = r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, false /* skipQueryPlanCache */)
+	if err != nil {
+		t.Error(err)
+	}
+	if r.plans.Size() != 1 {
+		t.Errorf("getPlan() expected cache to have size 1, but got: %b", r.plans.Size())
+	}
+}
+
+func TestGetPlanCacheNormalized(t *testing.T) {
+	r, _, _, _ := createExecutorEnv()
+	r.normalize = true
+	emptyvc := newVCursorImpl(context.Background(), nil, querypb.Target{}, "", r)
+	query1 := "select * from music_user_map where id = 1"
+	_, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, true /* skipQueryPlanCache */)
+	if err != nil {
+		t.Error(err)
+	}
+	if r.plans.Size() != 0 {
+		t.Errorf("getPlan() expected cache to have size 0, but got: %b", r.plans.Size())
+	}
+	_, err = r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, false /* skipQueryPlanCache */)
+	if err != nil {
+		t.Error(err)
+	}
+	if r.plans.Size() != 1 {
+		t.Errorf("getPlan() expected cache to have size 1, but got: %b", r.plans.Size())
+	}
+}
+
 func TestGetPlanNormalized(t *testing.T) {
 	r, _, _, _ := createExecutorEnv()
 	r.normalize = true
@@ -756,11 +823,11 @@ func TestGetPlanNormalized(t *testing.T) {
 	query1 := "select * from music_user_map where id = 1"
 	query2 := "select * from music_user_map where id = 2"
 	normalized := "select * from music_user_map where id = :vtg1"
-	plan1, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{})
+	plan1, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
-	plan2, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{})
+	plan2, err := r.getPlan(emptyvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -773,14 +840,14 @@ func TestGetPlanNormalized(t *testing.T) {
 	if keys := r.plans.Keys(); !reflect.DeepEqual(keys, want) {
 		t.Errorf("Plan keys: %s, want %s", keys, want)
 	}
-	plan3, err := r.getPlan(emptyvc, query2, map[string]*querypb.BindVariable{})
+	plan3, err := r.getPlan(emptyvc, query2, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
 	if plan1 != plan3 {
 		t.Errorf("getPlan(query2): plans must be equal: %p %p", plan1, plan3)
 	}
-	plan4, err := r.getPlan(emptyvc, normalized, map[string]*querypb.BindVariable{})
+	plan4, err := r.getPlan(emptyvc, normalized, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -788,14 +855,14 @@ func TestGetPlanNormalized(t *testing.T) {
 		t.Errorf("getPlan(normalized): plans must be equal: %p %p", plan1, plan4)
 	}
 
-	plan3, err = r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{})
+	plan3, err = r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
 	if plan1 == plan3 {
 		t.Errorf("getPlan(query1, ks): plans must not be equal: %p %p", plan1, plan3)
 	}
-	plan4, err = r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{})
+	plan4, err = r.getPlan(unshardedvc, query1, map[string]*querypb.BindVariable{}, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -811,12 +878,12 @@ func TestGetPlanNormalized(t *testing.T) {
 	}
 
 	// Errors
-	_, err = r.getPlan(emptyvc, "syntax", map[string]*querypb.BindVariable{})
+	_, err = r.getPlan(emptyvc, "syntax", map[string]*querypb.BindVariable{}, false)
 	wantErr := "syntax error at position 7 near 'syntax'"
 	if err == nil || err.Error() != wantErr {
 		t.Errorf("getPlan(syntax): %v, want %s", err, wantErr)
 	}
-	_, err = r.getPlan(emptyvc, "create table a(id int)", map[string]*querypb.BindVariable{})
+	_, err = r.getPlan(emptyvc, "create table a(id int)", map[string]*querypb.BindVariable{}, false)
 	wantErr = "unsupported construct: ddl"
 	if err == nil || err.Error() != wantErr {
 		t.Errorf("getPlan(syntax): %v, want %s", err, wantErr)
@@ -940,4 +1007,43 @@ func TestPassthroughDDL(t *testing.T) {
 	}
 	sbc2.Queries = nil
 	masterSession.TargetString = ""
+}
+
+func TestParseEmptyTargetSingleKeyspace(t *testing.T) {
+	r, _, _, _ := createExecutorEnv()
+	altVSchema := &vindexes.VSchema{
+		Keyspaces: map[string]*vindexes.KeyspaceSchema{
+			KsTestUnsharded: r.vschema.Keyspaces[KsTestUnsharded],
+		},
+	}
+	r.vschema = altVSchema
+
+	got := r.ParseTarget("")
+	want := querypb.Target{
+		Keyspace:   KsTestUnsharded,
+		TabletType: topodatapb.TabletType_MASTER,
+	}
+	if !proto.Equal(&got, &want) {
+		t.Errorf("ParseTarget(%s): %v, want %v", "@master", got, want)
+	}
+}
+
+func TestParseEmptyTargetMultiKeyspace(t *testing.T) {
+	r, _, _, _ := createExecutorEnv()
+	altVSchema := &vindexes.VSchema{
+		Keyspaces: map[string]*vindexes.KeyspaceSchema{
+			KsTestUnsharded: r.vschema.Keyspaces[KsTestUnsharded],
+			KsTestSharded:   r.vschema.Keyspaces[KsTestSharded],
+		},
+	}
+	r.vschema = altVSchema
+
+	got := r.ParseTarget("")
+	want := querypb.Target{
+		Keyspace:   "",
+		TabletType: topodatapb.TabletType_MASTER,
+	}
+	if !proto.Equal(&got, &want) {
+		t.Errorf("ParseTarget(%s): %v, want %v", "@master", got, want)
+	}
 }

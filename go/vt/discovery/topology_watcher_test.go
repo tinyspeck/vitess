@@ -50,6 +50,13 @@ func checkWatcher(t *testing.T, cellTablets bool) {
 		t.Logf(`tw = ShardReplicationWatcher(topo.Server{ft}, fhc, "aa", "keyspace", "shard", 10ms, 5)`)
 	}
 
+	// Wait for the initial topology load to finish. Otherwise we
+	// have a background loadTablets() that's running, and it can
+	// interact with our tests in weird ways.
+	if err := tw.WaitForInitialTopology(); err != nil {
+		t.Fatalf("initial WaitForInitialTopology failed")
+	}
+
 	// add a tablet to the topology
 	ft.AddTablet("aa", 0, "host1", map[string]int32{"vt": 123})
 	tw.loadTablets()
@@ -75,6 +82,25 @@ func checkWatcher(t *testing.T, cellTablets bool) {
 	want = &topodatapb.Tablet{
 		Alias: &topodatapb.TabletAlias{
 			Uid: 0,
+		},
+		Hostname: "host1",
+		PortMap:  map[string]int32{"vt": 456},
+	}
+	allTablets = fhc.GetAllTablets()
+	key = TabletToMapKey(want)
+	if _, ok := allTablets[key]; !ok || len(allTablets) != 1 {
+		t.Errorf("fhc.GetAllTablets() = %+v; want %+v", allTablets, want)
+	}
+
+	// Remove and re-add with a new uid. This should trigger a ReplaceTablet in loadTablets,
+	// because the uid does not match.
+	ft.RemoveTablet("aa", 0)
+	ft.AddTablet("aa", 1, "host1", map[string]int32{"vt": 456})
+	tw.loadTablets()
+	t.Logf(`ft.ReplaceTablet("aa", 0, "host1", {"vt": 456}); tw.loadTablets()`)
+	want = &topodatapb.Tablet{
+		Alias: &topodatapb.TabletAlias{
+			Uid: 1,
 		},
 		Hostname: "host1",
 		PortMap:  map[string]int32{"vt": 456},
@@ -179,7 +205,16 @@ func (ft *fakeTopo) GetShardReplication(ctx context.Context, cell, keyspace, sha
 func (ft *fakeTopo) GetTablet(ctx context.Context, alias *topodatapb.TabletAlias) (*topodatapb.Tablet, int64, error) {
 	ft.mu.RLock()
 	defer ft.mu.RUnlock()
-	return ft.tablets[topoproto.TabletAliasString(alias)], 0, nil
+	// Note we want to be correct here. The way we call this, we never
+	// change the tablet list in between a call to list them,
+	// and a call to get the record, so we could just blindly return it.
+	// (It wasn't the case before we added the WaitForInitialTopology()
+	// call in the test though!).
+	tablet, ok := ft.tablets[topoproto.TabletAliasString(alias)]
+	if !ok {
+		return nil, 0, topo.ErrNoNode
+	}
+	return tablet, 0, nil
 }
 
 func TestFilterByShard(t *testing.T) {

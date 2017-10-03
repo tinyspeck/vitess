@@ -21,10 +21,9 @@ fi
 
 # Run parallel make, based on number of cores available.
 case $(uname) in
-Linux)	NB_CORES=$(grep -c '^processor' /proc/cpuinfo);;
-Darwin)	NB_CORES=$(sysctl hw.ncpu | awk '{ print $2 }');;
+  Linux)  NB_CORES=$(grep -c '^processor' /proc/cpuinfo);;
+  Darwin) NB_CORES=$(sysctl hw.ncpu | awk '{ print $2 }');;
 esac
-
 if [ -n "$NB_CORES" ]; then
   export MAKEFLAGS="-j$((NB_CORES+1)) -l${NB_CORES}"
 fi
@@ -34,7 +33,7 @@ function fail() {
   exit 1
 }
 
-[ -f bootstrap.sh ] || fail "bootstrap.sh must be run from its current directory"
+[ "$(dirname $0)" = '.' ] || fail "bootstrap.sh must be run from its current directory"
 
 go version 2>&1 >/dev/null || fail "Go is not installed or is not on \$PATH"
 
@@ -48,6 +47,24 @@ mkdir -p $VTROOT/vthook
 
 echo "Updating git submodules..."
 git submodule update --init
+
+# Install "protoc" protobuf compiler binary.
+protoc_version=3.4.0
+protoc_dist=$VTROOT/dist/protoc
+protoc_version_file=$protoc_dist/version
+if [[ -f $protoc_version_file && "$(cat $protoc_version_file)" == "$protoc_version" ]]; then
+  echo "skipping protoc install. remove $protoc_version_file to force re-install."
+else
+  rm -rf $protoc_dist
+  mkdir -p $protoc_dist
+  download_url=https://github.com/google/protobuf/releases/download/v${protoc_version}/protoc-${protoc_version}-linux-x86_64.zip
+  (cd $protoc_dist && \
+    wget $download_url && \
+    unzip protoc-${protoc_version}-linux-x86_64.zip)
+  [ $? -eq 0 ] || fail "protoc download failed"
+  echo "$protoc_version" > $protoc_version_file
+fi
+ln -snf $protoc_dist/bin/protoc $VTROOT/bin/protoc
 
 # install zookeeper
 zk_ver=3.4.6
@@ -268,7 +285,9 @@ selenium_dist=$VTROOT/dist/selenium
 mkdir -p $selenium_dist
 $VIRTUALENV $selenium_dist
 PIP=$selenium_dist/bin/pip
-$PIP install selenium
+# PYTHONPATH is removed for `pip install` because otherwise it can pick up go/dist/grpc/usr/local/lib/python2.7/site-packages
+# instead of go/dist/selenium/lib/python3.5/site-packages and then can't find module 'pip._vendor.requests'
+PYTHONPATH= $PIP install selenium
 mkdir -p $VTROOT/dist/chromedriver
 curl -sL http://chromedriver.storage.googleapis.com/2.25/chromedriver_linux64.zip > chromedriver_linux64.zip
 unzip -o -q chromedriver_linux64.zip -d $VTROOT/dist/chromedriver

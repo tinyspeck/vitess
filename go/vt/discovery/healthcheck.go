@@ -44,6 +44,10 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
+	"encoding/json"
+	"net/http"
+
 	log "github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
 	"github.com/youtube/vitess/go/netutil"
@@ -51,6 +55,7 @@ import (
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
 	topodatapb "github.com/youtube/vitess/go/vt/proto/topodata"
 	"github.com/youtube/vitess/go/vt/topo/topoproto"
+	"github.com/youtube/vitess/go/vt/topotools"
 	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletconn"
 	"golang.org/x/net/context"
@@ -59,6 +64,7 @@ import (
 var (
 	hcErrorCounters          = stats.NewMultiCounters("HealthcheckErrors", []string{"Keyspace", "ShardName", "TabletType"})
 	hcMasterPromotedCounters = stats.NewMultiCounters("HealthcheckMasterPromoted", []string{"Keyspace", "ShardName"})
+	healthcheckOnce          sync.Once
 )
 
 // See the documentation for NewHealthCheck below for an explanation of these parameters.
@@ -321,12 +327,32 @@ func NewHealthCheck(connTimeout, retryDelay, healthCheckTimeout time.Duration) H
 			}
 		}
 	}()
+
+	healthcheckOnce.Do(func() {
+		http.Handle("/debug/gateway", hc)
+	})
+
 	return hc
 }
 
 // RegisterStats registers the connection counts stats
 func (hc *HealthCheckImpl) RegisterStats() {
 	stats.NewMultiCountersFunc("HealthcheckConnections", []string{"Keyspace", "ShardName", "TabletType"}, hc.servingConnStats)
+}
+
+// ServeHTTP is part of the http.Handler interface. It renders the current state of the discovery gateway tablet cache into json.
+func (hc *HealthCheckImpl) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	status := hc.cacheStatusMap()
+	b, err := json.MarshalIndent(status, "", " ")
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	buf := bytes.NewBuffer(nil)
+	json.HTMLEscape(buf, b)
+	w.Write(buf.Bytes())
 }
 
 // servingConnStats returns the number of serving tablets per keyspace/shard/tablet type.
@@ -477,7 +503,8 @@ func (hcc *healthCheckConn) processResponse(hc *HealthCheckImpl, shr *querypb.St
 	// initial message), we want to log it, and maybe advertise it too.
 	if hcc.tabletStats.Target.TabletType != topodatapb.TabletType_UNKNOWN && hcc.tabletStats.Target.TabletType != shr.Target.TabletType {
 		// Log and maybe notify
-		log.Infof("HealthCheckUpdate(Type Change): %v, tablet: %v/%+v, target %+v => %+v, reparent time: %v", oldTs.Name, oldTs.Tablet.Alias.Cell, oldTs.Tablet, oldTs.Target, shr.Target, shr.TabletExternallyReparentedTimestamp)
+		log.Infof("HealthCheckUpdate(Type Change): %v, tablet: %s, target %+v => %+v, reparent time: %v",
+			oldTs.Name, topotools.TabletIdent(oldTs.Tablet), topotools.TargetIdent(oldTs.Target), topotools.TargetIdent(shr.Target), shr.TabletExternallyReparentedTimestamp)
 		if hc.listener != nil && hc.sendDownEvents {
 			oldTs.Up = false
 			hc.listener.StatsUpdate(&oldTs)
@@ -488,6 +515,12 @@ func (hcc *healthCheckConn) processResponse(hc *HealthCheckImpl, shr *querypb.St
 		if oldTs.Target.TabletType != topodatapb.TabletType_MASTER && shr.Target.TabletType == topodatapb.TabletType_MASTER {
 			hcMasterPromotedCounters.Add([]string{shr.Target.Keyspace, shr.Target.Shard}, 1)
 		}
+	}
+
+	// In this case where a new tablet is initialized or a tablet type changes, we want to
+	// initialize the counter so the rate can be calculated correctly.
+	if hcc.tabletStats.Target.TabletType != shr.Target.TabletType {
+		hcErrorCounters.Add([]string{shr.Target.Keyspace, shr.Target.Shard, topoproto.TabletTypeLString(shr.Target.TabletType)}, 0)
 	}
 
 	// Update our record, and notify downstream for tabletType and
@@ -633,6 +666,14 @@ func (hc *HealthCheckImpl) RemoveTablet(tablet *topodatapb.Tablet) {
 	go hc.deleteConn(tablet)
 }
 
+// ReplaceTablet removes the old tablet and adds the new tablet.
+func (hc *HealthCheckImpl) ReplaceTablet(old, new *topodatapb.Tablet, name string) {
+	go func() {
+		hc.deleteConn(old)
+		hc.AddTablet(new, name)
+	}()
+}
+
 // WaitForInitialStatsUpdates waits until all tablets added via AddTablet() call
 // were propagated to downstream via corresponding StatsUpdate() calls.
 func (hc *HealthCheckImpl) WaitForInitialStatsUpdates() {
@@ -740,11 +781,22 @@ func (tcsl TabletsCacheStatusList) Swap(i, j int) {
 
 // CacheStatus returns a displayable version of the cache.
 func (hc *HealthCheckImpl) CacheStatus() TabletsCacheStatusList {
+	tcsMap := hc.cacheStatusMap()
+	tcsl := make(TabletsCacheStatusList, 0, len(tcsMap))
+	for _, tcs := range tcsMap {
+		tcsl = append(tcsl, tcs)
+	}
+	sort.Sort(tcsl)
+	return tcsl
+}
+
+func (hc *HealthCheckImpl) cacheStatusMap() map[string]*TabletsCacheStatus {
 	tcsMap := make(map[string]*TabletsCacheStatus)
 	hc.mu.RLock()
+	defer hc.mu.RUnlock()
 	for _, hcc := range hc.addrToConns {
 		hcc.mu.RLock()
-		key := fmt.Sprintf("%v.%v.%v.%v", hcc.tabletStats.Tablet.Alias.Cell, hcc.tabletStats.Target.Keyspace, hcc.tabletStats.Target.Shard, string(hcc.tabletStats.Target.TabletType))
+		key := fmt.Sprintf("%v.%v.%v.%v", hcc.tabletStats.Tablet.Alias.Cell, hcc.tabletStats.Target.Keyspace, hcc.tabletStats.Target.Shard, hcc.tabletStats.Target.TabletType.String())
 		var tcs *TabletsCacheStatus
 		var ok bool
 		if tcs, ok = tcsMap[key]; !ok {
@@ -758,13 +810,7 @@ func (hc *HealthCheckImpl) CacheStatus() TabletsCacheStatusList {
 		hcc.mu.RUnlock()
 		tcs.TabletsStats = append(tcs.TabletsStats, &stats)
 	}
-	hc.mu.RUnlock()
-	tcsl := make(TabletsCacheStatusList, 0, len(tcsMap))
-	for _, tcs := range tcsMap {
-		tcsl = append(tcsl, tcs)
-	}
-	sort.Sort(tcsl)
-	return tcsl
+	return tcsMap
 }
 
 // Close stops the healthcheck.

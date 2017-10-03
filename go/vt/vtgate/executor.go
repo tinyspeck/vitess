@@ -33,6 +33,7 @@ import (
 	"github.com/youtube/vitess/go/acl"
 	"github.com/youtube/vitess/go/cache"
 	"github.com/youtube/vitess/go/sqltypes"
+	"github.com/youtube/vitess/go/stats"
 	"github.com/youtube/vitess/go/vt/sqlannotation"
 	"github.com/youtube/vitess/go/vt/sqlparser"
 	"github.com/youtube/vitess/go/vt/topo"
@@ -78,19 +79,25 @@ type Executor struct {
 var executorOnce sync.Once
 
 // NewExecutor creates a new Executor.
-func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int) *Executor {
+func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryCacheSize int64) *Executor {
 	e := &Executor{
 		serv:        serv,
 		cell:        cell,
 		resolver:    resolver,
 		scatterConn: resolver.scatterConn,
 		txConn:      resolver.scatterConn.txConn,
-		plans:       cache.NewLRUCache(10000),
+		plans:       cache.NewLRUCache(queryCacheSize),
 		normalize:   normalize,
 		streamSize:  streamSize,
 	}
 	e.watchSrvVSchema(ctx, cell)
 	executorOnce.Do(func() {
+		stats.Publish("QueryPlanCacheLength", stats.IntFunc(e.plans.Length))
+		stats.Publish("QueryPlanCacheSize", stats.IntFunc(e.plans.Size))
+		stats.Publish("QueryPlanCacheCapacity", stats.IntFunc(e.plans.Capacity))
+		stats.Publish("QueryPlanCacheOldest", stats.StringFunc(func() string {
+			return fmt.Sprintf("%v", e.plans.Oldest())
+		}))
 		http.Handle("/debug/query_plans", e)
 		http.Handle("/debug/vschema", e)
 	})
@@ -181,7 +188,11 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 	// V3 mode.
 	query, comments := sqlparser.SplitTrailingComments(sql)
 	vcursor := newVCursorImpl(ctx, session, target, comments, e)
-	plan, err := e.getPlan(vcursor, query, bindVars)
+	plan, err := e.getPlan(vcursor,
+		query,
+		bindVars,
+		skipQueryPlanCache(session),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -280,6 +291,22 @@ func (e *Executor) handleSet(ctx context.Context, session *vtgatepb.Session, sql
 			default:
 				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unexpected value for client_found_rows: %d", val)
 			}
+		case "skip_query_plan_cache":
+			val, ok := v.(int64)
+			if !ok {
+				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unexpected value type for skip_query_plan_cache: %T", v)
+			}
+			if session.Options == nil {
+				session.Options = &querypb.ExecuteOptions{}
+			}
+			switch val {
+			case 0:
+				session.Options.SkipQueryPlanCache = false
+			case 1:
+				session.Options.SkipQueryPlanCache = true
+			default:
+				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unexpected value for skip_query_plan_cache: %d", val)
+			}
 		case "transaction_mode":
 			val, ok := v.(string)
 			if !ok {
@@ -328,7 +355,7 @@ func (e *Executor) handleSet(ctx context.Context, session *vtgatepb.Session, sql
 			default:
 				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "disallowed value for character_set_results: %v", v)
 			}
-		case "net_write_timeout", "net_read_timeout":
+		case "net_write_timeout", "net_read_timeout", "lc_messages", "collation_connection":
 			log.Warningf("Ignored inapplicable SET %v = %v", k, v)
 			warnings.Add("IgnoredSet", 1)
 		default:
@@ -376,7 +403,9 @@ func (e *Executor) handleShow(ctx context.Context, session *vtgatepb.Session, sq
 		for _, keyspace := range keyspaces {
 			_, _, shards, err := getKeyspaceShards(ctx, e.serv, e.cell, keyspace, target.TabletType)
 			if err != nil {
-				return nil, err
+				// There might be a misconfigured keyspace or no shards in the keyspace.
+				// Skip any errors and move on.
+				continue
 			}
 
 			for _, shard := range shards {
@@ -395,7 +424,7 @@ func (e *Executor) handleShow(ctx context.Context, session *vtgatepb.Session, sq
 		}
 		ks, ok := e.VSchema().Keyspaces[target.Keyspace]
 		if !ok {
-			return nil, vterrors.Errorf(vtrpcpb.Code_NOT_FOUND, "keyspace %s not found in vschema", target.Keyspace)
+			return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "keyspace %s not found in vschema", target.Keyspace)
 		}
 
 		var tables []string
@@ -459,7 +488,12 @@ func (e *Executor) StreamExecute(ctx context.Context, session *vtgatepb.Session,
 	}
 	query, comments := sqlparser.SplitTrailingComments(sql)
 	vcursor := newVCursorImpl(ctx, session, target, comments, e)
-	plan, err := e.getPlan(vcursor, query, bindVars)
+	plan, err := e.getPlan(
+		vcursor,
+		query,
+		bindVars,
+		skipQueryPlanCache(session),
+	)
 	if err != nil {
 		return err
 	}
@@ -728,7 +762,7 @@ func (e *Executor) ParseTarget(targetString string) querypb.Target {
 
 // getPlan computes the plan for the given query. If one is in
 // the cache, it reuses it.
-func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, bindVars map[string]*querypb.BindVariable) (*engine.Plan, error) {
+func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, bindVars map[string]*querypb.BindVariable, skipQueryPlanCache bool) (*engine.Plan, error) {
 	if e.VSchema() == nil {
 		return nil, errors.New("vschema not initialized")
 	}
@@ -745,7 +779,9 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, bindVars map[string
 		if err != nil {
 			return nil, err
 		}
-		e.plans.Set(key, plan)
+		if !skipQueryPlanCache {
+			e.plans.Set(key, plan)
+		}
 		return plan, nil
 	}
 	// Normalize and retry.
@@ -766,8 +802,18 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, bindVars map[string
 	if err != nil {
 		return nil, err
 	}
-	e.plans.Set(normkey, plan)
+	if !skipQueryPlanCache {
+		e.plans.Set(normkey, plan)
+	}
 	return plan, nil
+}
+
+// skipQueryPlanCache extracts SkipQueryPlanCache from session
+func skipQueryPlanCache(session *vtgatepb.Session) bool {
+	if session == nil || session.Options == nil {
+		return false
+	}
+	return session.Options.SkipQueryPlanCache
 }
 
 // ServeHTTP shows the current plans in the query cache.

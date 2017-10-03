@@ -16,11 +16,6 @@
 
 package io.vitess.jdbc;
 
-import io.vitess.proto.Query;
-import io.vitess.proto.Topodata;
-import io.vitess.util.Constants;
-import io.vitess.util.StringUtils;
-
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.sql.DriverPropertyInfo;
@@ -29,6 +24,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+
+import io.vitess.proto.Query;
+import io.vitess.proto.Topodata;
+import io.vitess.util.Constants;
+import io.vitess.util.StringUtils;
 
 public class ConnectionProperties {
 
@@ -132,7 +132,7 @@ public class ConnectionProperties {
         Constants.DEFAULT_EXECUTE_TYPE);
     private BooleanConnectionProperty twopcEnabled = new BooleanConnectionProperty(
         Constants.Property.TWOPC_ENABLED,
-        "Whether to enable two-phased commit, for atomic distributed commits. See http://vitess.io/user-guide/twopc.html",
+        "Whether to enable two-phased commit, for atomic distributed commits. See http://vitess.io/user-guide/twopc/",
         false);
     private EnumConnectionProperty<Query.ExecuteOptions.IncludedFields> includedFields = new EnumConnectionProperty<>(
         Constants.Property.INCLUDED_FIELDS,
@@ -207,9 +207,16 @@ public class ConnectionProperties {
         "Should the driver treat java.util.Date as a TIMESTAMP for the purposes of PreparedStatement.setObject()",
         true);
 
+    private LongConnectionProperty timeout = new LongConnectionProperty(
+        "timeout",
+        "The default timeout, in millis, to use for queries, connections, and transaction commit/rollback. Query timeout can be overridden by explicitly calling setQueryTimeout",
+        Constants.DEFAULT_TIMEOUT
+    );
+
     // Caching of some hot properties to avoid casting over and over
     private Topodata.TabletType tabletTypeCache;
     private Query.ExecuteOptions.IncludedFields includedFieldsCache;
+    private Query.ExecuteOptions executeOptionsCache;
     private boolean includeAllFieldsCache = true;
     private boolean twopcEnabledCache = false;
     private boolean simpleExecuteTypeCache = true;
@@ -238,6 +245,7 @@ public class ConnectionProperties {
         this.simpleExecuteTypeCache = this.executeType.getValueAsEnum() == Constants.QueryExecuteType.SIMPLE;
         this.characterEncodingAsString = this.characterEncoding.getValueAsString();
         this.userNameCache = this.userName.getValueAsString();
+        this.executeOptionsCache = Query.ExecuteOptions.newBuilder().setIncludedFields(this.includedFieldsCache).build();
     }
 
     /**
@@ -357,6 +365,15 @@ public class ConnectionProperties {
         this.includedFields.setValue(includedFields);
         this.includedFieldsCache = includedFields;
         this.includeAllFieldsCache = includedFields == Query.ExecuteOptions.IncludedFields.ALL;
+        this.setExecuteOptions();
+    }
+
+    private void setExecuteOptions() {
+        this.executeOptionsCache = Query.ExecuteOptions.newBuilder().setIncludedFields(this.includedFieldsCache).build();
+    }
+
+    public Query.ExecuteOptions getExecuteOptions() {
+        return this.executeOptionsCache;
     }
 
     public boolean getTwopcEnabled() {
@@ -460,6 +477,14 @@ public class ConnectionProperties {
 
     public void setTreatUtilDateAsTimestamp(boolean treatUtilDateAsTimestamp) {
         this.treatUtilDateAsTimestamp.setValue(treatUtilDateAsTimestamp);
+    }
+
+    public long getTimeout() {
+        return timeout.getValueAsLong();
+    }
+
+    public void setTimeout(long timeout) {
+        this.timeout.setValue(timeout);
     }
 
     public String getTarget() {

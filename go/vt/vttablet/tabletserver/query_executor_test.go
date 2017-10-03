@@ -195,9 +195,10 @@ func TestQueryExecutorPlanInsertMessage(t *testing.T) {
 	defer db.Close()
 	db.AddQueryPattern("insert into msg\\(time_scheduled, id, message, time_next, time_created, epoch\\) values \\(1, 2, 3, 1,.*", &sqltypes.Result{})
 	db.AddQuery(
-		"select time_next, epoch, id, time_scheduled, message from msg where (time_scheduled = 1 and id = 2)",
+		"select time_next, epoch, time_created, id, time_scheduled, message from msg where (time_scheduled = 1 and id = 2)",
 		&sqltypes.Result{
 			Fields: []*querypb.Field{
+				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
 				{Type: sqltypes.Int64},
@@ -208,6 +209,7 @@ func TestQueryExecutorPlanInsertMessage(t *testing.T) {
 			Rows: [][]sqltypes.Value{{
 				sqltypes.NewVarBinary("1"),
 				sqltypes.NewVarBinary("0"),
+				sqltypes.NewVarBinary("10"),
 				sqltypes.NewVarBinary("1"),
 				sqltypes.NewVarBinary("10"),
 				sqltypes.NewVarBinary("2"),
@@ -223,7 +225,7 @@ func TestQueryExecutorPlanInsertMessage(t *testing.T) {
 	checkPlanID(t, planbuilder.PlanInsertMessage, qre.plan.PlanID)
 	ch1 := make(chan *sqltypes.Result)
 	count := 0
-	tsv.messager.Subscribe("msg", func(qr *sqltypes.Result) error {
+	tsv.messager.Subscribe(context.Background(), "msg", func(qr *sqltypes.Result) error {
 		if count > 1 {
 			return io.EOF
 		}
@@ -1859,7 +1861,7 @@ func newTransaction(tsv *TabletServer, options *querypb.ExecuteOptions) int64 {
 
 func newTestQueryExecutor(ctx context.Context, tsv *TabletServer, sql string, txID int64) *QueryExecutor {
 	logStats := tabletenv.NewLogStats(ctx, "TestQueryExecutor")
-	plan, err := tsv.qe.GetPlan(ctx, logStats, sql)
+	plan, err := tsv.qe.GetPlan(ctx, logStats, sql, false)
 	if err != nil {
 		panic(err)
 	}

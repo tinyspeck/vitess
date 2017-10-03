@@ -19,6 +19,7 @@ package planbuilder
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/youtube/vitess/go/sqltypes"
 	"github.com/youtube/vitess/go/vt/sqlparser"
@@ -392,9 +393,9 @@ func (rb *route) MakeDistinct() error {
 }
 
 // SetGroupBy sets the GROUP BY clause for the route.
-func (rb *route) SetGroupBy(groupBy sqlparser.GroupBy) (builder, error) {
+func (rb *route) SetGroupBy(groupBy sqlparser.GroupBy) error {
 	rb.Select.(*sqlparser.Select).GroupBy = groupBy
-	return rb, nil
+	return nil
 }
 
 // PushOrderBy sets the order by for the route.
@@ -405,7 +406,7 @@ func (rb *route) PushOrderBy(order *sqlparser.Order) error {
 	}
 
 	// If it's a scatter, we have to populate the OrderBy field.
-	var colnum int
+	colnum := -1
 	switch expr := order.Expr.(type) {
 	case *sqlparser.SQLVal:
 		var err error
@@ -414,8 +415,6 @@ func (rb *route) PushOrderBy(order *sqlparser.Order) error {
 		}
 	case *sqlparser.ColName:
 		c := expr.Metadata.(*column)
-		// The column is guaranteed to be found because this function is called
-		// only after a successful symbol resolution that points to this route.
 		for i, rc := range rb.resultColumns {
 			if rc.column == c {
 				colnum = i
@@ -423,11 +422,12 @@ func (rb *route) PushOrderBy(order *sqlparser.Order) error {
 			}
 		}
 	default:
-		return fmt.Errorf("unsupported: in scatter query: complex order by expression: %v", sqlparser.String(expr))
+		return fmt.Errorf("unsupported: in scatter query: complex order by expression: %s", sqlparser.String(expr))
 	}
-	// Ensure that it's not an anonymous column (* expression).
-	if rb.resultColumns[colnum].alias.IsEmpty() {
-		return errors.New("unsupported: scatter order by with a '*' in select expression")
+	// If column is not found, then the order by is referencing
+	// a column that's not on the select list.
+	if colnum == -1 {
+		return fmt.Errorf("unsupported: in scatter query: order by must reference a column in the select list: %s", sqlparser.String(order))
 	}
 	rb.ERoute.OrderBy = append(rb.ERoute.OrderBy, engine.OrderbyParams{
 		Col:  colnum,
@@ -519,10 +519,12 @@ func (rb *route) Wireup(bldr builder, jt *jointab) error {
 				return
 			}
 		case sqlparser.TableName:
-			if node.Qualifier != infoSchema {
+			if !systemTable(node.Qualifier.String()) {
 				node.Name.Format(buf)
 				return
 			}
+			node.Format(buf)
+			return
 		}
 		node.Format(buf)
 	}
@@ -531,6 +533,13 @@ func (rb *route) Wireup(bldr builder, jt *jointab) error {
 	rb.ERoute.Query = buf.ParsedQuery().Query
 	rb.ERoute.FieldQuery = rb.generateFieldQuery(rb.Select, jt)
 	return nil
+}
+
+func systemTable(qualifier string) bool {
+	return strings.EqualFold(qualifier, "information_schema") ||
+		strings.EqualFold(qualifier, "performance_schema") ||
+		strings.EqualFold(qualifier, "sys") ||
+		strings.EqualFold(qualifier, "mysql")
 }
 
 // procureValues procures and converts the input into
@@ -573,10 +582,12 @@ func (rb *route) generateFieldQuery(sel sqlparser.SelectStatement, jt *jointab) 
 				return
 			}
 		case sqlparser.TableName:
-			if node.Qualifier != infoSchema {
+			if !systemTable(node.Qualifier.String()) {
 				node.Name.Format(buf)
 				return
 			}
+			node.Format(buf)
+			return
 		}
 		sqlparser.FormatImpossibleQuery(buf, node)
 	}

@@ -19,10 +19,12 @@ package vtgate
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -791,6 +793,11 @@ func TestVTGateExecuteBatchShards(t *testing.T) {
 	if len(session.ShardSessions) != 2 {
 		t.Errorf("want 2, got %d", len(session.ShardSessions))
 	}
+
+	timingsCount := rpcVTGate.timings.Counts()["ExecuteBatchShards.TestVTGateExecuteBatchShards.master"]
+	if got, want := timingsCount, int64(2); got != want {
+		t.Errorf("stats were not properly recorded: got = %d, want = %d", got, want)
+	}
 }
 
 func TestVTGateExecuteBatchKeyspaceIds(t *testing.T) {
@@ -859,6 +866,11 @@ func TestVTGateExecuteBatchKeyspaceIds(t *testing.T) {
 		nil)
 	if len(session.ShardSessions) != 2 {
 		t.Errorf("want 2, got %d", len(session.ShardSessions))
+	}
+
+	timingsCount := rpcVTGate.timings.Counts()["ExecuteBatchKeyspaceIds.TestVTGateExecuteBatchKeyspaceIds.master"]
+	if got, want := timingsCount, int64(2); got != want {
+		t.Errorf("stats were not properly recorded: got = %d, want = %d", got, want)
 	}
 }
 
@@ -1172,10 +1184,15 @@ func TestVTGateMessageStreamSharded(t *testing.T) {
 	_ = hcVTGateTest.AddTestTablet("aa", "1.1.1.1", 1002, ks, shard2, topodatapb.TabletType_MASTER, true, 1, nil)
 	ch := make(chan *sqltypes.Result)
 	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		kr := &topodatapb.KeyRange{End: []byte{0x40}}
-		err := rpcVTGate.MessageStream(context.Background(), ks, "", kr, "msg", func(qr *sqltypes.Result) error {
-			ch <- qr
+		err := rpcVTGate.MessageStream(ctx, ks, "", kr, "msg", func(qr *sqltypes.Result) error {
+			select {
+			case <-ctx.Done():
+				return io.EOF
+			case ch <- qr:
+			}
 			return nil
 		})
 		if err != nil {
@@ -1189,6 +1206,8 @@ func TestVTGateMessageStreamSharded(t *testing.T) {
 	if !reflect.DeepEqual(got, sandboxconn.SingleRowResult) {
 		t.Errorf("MessageStream: %v, want %v", got, sandboxconn.SingleRowResult)
 	}
+	// Once we cancel, the function should return.
+	cancel()
 	<-done
 
 	// Test error case.
@@ -1210,9 +1229,14 @@ func TestVTGateMessageStreamUnsharded(t *testing.T) {
 	_ = hcVTGateTest.AddTestTablet("aa", "1.1.1.1", 1001, ks, "0", topodatapb.TabletType_MASTER, true, 1, nil)
 	ch := make(chan *sqltypes.Result)
 	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		err := rpcVTGate.MessageStream(context.Background(), ks, "0", nil, "msg", func(qr *sqltypes.Result) error {
-			ch <- qr
+		err := rpcVTGate.MessageStream(ctx, ks, "0", nil, "msg", func(qr *sqltypes.Result) error {
+			select {
+			case <-ctx.Done():
+				return io.EOF
+			case ch <- qr:
+			}
 			return nil
 		})
 		if err != nil {
@@ -1224,7 +1248,141 @@ func TestVTGateMessageStreamUnsharded(t *testing.T) {
 	if !reflect.DeepEqual(got, sandboxconn.SingleRowResult) {
 		t.Errorf("MessageStream: %v, want %v", got, sandboxconn.SingleRowResult)
 	}
+	// Function should return after cancel.
+	cancel()
 	<-done
+}
+
+func TestVTGateMessageStreamRetry(t *testing.T) {
+	*messageStreamGracePeriod = 5 * time.Second
+	defer func() {
+		*messageStreamGracePeriod = 30 * time.Second
+	}()
+	ks := KsTestUnsharded
+	createSandbox(ks)
+	hcVTGateTest.Reset()
+	_ = hcVTGateTest.AddTestTablet("aa", "1.1.1.1", 1001, ks, "0", topodatapb.TabletType_MASTER, true, 1, nil)
+	ch := make(chan *sqltypes.Result)
+	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		err := rpcVTGate.MessageStream(ctx, ks, "0", nil, "msg", func(qr *sqltypes.Result) error {
+			select {
+			case <-ctx.Done():
+				return io.EOF
+			case ch <- qr:
+			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
+	<-ch
+
+	// By default, will end the stream after the first message,
+	// which should make vtgate wait for 1s (5s/5) and retry.
+	start := time.Now()
+	<-ch
+	duration := time.Now().Sub(start)
+	if duration < 1*time.Second || duration > 2*time.Second {
+		t.Errorf("Retry duration should be around 1 second: %v", duration)
+	}
+	// Function should return after cancel.
+	cancel()
+	<-done
+}
+
+func TestVTGateMessageStreamUnavailable(t *testing.T) {
+	*messageStreamGracePeriod = 5 * time.Second
+	defer func() {
+		*messageStreamGracePeriod = 30 * time.Second
+	}()
+	ks := KsTestUnsharded
+	createSandbox(ks)
+	hcVTGateTest.Reset()
+	tablet := hcVTGateTest.AddTestTablet("aa", "1.1.1.1", 1001, ks, "0", topodatapb.TabletType_MASTER, true, 1, nil)
+	// Unavailable error should cause vtgate to wait 1s and retry.
+	tablet.MustFailCodes[vtrpcpb.Code_UNAVAILABLE] = 1
+	ch := make(chan *sqltypes.Result)
+	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		err := rpcVTGate.MessageStream(ctx, ks, "0", nil, "msg", func(qr *sqltypes.Result) error {
+			select {
+			case <-ctx.Done():
+				return io.EOF
+			case ch <- qr:
+			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
+		close(done)
+	}()
+
+	// Verify the 1s delay.
+	start := time.Now()
+	<-ch
+	duration := time.Now().Sub(start)
+	if duration < 1*time.Second || duration > 2*time.Second {
+		t.Errorf("Retry duration should be around 1 second: %v", duration)
+	}
+	// Function should return after cancel.
+	cancel()
+	<-done
+}
+
+func TestVTGateMessageStreamGracePeriod(t *testing.T) {
+	*messageStreamGracePeriod = 1 * time.Second
+	defer func() {
+		*messageStreamGracePeriod = 30 * time.Second
+	}()
+	ks := KsTestUnsharded
+	createSandbox(ks)
+	hcVTGateTest.Reset()
+	tablet := hcVTGateTest.AddTestTablet("aa", "1.1.1.1", 1001, ks, "0", topodatapb.TabletType_MASTER, true, 1, nil)
+	// tablet should return no results for at least 5 calls for it to exceed the grace period.
+	tablet.SetResults([]*sqltypes.Result{
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	})
+	start := time.Now()
+	err := rpcVTGate.MessageStream(context.Background(), ks, "0", nil, "msg", func(qr *sqltypes.Result) error {
+		return nil
+	})
+	want := "has repeatedly failed for longer than 1s"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("MessageStream err: %v, must contain %s", err, want)
+	}
+	duration := time.Now().Sub(start)
+	if duration < 1*time.Second || duration > 2*time.Second {
+		t.Errorf("Retry duration should be around 1 second: %v", duration)
+	}
+}
+
+func TestVTGateMessageStreamFail(t *testing.T) {
+	ks := KsTestUnsharded
+	createSandbox(ks)
+	hcVTGateTest.Reset()
+	tablet := hcVTGateTest.AddTestTablet("aa", "1.1.1.1", 1001, ks, "0", topodatapb.TabletType_MASTER, true, 1, nil)
+	// tablet should should fail immediately if the error is not EOF or UNAVAILABLE.
+	tablet.MustFailCodes[vtrpcpb.Code_RESOURCE_EXHAUSTED] = 1
+	err := rpcVTGate.MessageStream(context.Background(), ks, "0", nil, "msg", func(qr *sqltypes.Result) error {
+		return nil
+	})
+	want := "RESOURCE_EXHAUSTED error"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("MessageStream err: %v, must contain %s", err, want)
+	}
 }
 
 func TestVTGateMessageAck(t *testing.T) {
@@ -1996,6 +2154,10 @@ func testErrorPropagation(t *testing.T, sbcs []*sandboxconn.SandboxConn, before 
 			t.Errorf("unexpected error, got %v want %v: %v", ec, expected, err)
 		}
 	}
+	statsKey := fmt.Sprintf("%s.%s.master.%v", "ExecuteBatchShards", KsTestUnsharded, vterrors.Code(err))
+	if got, want := errorCounts.Counts()[statsKey], int64(1); got != want {
+		t.Errorf("errorCounts not increased for '%s': got = %v, want = %v", statsKey, got, want)
+	}
 	for _, sbc := range sbcs {
 		after(sbc)
 	}
@@ -2027,12 +2189,16 @@ func testErrorPropagation(t *testing.T, sbcs []*sandboxconn.SandboxConn, before 
 		nil,
 		executeOptions)
 	if err == nil {
-		t.Errorf("error %v not propagated for ExecuteBatchShards", expected)
+		t.Errorf("error %v not propagated for ExecuteBatchKeyspaceIds", expected)
 	} else {
 		ec := vterrors.Code(err)
 		if ec != expected {
 			t.Errorf("unexpected error, got %v want %v: %v", ec, expected, err)
 		}
+	}
+	statsKey = fmt.Sprintf("%s.%s.master.%v", "ExecuteBatchKeyspaceIds", KsTestUnsharded, vterrors.Code(err))
+	if got, want := errorCounts.Counts()[statsKey], int64(1); got != want {
+		t.Errorf("errorCounts not increased for '%s': got = %v, want = %v", statsKey, got, want)
 	}
 	for _, sbc := range sbcs {
 		after(sbc)

@@ -17,7 +17,7 @@ To run Vitess in Docker, you can either use our pre-built images on [Docker Hub]
 * The [vitess/lite](https://hub.docker.com/r/vitess/lite/) image contains only
   the compiled Vitess binaries, excluding ZooKeeper. It can run Vitess, but
   lacks the environment needed to build Vitess or run tests. It's primarily used
-  for the [Vitess on Kubernetes](http://vitess.io/getting-started/) guide.
+  for the [Vitess on Kubernetes]({% link getting-started/index.md %}) guide.
 
 For example, you can directly run `vitess/base`, and Docker will download the
 image for you:
@@ -73,7 +73,7 @@ OS X 10.11 (El Capitan) should work as well, the installation instructions are b
 
 In addition, Vitess requires the software and libraries listed below.
 
-1.  [Install Go 1.8+](http://golang.org/doc/install).
+1.  [Install Go 1.9+](http://golang.org/doc/install).
 
 2.  Install [MariaDB 10.0](https://downloads.mariadb.org/) or
     [MySQL 5.6](http://dev.mysql.com/downloads/mysql). You can use any
@@ -283,7 +283,7 @@ In addition, Vitess requires the software and libraries listed below.
 export VT_TEST_FLAGS='--topo-server-flavor=etcd'
 ```
 
-The default targets when running `make` or `make test` contain a full set of
+The default targets when running `make test` contain a full set of
 tests intended to help Vitess developers to verify code changes. Those tests
 simulate a small Vitess cluster by launching many servers on the local
 machine. To do so, they require a lot of resources; a minimum of 8GB RAM
@@ -298,7 +298,7 @@ make site_test
 
 #### Common Test Issues
 
-Attempts to run the full developer test suite (`make` or `make test`)
+Attempts to run the full developer test suite (`make test`)
 on an underpowered machine often results in failure. If you still see
 the same failures when running the lighter set of tests (`make site_test`),
 please let the development team know in the
@@ -437,8 +437,8 @@ lock service. ZooKeeper is included in the Vitess distribution.
 1.  **Start vttablets**
 
     The `vttablet-up.sh` script brings up three vttablets, and assigns them to
-    a [keyspace](http://vitess.io/overview/concepts.html#keyspace) and [shard]
-    (http://vitess.io/overview/concepts.html#shard) according to the variables
+    a [keyspace]({% link overview/concepts.md %}#keyspace) and [shard]
+    ({% link overview/concepts.md %}#shard) according to the variables
     set at the top of the script file.
 
     ``` sh
@@ -460,7 +460,7 @@ lock service. ZooKeeper is included in the Vitess distribution.
     This is what an unsharded keyspace looks like.
 
     If you click on the shard box, you'll see a list of [tablets]
-    (http://vitess.io/overview/concepts.html#tablet) in that shard.
+    ({% link overview/concepts.md %}#tablet) in that shard.
     Note that it's normal for the tablets to be unhealthy at this point, since
     you haven't initialized them yet.
 
@@ -491,17 +491,19 @@ lock service. ZooKeeper is included in the Vitess distribution.
 
     After running this command, go back to the **Shard Status** page
     in the *vtctld* web interface. When you refresh the
-    page, you should see that one *vttablet* is the master
-    and the other two are replicas.
+    page, you should see that one *vttablet* is the master,
+    two are replicas and two are rdonly.
 
     You can also see this on the command line:
 
     ``` sh
     vitess/examples/local$ ./lvtctl.sh ListAllTablets test
     ### example output:
-    # test-0000000100 test_keyspace 0 master localhost:15100 localhost:33100 []
-    # test-0000000101 test_keyspace 0 replica localhost:15101 localhost:33101 []
-    # test-0000000102 test_keyspace 0 replica localhost:15102 localhost:33102 []
+    # test-0000000100 test_keyspace 0 master localhost:15100 localhost:17100 []
+    # test-0000000101 test_keyspace 0 replica localhost:15101 localhost:17101 []
+    # test-0000000102 test_keyspace 0 replica localhost:15102 localhost:17102 []
+    # test-0000000103 test_keyspace 0 rdonly localhost:15103 localhost:17103 []
+    # test-0000000104 test_keyspace 0 rdonly localhost:15104 localhost:17104 []
     ```
 
 1.  **Create a table**
@@ -529,7 +531,7 @@ lock service. ZooKeeper is included in the Vitess distribution.
 1.  **Take a backup**
 
     Now that the initial schema is applied, it's a good time to take the first
-    [backup](http://vitess.io/user-guide/backup-and-restore.html). This backup
+    [backup]({% link user-guide/backup-and-restore.md %}). This backup
     will be used to automatically restore any additional replicas that you run,
     before they connect themselves to the master and catch up on replication.
     If an existing tablet goes down and comes back up without its data, it will
@@ -607,10 +609,10 @@ See the comments at the top of each sample file for usage instructions.
 ### Try Vitess resharding
 
 Now that you have a full Vitess stack running, you may want to go on to the
-[Horizontal Sharding workflow guide](http://vitess.io/user-guide/horizontal-sharding-workflow.html)
-or [Horizontal Sharding codelab](http://vitess.io/user-guide/horizontal-sharding.html)
+[Horizontal Sharding workflow guide]({% link user-guide/horizontal-sharding-workflow.md %})
+or [Horizontal Sharding codelab]({% link user-guide/horizontal-sharding.md %})
 (if you prefer to run each step manually through commands) to try out
-[dynamic resharding](http://vitess.io/user-guide/sharding.html#resharding).
+[dynamic resharding]({% link user-guide/sharding.md %}#resharding).
 
 If so, you can skip the tear-down since the sharding guide picks up right here.
 If not, continue to the clean-up steps below.
