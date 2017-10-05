@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/youtube/vitess/go/stats"
@@ -31,6 +32,7 @@ var (
 	buildTime      = ""
 	buildGitRev    = ""
 	buildGitBranch = ""
+	buildNumberStr = ""
 
 	// Version registers the command line flag to expose build info.
 	Version = flag.Bool("version", false, "print binary version")
@@ -46,19 +48,25 @@ type versionInfo struct {
 	buildTimePretty string
 	buildGitRev     string
 	buildGitBranch  string
+	buildNumber     int64
 	goVersion       string
 	goOS            string
 	goArch          string
 }
 
 func (v *versionInfo) Print() {
-	fmt.Printf("Version: %s (Git branch '%s') built on %s by %s@%s using %s %s/%s\n", v.buildGitRev, v.buildGitBranch, v.buildTimePretty, v.buildUser, v.buildHost, v.goVersion, v.goOS, v.goArch)
+	fmt.Printf("Version: %s (%d) (Git branch '%s') built on %s by %s@%s using %s %s/%s\n", v.buildGitRev, v.buildNumber, v.buildGitBranch, v.buildTimePretty, v.buildUser, v.buildHost, v.goVersion, v.goOS, v.goArch)
 }
 
 func init() {
 	t, err := time.Parse(time.UnixDate, buildTime)
 	if buildTime != "" && err != nil {
 		panic(fmt.Sprintf("Couldn't parse build timestamp %q: %v", buildTime, err))
+	}
+
+	buildNumber, err := strconv.ParseInt(buildNumberStr, 10, 64)
+	if err != nil {
+		buildNumber = 0
 	}
 
 	AppVersion = versionInfo{
@@ -68,6 +76,7 @@ func init() {
 		buildTimePretty: buildTime,
 		buildGitRev:     buildGitRev,
 		buildGitBranch:  buildGitBranch,
+		buildNumber:     buildNumber,
 		goVersion:       runtime.Version(),
 		goOS:            runtime.GOOS,
 		goArch:          runtime.GOARCH,
@@ -78,6 +87,7 @@ func init() {
 	stats.NewInt("BuildTimestamp").Set(AppVersion.buildTime)
 	stats.NewString("BuildGitRev").Set(AppVersion.buildGitRev)
 	stats.NewString("BuildGitBranch").Set(AppVersion.buildGitBranch)
+	stats.NewInt("BuildNumber").Set(AppVersion.buildNumber)
 	stats.NewString("GoVersion").Set(AppVersion.goVersion)
 	stats.NewString("GoOS").Set(AppVersion.goOS)
 	stats.NewString("GoArch").Set(AppVersion.goArch)
