@@ -1534,6 +1534,7 @@ func (*ConvertUsingExpr) iExpr() {}
 func (*MatchExpr) iExpr()        {}
 func (*GroupConcatExpr) iExpr()  {}
 func (*Default) iExpr()          {}
+func (SetVal) iExpr()            {}
 
 // Exprs represents a list of value expressions.
 // It's not a valid expression because it's not parenthesized.
@@ -1912,6 +1913,22 @@ func (node BoolVal) Format(buf *TrackedBuffer) {
 
 // WalkSubtree walks the nodes of the subtree.
 func (node BoolVal) WalkSubtree(visit Visit) error {
+	return nil
+}
+
+// SetVal is used for `SET` statement values that are not valid literals,
+// like `ON`, `OFF`, etc
+type SetVal struct {
+	Val []byte
+}
+
+// Format formats the node.
+func (node SetVal) Format(buf *TrackedBuffer) {
+	buf.Myprintf("%s", node.Val)
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node SetVal) WalkSubtree(visit Visit) error {
 	return nil
 }
 

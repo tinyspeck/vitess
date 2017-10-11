@@ -70,6 +70,7 @@ func forceEOF(yylex interface{}) {
   expr          Expr
   exprs         Exprs
   boolVal       BoolVal
+  setVal        SetVal
   colTuple      ColTuple
   values        Values
   valTuple      ValTuple
@@ -109,7 +110,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> NEXT VALUE SHARE MODE
 %token <bytes> SQL_NO_CACHE SQL_CACHE
 %left <bytes> JOIN STRAIGHT_JOIN LEFT RIGHT INNER OUTER CROSS NATURAL USE FORCE
-%left <bytes> ON
+%left <bytes> ON OFF
 %token <empty> '(' ',' ')'
 %token <bytes> ID HEX STRING INTEGRAL FLOAT HEXNUM VALUE_ARG LIST_ARG COMMENT COMMENT_KEYWORD BIT_LITERAL
 %token <bytes> NULL TRUE FALSE
@@ -201,6 +202,7 @@ func forceEOF(yylex interface{}) {
 %type <expr> where_expression_opt
 %type <expr> condition
 %type <boolVal> boolean_value
+%type <setVal> set_value
 %type <str> compare
 %type <ins> insert_data
 %type <expr> value value_expression num_val
@@ -225,9 +227,9 @@ func forceEOF(yylex interface{}) {
 %type <str> lock_opt
 %type <columns> ins_column_list
 %type <updateExprs> on_dup_opt
-%type <updateExprs> update_list
+%type <updateExprs> update_list set_list
 %type <bytes> charset_or_character_set
-%type <updateExpr> update_expression
+%type <updateExpr> update_expression set_expression
 %type <bytes> for_from
 %type <str> ignore_opt default_opt
 %type <byt> exists_opt
@@ -407,7 +409,7 @@ set_statement:
   {
     $$ = &Set{Comments: Comments($2), Charset: $4}
   }
-| SET comment_opt update_list
+| SET comment_opt set_list
   {
     $$ = &Set{Comments: Comments($2), Exprs: $3}
    }
@@ -425,6 +427,36 @@ charset_value:
 | STRING
   {
     $$ = NewColIdent(string($1))
+  }
+
+set_list:
+  set_expression
+  {
+    $$ = UpdateExprs{$1}
+  }
+| set_list ',' set_expression
+  {
+    $$ = append($1, $3)
+  }
+
+set_expression:
+  column_name '=' expression
+  {
+    $$ = &UpdateExpr{Name: $1, Expr: $3}
+  }
+| column_name '=' set_value
+  {
+    $$ = &UpdateExpr{Name: $1, Expr: $3}
+  }
+
+set_value:
+  ON
+  {
+    $$ = SetVal{$1}
+  }
+| OFF
+  {
+    $$ = SetVal{$1}
   }
 
 create_statement:
@@ -2389,6 +2421,7 @@ reserved_keyword:
 | NEXT // next should be doable as non-reserved, but is not due to the special `select next num_val` query that vitess supports
 | NOT
 | NULL
+| OFF
 | ON
 | OR
 | ORDER

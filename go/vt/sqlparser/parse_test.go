@@ -649,6 +649,10 @@ func TestValid(t *testing.T) {
 	}, {
 		input: "set /* list */ a = 3, b = 4",
 	}, {
+		input: "set foreign_key_checks = on",
+	}, {
+		input: "set foreign_key_checks = off",
+	}, {
 		input:  "alter ignore table a add foo",
 		output: "alter table a",
 	}, {

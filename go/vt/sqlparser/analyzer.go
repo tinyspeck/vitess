@@ -253,6 +253,8 @@ func ExtractSetValues(sql string) (keyValues map[string]interface{}, charset str
 			result[key] = nil
 		case *Default:
 			result[key] = "default"
+		case SetVal:
+			result[key] = string(expr.Val)
 		default:
 			return nil, "", fmt.Errorf("invalid syntax: %s", String(expr))
 		}

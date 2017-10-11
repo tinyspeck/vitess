@@ -401,6 +401,12 @@ func TestExtractSetValues(t *testing.T) {
 		sql:     "SET character set ascii",
 		out:     map[string]interface{}{},
 		charset: "ascii",
+	}, {
+		sql: "SET foreign_key_checks = on",
+		out: map[string]interface{}{"foreign_key_checks": "on"},
+	}, {
+		sql: "SET foreign_key_checks = off",
+		out: map[string]interface{}{"foreign_key_checks": "off"},
 	}}
 	for _, tcase := range testcases {
 		out, charset, err := ExtractSetValues(tcase.sql)
