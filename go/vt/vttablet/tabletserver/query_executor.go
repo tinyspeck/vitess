@@ -348,6 +348,22 @@ func (qre *QueryExecutor) checkPermissions() error {
 
 func (qre *QueryExecutor) checkAccess(authorized *tableacl.ACLResult, tableName sqlparser.TableIdent, callerID *querypb.VTGateCallerID) error {
 	statsKey := []string{tableName.String(), authorized.GroupName, qre.plan.PlanID.String(), callerID.Username}
+	if len(authorized.CallerIDSecrets) != 0 {
+		secretMatch := false
+		for _, callerIdSecret := range authorized.CallerIDSecrets {
+			if callerID.Username == callerIdSecret.CallerID && callerID.Secret == callerIdSecret.Secret {
+				secretMatch = true
+				break
+			}
+		}
+		if !secretMatch {
+			errStr := fmt.Sprintf("table acl error: %q %v cannot run %v on table %q beacause of secret mistmatch", callerID.Username, callerID.Groups, qre.plan.PlanID, tableName)
+			tabletenv.TableaclDenied.Add(statsKey, 1)
+			qre.tsv.qe.accessCheckerLogger.Infof("%s", errStr)
+			return vterrors.Errorf(vtrpcpb.Code_PERMISSION_DENIED, "%s", errStr)
+		}
+	}
+
 	if !authorized.IsMember(callerID) {
 		if qre.tsv.qe.enableTableACLDryRun {
 			tabletenv.TableaclPseudoDenied.Add(statsKey, 1)

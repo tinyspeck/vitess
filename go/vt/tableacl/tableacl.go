@@ -40,13 +40,20 @@ import (
 // ACLResult embeds an acl.ACL and also tell which table group it belongs to.
 type ACLResult struct {
 	acl.ACL
-	GroupName string
+	GroupName       string
+	CallerIDSecrets []callerIDSecret
+}
+
+type callerIDSecret struct {
+	CallerID string
+	Secret   string
 }
 
 type aclEntry struct {
 	tableNameOrPrefix string
 	groupName         string
 	acl               map[Role]acl.ACL
+	callerIDSecrets   []callerIDSecret
 }
 
 type aclEntries []aclEntry
@@ -158,6 +165,14 @@ func load(config *tableaclpb.Config, newACL func([]string) (acl.ACL, error)) (en
 		if err != nil {
 			return nil, err
 		}
+		var callerIDSecrets []callerIDSecret
+		for _, cidSecret := range group.CallerIdSecrets {
+			callerIDSecrets = append(callerIDSecrets, callerIDSecret{
+				CallerID: cidSecret.CallerId,
+				Secret:   cidSecret.Secret,
+			})
+
+		}
 		for _, tableNameOrPrefix := range group.TableNamesOrPrefixes {
 			entries = append(entries, aclEntry{
 				tableNameOrPrefix: tableNameOrPrefix,
@@ -167,6 +182,7 @@ func load(config *tableaclpb.Config, newACL func([]string) (acl.ACL, error)) (en
 					WRITER: writers,
 					ADMIN:  admins,
 				},
+				callerIDSecrets: callerIDSecrets,
 			})
 		}
 	}
@@ -256,8 +272,9 @@ func (tacl *tableACL) Authorized(table string, role Role) *ACLResult {
 			acl, ok := tacl.entries[mid].acl[role]
 			if ok {
 				return &ACLResult{
-					ACL:       acl,
-					GroupName: tacl.entries[mid].groupName,
+					ACL:             acl,
+					GroupName:       tacl.entries[mid].groupName,
+					CallerIDSecrets: tacl.entries[mid].callerIDSecrets,
 				}
 			}
 			break

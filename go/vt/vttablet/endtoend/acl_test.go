@@ -79,6 +79,9 @@ func TestTableACLNoAccess(t *testing.T) {
 	}, {
 		query: "alter table vitess_acl_all_user_read_only comment 'comment'",
 		err:   aclErr,
+	}, {
+		query: "select * from vitess_acl_secret",
+		err:   aclErr,
 	}}
 
 	for _, tcase := range execCases {

@@ -20,6 +20,11 @@ syntax = "proto3";
 
 package tableacl;
 
+// TableGroupCallerIDSecretSpec
+message TableGroupCallerIDSecretSpec {
+	string caller_id = 1;
+	string secret = 2;
+}
 // TableGroupSpec defines ACLs for a group of tables.
 message TableGroupSpec {
   string name = 1;
@@ -28,6 +33,7 @@ message TableGroupSpec {
   repeated string readers = 3;
   repeated string writers = 4;
   repeated string admins = 5;
+  repeated TableGroupCallerIDSecretSpec caller_id_secrets = 6;
 }
 
 message Config {

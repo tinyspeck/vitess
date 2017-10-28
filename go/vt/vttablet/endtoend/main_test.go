@@ -150,6 +150,7 @@ create table vitess_acl_read_only(key1 bigint default 0, key2 bigint default nul
 create table vitess_acl_read_write(key1 bigint default 0, key2 bigint default null, primary key(key1));
 create table vitess_acl_admin(key1 bigint default 0, key2 bigint default null, primary key(key1));
 create table vitess_acl_unmatched(key1 bigint default 0, key2 bigint default null, primary key(key1));
+create table vitess_acl_secret(key1 bigint default 0, key2 bigint default null, primary key(key1));
 create table vitess_acl_all_user_read_only(key1 bigint default 0, key2 bigint default null, primary key(key1));`
 
 var tableACLConfig = `{
@@ -270,6 +271,13 @@ var tableACLConfig = `{
       "table_names_or_prefixes": ["vitess_test_debuguser"],
       "readers": ["dev", "vt_appdebug"],
       "writers": ["dev", "vt_appdebug"]
+    },
+    {
+      "name": "vitess_acl_secrets",
+      "table_names_or_prefixes": ["vitess_acl_secret"],
+      "readers": ["vitess_secret"],
+      "writers": ["vitess_secret"],
+      "caller_id_secrets": [{"caller_id": "vitess_secret", "secret": "1234"}]
     }
   ]
 }`

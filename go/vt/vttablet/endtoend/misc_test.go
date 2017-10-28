@@ -729,3 +729,48 @@ func TestAppDebugRequest(t *testing.T) {
 		t.Errorf("Error: %v, want prefix %s", err, want)
 	}
 }
+
+func TestAclSecret(t *testing.T) {
+	// Set user and secret
+	ctx := callerid.NewContext(
+		context.Background(),
+		&vtrpcpb.CallerID{},
+		&querypb.VTGateCallerID{Username: "vitess_secret", Secret: "1234"})
+
+	client := framework.NewClientWithContext(ctx)
+	if _, err := client.Execute("insert into vitess_acl_secret(key1, key2) values(124, 123)", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	defer client.Execute("delete from vitess_secret where key1= 124", nil)
+
+	// Set invalid secert
+	ctx = callerid.NewContext(
+		context.Background(),
+		&vtrpcpb.CallerID{},
+		&querypb.VTGateCallerID{Username: "vitess_secret", Secret: "12345"})
+
+	want := "table acl error:"
+
+	client = framework.NewClientWithContext(ctx)
+
+	_, err := client.Execute("insert into vitess_acl_secret(key1, key2) values(125, 125)", nil)
+
+	if err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("Error: %v, want prefix %s", err, want)
+	}
+
+	// Fails for other users
+	ctx = callerid.NewContext(
+		context.Background(),
+		&vtrpcpb.CallerID{},
+		&querypb.VTGateCallerID{Username: "invalid_user", Secret: "12345"})
+
+	client = framework.NewClientWithContext(ctx)
+
+	_, err = client.Execute("insert into vitess_acl_secret(key1, key2) values(125, 125)", nil)
+
+	if err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("Error: %v, want prefix %s", err, want)
+	}
+}
