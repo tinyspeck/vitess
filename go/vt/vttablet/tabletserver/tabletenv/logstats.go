@@ -199,7 +199,7 @@ func (stats *LogStats) RemoteAddrUsername() (string, string) {
 
 // Format returns a tab separated list of logged fields.
 func (stats *LogStats) Format(params url.Values) string {
-	//_, fullBindParams := params["full"]
+	_, fullBindParams := params["full"]
 
 	// TODO: remove username here we fully enforce immediate caller id
 	remoteAddr, username := stats.RemoteAddrUsername()
@@ -215,9 +215,9 @@ func (stats *LogStats) Format(params url.Values) string {
 		stats.TotalTime().Seconds(),
 		stats.PlanType,
 		stats.OriginalSQL,
-		"[REDACTED]", //stats.FmtBindVariables(fullBindParams),
+		stats.FmtBindVariables(fullBindParams),
 		stats.NumberOfQueries,
-		"[REDACTED]", //stats.RewrittenSQL(),
+		stats.RewrittenSQL(),
 		stats.FmtQuerySources(),
 		stats.MysqlResponseTime.Seconds(),
 		stats.WaitingForConnection.Seconds(),
