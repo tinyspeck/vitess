@@ -17,6 +17,7 @@ limitations under the License.
 package vttest
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -72,6 +73,8 @@ func TestVitess(t *testing.T) {
 	}
 
 	hdl, err := LaunchVitess(ProtoTopo(topology), Schema(schema), VSchema(vschema))
+	fmt.Printf("sleeping\n")
+	time.Sleep(1 * time.Minute)
 	if err != nil {
 		t.Error(err)
 		return
@@ -89,7 +92,9 @@ func TestVitess(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	conn, err := vtgateconn.DialProtocol(ctx, vtgateProtocol(), vtgateAddr, 5*time.Second)
+
+	proto := hdl.db.Env.DefaultProtocol()
+	conn, err := vtgateconn.DialProtocol(ctx, proto, vtgateAddr, 5*time.Second)
 	if err != nil {
 		t.Error(err)
 		return

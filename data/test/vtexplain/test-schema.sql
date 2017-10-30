@@ -1,6 +1,7 @@
 create table t1 (
 	id bigint(20) unsigned not null,
-	val bigint(20) unsigned not null default 0,
+	intval bigint(20) unsigned not null default 0,
+	floatval float not null default 0,
 	primary key (id)
 );
 
@@ -8,6 +9,8 @@ create table user (
 	id bigint,
 	name varchar(64),
 	email varchar(64),
+	nickname varchar(64),
+	pet varchar(64),
 	primary key (id)
 ) Engine=InnoDB;
 

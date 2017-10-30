@@ -171,6 +171,11 @@ func NewStreamer(dbname string, mysqld mysqlctl.MysqlDaemon, se *schema.Engine, 
 
 // Stream starts streaming binlog events using the settings from NewStreamer().
 func (bls *Streamer) Stream(ctx context.Context) (err error) {
+	// Ensure se is Open. If vttablet came up in a non_serving role,
+	// the schema engine may not have been initialized.
+	if err := bls.se.Open(); err != nil {
+		return err
+	}
 	stopPos := bls.startPos
 	defer func() {
 		if err != nil && err != mysqlctl.ErrBinlogUnavailable {
@@ -587,13 +592,10 @@ func (bls *Streamer) parseEvents(ctx context.Context, events <-chan mysql.Binlog
 
 func (bls *Streamer) appendInserts(statements []FullBinlogStatement, tce *tableCacheEntry, rows *mysql.Rows) []FullBinlogStatement {
 	for i := range rows.Rows {
-		var sql bytes.Buffer
+		sql := sqlparser.NewTrackedBuffer(nil)
+		sql.Myprintf("INSERT INTO %v SET ", sqlparser.NewTableIdent(tce.tm.Name))
 
-		sql.WriteString("INSERT INTO ")
-		sql.WriteString(tce.tm.Name)
-		sql.WriteString(" SET ")
-
-		keyspaceIDCell, pkValues, err := writeValuesAsSQL(&sql, tce, rows, i, tce.pkNames != nil)
+		keyspaceIDCell, pkValues, err := writeValuesAsSQL(sql, tce, rows, i, tce.pkNames != nil)
 		if err != nil {
 			log.Warningf("writeValuesAsSQL(%v) failed: %v", i, err)
 			continue
@@ -626,13 +628,10 @@ func (bls *Streamer) appendInserts(statements []FullBinlogStatement, tce *tableC
 
 func (bls *Streamer) appendUpdates(statements []FullBinlogStatement, tce *tableCacheEntry, rows *mysql.Rows) []FullBinlogStatement {
 	for i := range rows.Rows {
-		var sql bytes.Buffer
+		sql := sqlparser.NewTrackedBuffer(nil)
+		sql.Myprintf("UPDATE %v SET ", sqlparser.NewTableIdent(tce.tm.Name))
 
-		sql.WriteString("UPDATE ")
-		sql.WriteString(tce.tm.Name)
-		sql.WriteString(" SET ")
-
-		keyspaceIDCell, pkValues, err := writeValuesAsSQL(&sql, tce, rows, i, tce.pkNames != nil)
+		keyspaceIDCell, pkValues, err := writeValuesAsSQL(sql, tce, rows, i, tce.pkNames != nil)
 		if err != nil {
 			log.Warningf("writeValuesAsSQL(%v) failed: %v", i, err)
 			continue
@@ -640,7 +639,7 @@ func (bls *Streamer) appendUpdates(statements []FullBinlogStatement, tce *tableC
 
 		sql.WriteString(" WHERE ")
 
-		if _, _, err := writeIdentifiesAsSQL(&sql, tce, rows, i, false); err != nil {
+		if _, _, err := writeIdentifiersAsSQL(sql, tce, rows, i, false); err != nil {
 			log.Warningf("writeIdentifiesAsSQL(%v) failed: %v", i, err)
 			continue
 		}
@@ -672,13 +671,10 @@ func (bls *Streamer) appendUpdates(statements []FullBinlogStatement, tce *tableC
 
 func (bls *Streamer) appendDeletes(statements []FullBinlogStatement, tce *tableCacheEntry, rows *mysql.Rows) []FullBinlogStatement {
 	for i := range rows.Rows {
-		var sql bytes.Buffer
+		sql := sqlparser.NewTrackedBuffer(nil)
+		sql.Myprintf("DELETE FROM %v WHERE ", sqlparser.NewTableIdent(tce.tm.Name))
 
-		sql.WriteString("DELETE FROM ")
-		sql.WriteString(tce.tm.Name)
-		sql.WriteString(" WHERE ")
-
-		keyspaceIDCell, pkValues, err := writeIdentifiesAsSQL(&sql, tce, rows, i, tce.pkNames != nil)
+		keyspaceIDCell, pkValues, err := writeIdentifiersAsSQL(sql, tce, rows, i, tce.pkNames != nil)
 		if err != nil {
 			log.Warningf("writeIdentifiesAsSQL(%v) failed: %v", i, err)
 			continue
@@ -712,7 +708,7 @@ func (bls *Streamer) appendDeletes(statements []FullBinlogStatement, tce *tableC
 // writeValuesAsSQL is a helper method to print the values as SQL in the
 // provided bytes.Buffer. It also returns the value for the keyspaceIDColumn,
 // and the array of values for the PK, if necessary.
-func writeValuesAsSQL(sql *bytes.Buffer, tce *tableCacheEntry, rs *mysql.Rows, rowIndex int, getPK bool) (sqltypes.Value, []sqltypes.Value, error) {
+func writeValuesAsSQL(sql *sqlparser.TrackedBuffer, tce *tableCacheEntry, rs *mysql.Rows, rowIndex int, getPK bool) (sqltypes.Value, []sqltypes.Value, error) {
 	valueIndex := 0
 	data := rs.Rows[rowIndex].Data
 	pos := 0
@@ -730,7 +726,7 @@ func writeValuesAsSQL(sql *bytes.Buffer, tce *tableCacheEntry, rs *mysql.Rows, r
 		if valueIndex > 0 {
 			sql.WriteString(", ")
 		}
-		sql.WriteString(tce.ti.Columns[c].Name.String())
+		sql.Myprintf("%v", tce.ti.Columns[c].Name)
 		sql.WriteByte('=')
 
 		if rs.Rows[rowIndex].NullColumns.Bit(valueIndex) {
@@ -770,10 +766,10 @@ func writeValuesAsSQL(sql *bytes.Buffer, tce *tableCacheEntry, rs *mysql.Rows, r
 	return keyspaceIDCell, pkValues, nil
 }
 
-// writeIdentifiesAsSQL is a helper method to print the identifies as SQL in the
+// writeIdentifiersAsSQL is a helper method to print the identifies as SQL in the
 // provided bytes.Buffer. It also returns the value for the keyspaceIDColumn,
 // and the array of values for the PK, if necessary.
-func writeIdentifiesAsSQL(sql *bytes.Buffer, tce *tableCacheEntry, rs *mysql.Rows, rowIndex int, getPK bool) (sqltypes.Value, []sqltypes.Value, error) {
+func writeIdentifiersAsSQL(sql *sqlparser.TrackedBuffer, tce *tableCacheEntry, rs *mysql.Rows, rowIndex int, getPK bool) (sqltypes.Value, []sqltypes.Value, error) {
 	valueIndex := 0
 	data := rs.Rows[rowIndex].Identify
 	pos := 0
@@ -791,7 +787,7 @@ func writeIdentifiesAsSQL(sql *bytes.Buffer, tce *tableCacheEntry, rs *mysql.Row
 		if valueIndex > 0 {
 			sql.WriteString(" AND ")
 		}
-		sql.WriteString(tce.ti.Columns[c].Name.String())
+		sql.Myprintf("%v", tce.ti.Columns[c].Name)
 
 		if rs.Rows[rowIndex].NullIdentifyColumns.Bit(valueIndex) {
 			// This column is represented, but its value is NULL.
