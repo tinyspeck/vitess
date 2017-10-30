@@ -102,19 +102,6 @@ func NewConsolidatorCache(capacity int64) *ConsolidatorCache {
 
 // ServeHTTP lists the most recent, cached queries and their count.
 func (cc *ConsolidatorCache) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	if true {
-		response.Write([]byte(`
-	<!DOCTYPE html>
-	<html>
-	<body>
-	<h1>Redacted</h1>
-	<p>/debug/consolidations has been redacted for your protection</p>
-	</body>
-	</html>
-		`))
-		return
-	}
-
 	if err := acl.CheckAccessHTTP(request, acl.DEBUGGING); err != nil {
 		acl.SendError(response, err)
 		return
