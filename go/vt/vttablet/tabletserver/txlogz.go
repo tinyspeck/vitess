@@ -85,17 +85,6 @@ func txlogzHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	io.WriteString(w, `
-<!DOCTYPE html>
-<html>
-<body>
-<h1>Redacted</h1>
-<p>/txlogz has been redacted for your protection</p>
-</body>
-</html>
-	`)
-	return;
-
 	timeout, limit := parseTimeoutLimitParams(req)
 	ch := tabletenv.TxLogger.Subscribe("txlogz")
 	defer tabletenv.TxLogger.Unsubscribe(ch)
