@@ -35,6 +35,8 @@ var (
 	key  = flag.String("throttler_client_grpc_key", "", "the key to use to connect")
 	ca   = flag.String("throttler_client_grpc_ca", "", "the server ca to use to validate servers when connecting")
 	name = flag.String("throttler_client_grpc_server_name", "", "the server name to use to validate server certificate")
+
+	staticAuthCreds = flag.String("throttler_client_grpc_static_auth_client_creds_file", "", "when using grpc_static_auth in the server, this file provides the credentials to use to authenticate with server")
 )
 
 type client struct {
@@ -47,7 +49,15 @@ func factory(addr string) (throttlerclient.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := grpcclient.Dial(addr, opt)
+	opts := []grpc.DialOption{opt}
+	if *staticAuthCreds != "" {
+		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, authOpts)
+	}
+	conn, err := grpcclient.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -38,10 +38,11 @@ import (
 )
 
 var (
-	cert = flag.String("vtgate_grpc_cert", "", "the cert to use to connect")
-	key  = flag.String("vtgate_grpc_key", "", "the key to use to connect")
-	ca   = flag.String("vtgate_grpc_ca", "", "the server ca to use to validate servers when connecting")
-	name = flag.String("vtgate_grpc_server_name", "", "the server name to use to validate server certificate")
+	cert            = flag.String("vtgate_grpc_cert", "", "the cert to use to connect")
+	key             = flag.String("vtgate_grpc_key", "", "the key to use to connect")
+	ca              = flag.String("vtgate_grpc_ca", "", "the server ca to use to validate servers when connecting")
+	name            = flag.String("vtgate_grpc_server_name", "", "the server name to use to validate server certificate")
+	staticAuthCreds = flag.String("vtgate_grpc_static_auth_client_creds_file", "", "when using grpc_static_auth in the server, this file provides the credentials to use to authenticate with server")
 )
 
 func init() {
@@ -54,11 +55,23 @@ type vtgateConn struct {
 }
 
 func dial(ctx context.Context, addr string, timeout time.Duration) (vtgateconn.Impl, error) {
-	opt, err := grpcclient.SecureDialOption(*cert, *key, *ca, *name)
+	secureOption, err := grpcclient.SecureDialOption(*cert, *key, *ca, *name)
 	if err != nil {
 		return nil, err
 	}
-	cc, err := grpcclient.Dial(addr, opt, grpc.WithTimeout(timeout))
+
+	opts := []grpc.DialOption{secureOption}
+
+	if *staticAuthCreds != "" {
+		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, authOpts)
+	}
+
+	opts = append(opts, grpc.WithTimeout(timeout))
+	cc, err := grpcclient.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}

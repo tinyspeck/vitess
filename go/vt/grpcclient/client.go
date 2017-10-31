@@ -17,10 +17,14 @@ limitations under the License.
 package grpcclient
 
 import (
+	"encoding/json"
+	"io/ioutil"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/youtube/vitess/go/vt/grpccommon"
+	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/vttls"
 )
 
@@ -62,4 +66,20 @@ func SecureDialOption(cert, key, ca, name string) (grpc.DialOption, error) {
 	// Create the creds server options.
 	creds := credentials.NewTLS(config)
 	return grpc.WithTransportCredentials(creds), nil
+}
+
+// LoadAuthPluginOption returns the gRPC auth dial option to use for the
+// given client connection. Only grpc_vitess_static_auth supported at the moment.
+func LoadAuthPluginOption(staticAuthConfig string) (grpc.DialOption, error) {
+	data, err := ioutil.ReadFile(staticAuthConfig)
+	if err != nil {
+		return nil, err
+	}
+	authEntryCreds := &servenv.VitessAuthEntry{}
+	err = json.Unmarshal(data, authEntryCreds)
+	if err != nil {
+		return nil, err
+	}
+	creds := grpc.WithPerRPCCredentials(authEntryCreds)
+	return creds, nil
 }

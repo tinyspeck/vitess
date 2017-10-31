@@ -33,10 +33,11 @@ import (
 )
 
 var (
-	cert = flag.String("vtctld_grpc_cert", "", "the cert to use to connect")
-	key  = flag.String("vtctld_grpc_key", "", "the key to use to connect")
-	ca   = flag.String("vtctld_grpc_ca", "", "the server ca to use to validate servers when connecting")
-	name = flag.String("vtctld_grpc_server_name", "", "the server name to use to validate server certificate")
+	cert            = flag.String("vtctld_grpc_cert", "", "the cert to use to connect")
+	key             = flag.String("vtctld_grpc_key", "", "the key to use to connect")
+	ca              = flag.String("vtctld_grpc_ca", "", "the server ca to use to validate servers when connecting")
+	name            = flag.String("vtctld_grpc_server_name", "", "the server name to use to validate server certificate")
+	staticAuthCreds = flag.String("vtctld_grpc_static_auth_client_creds_file", "", "when using grpc_static_auth in the server, this file provides the credentials to use to authenticate with server")
 )
 
 type gRPCVtctlClient struct {
@@ -49,8 +50,19 @@ func gRPCVtctlClientFactory(addr string, dialTimeout time.Duration) (vtctlclient
 	if err != nil {
 		return nil, err
 	}
+	opts := []grpc.DialOption{opt}
+	if *staticAuthCreds != "" {
+		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, authOpts)
+	}
+
+	opts = append(opts, grpc.WithTimeout(dialTimeout))
+
 	// create the RPC client
-	cc, err := grpcclient.Dial(addr, opt, grpc.WithTimeout(dialTimeout))
+	cc, err := grpcclient.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -36,10 +36,11 @@ import (
 )
 
 var (
-	cert = flag.String("vtworker_client_grpc_cert", "", "the cert to use to connect")
-	key  = flag.String("vtworker_client_grpc_key", "", "the key to use to connect")
-	ca   = flag.String("vtworker_client_grpc_ca", "", "the server ca to use to validate servers when connecting")
-	name = flag.String("vtworker_client_grpc_server_name", "", "the server name to use to validate server certificate")
+	cert            = flag.String("vtworker_client_grpc_cert", "", "the cert to use to connect")
+	key             = flag.String("vtworker_client_grpc_key", "", "the key to use to connect")
+	ca              = flag.String("vtworker_client_grpc_ca", "", "the server ca to use to validate servers when connecting")
+	name            = flag.String("vtworker_client_grpc_server_name", "", "the server name to use to validate server certificate")
+	staticAuthCreds = flag.String("vtworker_grpc_static_auth_client_creds_file", "", "when using grpc_static_auth in the server, this file provides the credentials to use to authenticate with server")
 )
 
 type gRPCVtworkerClient struct {
@@ -53,7 +54,16 @@ func gRPCVtworkerClientFactory(addr string, dialTimeout time.Duration) (vtworker
 	if err != nil {
 		return nil, err
 	}
-	cc, err := grpcclient.Dial(addr, opt, grpc.WithTimeout(dialTimeout))
+	opts := []grpc.DialOption{opt}
+	if *staticAuthCreds != "" {
+		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, authOpts)
+	}
+	opts = append(opts, grpc.WithTimeout(dialTimeout))
+	cc, err := grpcclient.Dial(addr, opts...)
 	if err != nil {
 		return nil, vterrors.Errorf(vtrpcpb.Code_DEADLINE_EXCEEDED, "grpcclient.Dial() err: %v", err)
 	}

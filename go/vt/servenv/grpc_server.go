@@ -30,6 +30,7 @@ import (
 	log "github.com/golang/glog"
 	"github.com/youtube/vitess/go/vt/grpccommon"
 	"github.com/youtube/vitess/go/vt/vttls"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -57,6 +58,9 @@ var (
 
 	// GRPCCA is the CA to use if TLS is enabled
 	GRPCCA = flag.String("grpc_ca", "", "ca to use, requires TLS, and enforces client cert check")
+
+	// GRPCAuthPluginImpl which auth plugin to use (at the moment now only grpc_static_auth is supported)
+	GRPCAuthPluginImpl = flag.String("grpc_auth_plugin_impl", "", "Which auth plugin implementation to use (grpc_static_auth)")
 
 	// GRPCServer is the global server to serve gRPC.
 	GRPCServer *grpc.Server
@@ -125,6 +129,16 @@ func createGRPCServer() {
 		opts = append(opts, grpc.KeepaliveParams(ka))
 	}
 
+	for _, initAuthPlugin := range pluginInitializers {
+		initAuthPlugin()
+	}
+
+	if *GRPCAuthPluginImpl != "" {
+		log.Infof("Using vitess auth plugin to: %q", *GRPCAuthPluginImpl)
+		opts = append(opts, grpc.StreamInterceptor(streamInterceptor))
+		opts = append(opts, grpc.UnaryInterceptor(unaryInterceptor))
+	}
+
 	GRPCServer = grpc.NewServer(opts...)
 }
 
@@ -167,4 +181,53 @@ func GRPCCheckServiceMap(name string) bool {
 
 	// then check ServiceMap
 	return CheckServiceMap("grpc", name)
+}
+
+func streamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	authPlugin := GetAuthPlugin(*GRPCAuthPluginImpl)
+	newCtx, err := authPlugin.Authenticate(stream.Context(), info.FullMethod)
+
+	if err != nil {
+		return err
+	}
+
+	wrapped := WrapServerStream(stream)
+	wrapped.WrappedContext = newCtx
+	return handler(srv, wrapped)
+}
+
+func unaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	authPlugin := GetAuthPlugin(*GRPCAuthPluginImpl)
+	newCtx, err := authPlugin.Authenticate(ctx, info.FullMethod)
+	if err != nil {
+		return nil, err
+	}
+
+	return handler(newCtx, req)
+}
+
+var pluginInitializers []func()
+
+// RegisterPluginInitializer lets plugins register themselves to be init'ed at servenv.OnRun-time
+func RegisterPluginInitializer(initializer func()) {
+	pluginInitializers = append(pluginInitializers, initializer)
+}
+
+// Based out of service stream wrapper from: https://github.com/grpc-ecosystem/go-grpc-middleware
+type WrappedServerStream struct {
+	grpc.ServerStream
+	WrappedContext context.Context
+}
+
+// Context returns the wrapper's WrappedContext, overwriting the nested grpc.ServerStream.Context()
+func (w *WrappedServerStream) Context() context.Context {
+	return w.WrappedContext
+}
+
+// WrapServerStream returns a ServerStream that has the ability to overwrite context.
+func WrapServerStream(stream grpc.ServerStream) *WrappedServerStream {
+	if existing, ok := stream.(*WrappedServerStream); ok {
+		return existing
+	}
+	return &WrappedServerStream{ServerStream: stream, WrappedContext: stream.Context()}
 }

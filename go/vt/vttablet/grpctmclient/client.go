@@ -42,11 +42,12 @@ import (
 )
 
 var (
-	concurrency = flag.Int("tablet_manager_grpc_concurrency", 8, "concurrency to use to talk to a vttablet server for performance-sensitive RPCs (like ExecuteFetchAs{Dba,AllPrivs,App})")
-	cert        = flag.String("tablet_manager_grpc_cert", "", "the cert to use to connect")
-	key         = flag.String("tablet_manager_grpc_key", "", "the key to use to connect")
-	ca          = flag.String("tablet_manager_grpc_ca", "", "the server ca to use to validate servers when connecting")
-	name        = flag.String("tablet_manager_grpc_server_name", "", "the server name to use to validate server certificate")
+	concurrency     = flag.Int("tablet_manager_grpc_concurrency", 8, "concurrency to use to talk to a vttablet server for performance-sensitive RPCs (like ExecuteFetchAs{Dba,AllPrivs,App})")
+	cert            = flag.String("tablet_manager_grpc_cert", "", "the cert to use to connect")
+	key             = flag.String("tablet_manager_grpc_key", "", "the key to use to connect")
+	ca              = flag.String("tablet_manager_grpc_ca", "", "the server ca to use to validate servers when connecting")
+	name            = flag.String("tablet_manager_grpc_server_name", "", "the server name to use to validate server certificate")
+	staticAuthCreds = flag.String("tablet_manager_grpc_static_auth_client_creds_file", "", "when using grpc_static_auth in the server, this file provides the credentials to use to authenticate with server")
 )
 
 func init() {
@@ -83,7 +84,16 @@ func (client *Client) dial(tablet *topodatapb.Tablet) (*grpc.ClientConn, tabletm
 	if err != nil {
 		return nil, nil, err
 	}
-	cc, err := grpcclient.Dial(addr, opt)
+	opts := []grpc.DialOption{opt}
+
+	if *staticAuthCreds != "" {
+		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		if err != nil {
+			return nil, nil, err
+		}
+		opts = append(opts, authOpts)
+	}
+	cc, err := grpcclient.Dial(addr, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,6 +105,15 @@ func (client *Client) dialPool(tablet *topodatapb.Tablet) (tabletmanagerservicep
 	opt, err := grpcclient.SecureDialOption(*cert, *key, *ca, *name)
 	if err != nil {
 		return nil, err
+	}
+	opts := []grpc.DialOption{opt}
+
+	if *staticAuthCreds != "" {
+		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, authOpts)
 	}
 
 	client.mu.Lock()
@@ -108,7 +127,7 @@ func (client *Client) dialPool(tablet *topodatapb.Tablet) (tabletmanagerservicep
 		client.mu.Unlock()
 
 		for i := 0; i < cap(c); i++ {
-			cc, err := grpcclient.Dial(addr, opt)
+			cc, err := grpcclient.Dial(addr, opts...)
 			if err != nil {
 				return nil, err
 			}
