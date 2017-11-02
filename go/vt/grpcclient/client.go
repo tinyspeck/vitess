@@ -68,14 +68,14 @@ func SecureDialOption(cert, key, ca, name string) (grpc.DialOption, error) {
 	return grpc.WithTransportCredentials(creds), nil
 }
 
-// LoadAuthPluginOption returns the gRPC auth dial option to use for the
+// StaticAuthDialOption returns the gRPC auth dial option to use for the
 // given client connection. Only grpc_vitess_static_auth supported at the moment.
-func LoadAuthPluginOption(staticAuthConfig string) (grpc.DialOption, error) {
+func StaticAuthDialOption(staticAuthConfig string) (grpc.DialOption, error) {
 	data, err := ioutil.ReadFile(staticAuthConfig)
 	if err != nil {
 		return nil, err
 	}
-	authEntryCreds := &servenv.VitessAuthEntry{}
+	authEntryCreds := &servenv.StaticAuthEntry{}
 	err = json.Unmarshal(data, authEntryCreds)
 	if err != nil {
 		return nil, err

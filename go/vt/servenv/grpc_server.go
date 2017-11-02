@@ -129,7 +129,7 @@ func createGRPCServer() {
 		opts = append(opts, grpc.KeepaliveParams(ka))
 	}
 
-	for _, initAuthPlugin := range pluginInitializers {
+	for _, initAuthPlugin := range authPluginInitializers {
 		initAuthPlugin()
 	}
 
@@ -206,11 +206,11 @@ func unaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return handler(newCtx, req)
 }
 
-var pluginInitializers []func()
+var authPluginInitializers []func()
 
-// RegisterPluginInitializer lets plugins register themselves to be init'ed at servenv.OnRun-time
-func RegisterPluginInitializer(initializer func()) {
-	pluginInitializers = append(pluginInitializers, initializer)
+// RegisterAuthPluginInitializer lets plugins register themselves to be init'ed at servenv.OnRun-time
+func RegisterAuthPluginInitializer(initializer func()) {
+	authPluginInitializers = append(authPluginInitializers, initializer)
 }
 
 // Based out of service stream wrapper from: https://github.com/grpc-ecosystem/go-grpc-middleware

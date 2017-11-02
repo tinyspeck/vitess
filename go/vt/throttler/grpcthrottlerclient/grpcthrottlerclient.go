@@ -51,7 +51,7 @@ func factory(addr string) (throttlerclient.Client, error) {
 	}
 	opts := []grpc.DialOption{opt}
 	if *staticAuthCreds != "" {
-		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		authOpts, err := grpcclient.StaticAuthDialOption(*staticAuthCreds)
 		if err != nil {
 			return nil, err
 		}

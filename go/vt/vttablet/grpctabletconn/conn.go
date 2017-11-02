@@ -79,7 +79,7 @@ func DialTablet(tablet *topodatapb.Tablet, timeout time.Duration) (queryservice.
 		opts = append(opts, grpc.WithTimeout(timeout))
 	}
 	if *staticAuthCreds != "" {
-		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		authOpts, err := grpcclient.StaticAuthDialOption(*staticAuthCreds)
 		if err != nil {
 			return nil, err
 		}

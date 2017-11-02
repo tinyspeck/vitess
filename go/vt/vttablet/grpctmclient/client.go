@@ -87,7 +87,7 @@ func (client *Client) dial(tablet *topodatapb.Tablet) (*grpc.ClientConn, tabletm
 	opts := []grpc.DialOption{opt}
 
 	if *staticAuthCreds != "" {
-		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		authOpts, err := grpcclient.StaticAuthDialOption(*staticAuthCreds)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -109,7 +109,7 @@ func (client *Client) dialPool(tablet *topodatapb.Tablet) (tabletmanagerservicep
 	opts := []grpc.DialOption{opt}
 
 	if *staticAuthCreds != "" {
-		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		authOpts, err := grpcclient.StaticAuthDialOption(*staticAuthCreds)
 		if err != nil {
 			return nil, err
 		}

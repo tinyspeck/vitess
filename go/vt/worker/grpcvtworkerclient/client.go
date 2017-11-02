@@ -56,7 +56,7 @@ func gRPCVtworkerClientFactory(addr string, dialTimeout time.Duration) (vtworker
 	}
 	opts := []grpc.DialOption{opt}
 	if *staticAuthCreds != "" {
-		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		authOpts, err := grpcclient.StaticAuthDialOption(*staticAuthCreds)
 		if err != nil {
 			return nil, err
 		}

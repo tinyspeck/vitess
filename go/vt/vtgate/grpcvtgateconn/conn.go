@@ -63,7 +63,7 @@ func dial(ctx context.Context, addr string, timeout time.Duration) (vtgateconn.I
 	opts := []grpc.DialOption{secureOption}
 
 	if *staticAuthCreds != "" {
-		authOpts, err := grpcclient.LoadAuthPluginOption(*staticAuthCreds)
+		authOpts, err := grpcclient.StaticAuthDialOption(*staticAuthCreds)
 		if err != nil {
 			return nil, err
 		}

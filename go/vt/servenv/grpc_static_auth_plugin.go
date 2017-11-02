@@ -30,39 +30,39 @@ import (
 )
 
 var (
-	credsFile                = flag.String("grpc_vitess_static_auth_plugin_file", "", "JSON File to read the users/passwords from.")
-	requireTransportSecurity = flag.Bool("grpc_vitess_static_auth_require_transport_security", false, "when true it requires transport security. Should be use in conjuction with tls certificates")
+	credsFile                = flag.String("grpc_static_auth_plugin_file", "", "JSON File to read the users/passwords from.")
+	requireTransportSecurity = flag.Bool("grpc_static_auth_require_transport_security", false, "when true it requires transport security. Should be use in conjuction with tls certificates")
 )
 
-type VitessAuthEntry struct {
+type StaticAuthEntry struct {
 	Username string
 	Password string
 	// TODO (@rafael) Add authorization parameters
 }
 
-func (e *VitessAuthEntry) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
+func (e *StaticAuthEntry) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
 	return map[string]string{
 		"username": e.Username,
 		"password": e.Password,
 	}, nil
 }
 
-func (c *VitessAuthEntry) RequireTransportSecurity() bool {
+func (c *StaticAuthEntry) RequireTransportSecurity() bool {
 	return *requireTransportSecurity
 }
 
 type VitessStaticAuth struct {
-	entries []VitessAuthEntry
+	entries []StaticAuthEntry
 }
 
-func (srvAuth *VitessStaticAuth) Authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
+func (sa *VitessStaticAuth) Authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if len(md["username"]) == 0 || len(md["password"]) == 0 {
 			return nil, grpc.Errorf(codes.Unauthenticated, "username and password must be provided")
 		}
 		username := md["username"][0]
 		password := md["password"][0]
-		for _, authEntry := range srvAuth.entries {
+		for _, authEntry := range sa.entries {
 			if username == authEntry.Username && password == authEntry.Password {
 				return ctx, nil
 			}
@@ -73,7 +73,7 @@ func (srvAuth *VitessStaticAuth) Authenticate(ctx context.Context, fullMethod st
 }
 
 func InitVitessStaticAuthPlugin() {
-	entries := make([]VitessAuthEntry, 0)
+	entries := make([]StaticAuthEntry, 0)
 	if *credsFile == "" {
 		// NOOP Vitess static auth plugin was not provided
 		return
@@ -93,10 +93,10 @@ func InitVitessStaticAuthPlugin() {
 	staticAuthPlugin := &VitessStaticAuth{
 		entries: entries,
 	}
-	log.Info("Vitess status auth plugin have initialized successfully with config from grpc_vitess_static_auth_plugin_file")
+	log.Info("Vitess status auth plugin have initialized successfully with config from grpc_static_auth_plugin_file")
 	RegisterAuthPluginImpl("grpc_static_auth", staticAuthPlugin)
 }
 
 func init() {
-	RegisterPluginInitializer(InitVitessStaticAuthPlugin)
+	RegisterAuthPluginInitializer(InitVitessStaticAuthPlugin)
 }

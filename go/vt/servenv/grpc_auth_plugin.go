@@ -26,15 +26,15 @@ import (
 	log "github.com/golang/glog"
 )
 
-type VitessAuthPlugin interface {
+type AuthPlugin interface {
 	Authenticate(ctx context.Context, fullMethod string) (context.Context, error)
 }
 
 // authPlugins is a registry of VitessAuthPlugin implementations.
-var authPlugins = make(map[string]VitessAuthPlugin)
+var authPlugins = make(map[string]AuthPlugin)
 
 // RegisterAuthPluginImpl registers an implementations of AuthServer.
-func RegisterAuthPluginImpl(name string, authPlugin VitessAuthPlugin) {
+func RegisterAuthPluginImpl(name string, authPlugin AuthPlugin) {
 	if _, ok := authPlugins[name]; ok {
 		log.Fatalf("AuthPlugin named %v already exists", name)
 	}
@@ -42,7 +42,7 @@ func RegisterAuthPluginImpl(name string, authPlugin VitessAuthPlugin) {
 }
 
 // GetAuthPlugin returns an AuthPlugin by name, or log.Fatalf.
-func GetAuthPlugin(name string) VitessAuthPlugin {
+func GetAuthPlugin(name string) AuthPlugin {
 	authPlugin, ok := authPlugins[name]
 	if !ok {
 		log.Fatalf("no AuthPlugin name %v registered", name)
