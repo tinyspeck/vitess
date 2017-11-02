@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/youtube/vitess/go/vt/grpccommon"
-	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/vttls"
 )
 
@@ -70,16 +69,20 @@ func SecureDialOption(cert, key, ca, name string) (grpc.DialOption, error) {
 
 // StaticAuthDialOption returns the gRPC auth dial option to use for the
 // given client connection. Only grpc_vitess_static_auth supported at the moment.
-func StaticAuthDialOption(staticAuthConfig string) (grpc.DialOption, error) {
-	data, err := ioutil.ReadFile(staticAuthConfig)
+func StaticAuthDialOption(opts []grpc.DialOption, staticAuthClientConfig string) ([]grpc.DialOption, error) {
+	if staticAuthClientConfig == "" {
+		return opts, nil
+	}
+	data, err := ioutil.ReadFile(staticAuthClientConfig)
 	if err != nil {
 		return nil, err
 	}
-	authEntryCreds := &servenv.StaticAuthEntry{}
-	err = json.Unmarshal(data, authEntryCreds)
+	clientCreds := &StaticAuthClientCreds{}
+	err = json.Unmarshal(data, clientCreds)
 	if err != nil {
 		return nil, err
 	}
-	creds := grpc.WithPerRPCCredentials(authEntryCreds)
-	return creds, nil
+	creds := grpc.WithPerRPCCredentials(clientCreds)
+	opts = append(opts, creds)
+	return opts, nil
 }

@@ -19,6 +19,7 @@ package servenv
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 
 	"golang.org/x/net/context"
@@ -30,32 +31,29 @@ import (
 )
 
 var (
-	credsFile                = flag.String("grpc_static_auth_plugin_file", "", "JSON File to read the users/passwords from.")
-	requireTransportSecurity = flag.Bool("grpc_static_auth_require_transport_security", false, "when true it requires transport security. Should be use in conjuction with tls certificates")
+	credsFile = flag.String("grpc_server_auth_static_file", "", "JSON File to read the users/passwords from.")
+	// StaticAuthPluginConfig implements AuthPlugin interface
+	_ AuthPlugin = (*StaticAuthPluginConfig)(nil)
 )
 
-type StaticAuthEntry struct {
+// StaticAuthConfigEntry holder for server side credentials. Current implementation matches the
+// the one from the client but this will change in the future as we hooked this pluging into ACL
+// features.
+type StaticAuthConfigEntry struct {
 	Username string
 	Password string
 	// TODO (@rafael) Add authorization parameters
 }
 
-func (e *StaticAuthEntry) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
-	return map[string]string{
-		"username": e.Username,
-		"password": e.Password,
-	}, nil
+// StaticAuthPluginConfig config for static auth plugin. It contains an array of username/passwords
+// that will be authorized to connect to the grpc server.
+type StaticAuthPluginConfig struct {
+	entries []StaticAuthConfigEntry
 }
 
-func (c *StaticAuthEntry) RequireTransportSecurity() bool {
-	return *requireTransportSecurity
-}
-
-type VitessStaticAuth struct {
-	entries []StaticAuthEntry
-}
-
-func (sa *VitessStaticAuth) Authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
+// Authenticate implements AuthPlugin interface. This method will be used inside a middleware in grpc_server to authenticate
+// incoming requests.
+func (sa *StaticAuthPluginConfig) Authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if len(md["username"]) == 0 || len(md["password"]) == 0 {
 			return nil, grpc.Errorf(codes.Unauthenticated, "username and password must be provided")
@@ -72,31 +70,31 @@ func (sa *VitessStaticAuth) Authenticate(ctx context.Context, fullMethod string)
 	return nil, grpc.Errorf(codes.Unauthenticated, "username and password must be provided")
 }
 
-func InitVitessStaticAuthPlugin() {
-	entries := make([]StaticAuthEntry, 0)
+func staticAuthPluginInitializer() (AuthPlugin, error) {
+	entries := make([]StaticAuthConfigEntry, 0)
 	if *credsFile == "" {
-		// NOOP Vitess static auth plugin was not provided
-		return
+		err := fmt.Errorf("failed to load static auth plugin. Plugin configured but grpc_server_auth_static_file not provided")
+		return nil, err
 	}
 
 	data, err := ioutil.ReadFile(*credsFile)
 	if err != nil {
-		log.Fatalf("failed to load auth plugin %v", err)
-		return
+		err := fmt.Errorf("failed to load static auth plugin %v", err)
+		return nil, err
 	}
 
 	err = json.Unmarshal(data, &entries)
 	if err != nil {
-		log.Fatalf("fail to load static auth plugin: %v", err)
-		return
+		err := fmt.Errorf("fail to load static auth plugin: %v", err)
+		return nil, err
 	}
-	staticAuthPlugin := &VitessStaticAuth{
+	staticAuthPlugin := &StaticAuthPluginConfig{
 		entries: entries,
 	}
-	log.Info("Vitess status auth plugin have initialized successfully with config from grpc_static_auth_plugin_file")
-	RegisterAuthPluginImpl("grpc_static_auth", staticAuthPlugin)
+	log.Info("static auth plugin have initialized successfully with config from grpc_server_auth_static_file")
+	return staticAuthPlugin, nil
 }
 
 func init() {
-	RegisterAuthPluginInitializer(InitVitessStaticAuthPlugin)
+	RegisterAuthPlugin("static", staticAuthPluginInitializer)
 }

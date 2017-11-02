@@ -59,8 +59,8 @@ var (
 	// GRPCCA is the CA to use if TLS is enabled
 	GRPCCA = flag.String("grpc_ca", "", "ca to use, requires TLS, and enforces client cert check")
 
-	// GRPCAuthPluginImpl which auth plugin to use (at the moment now only grpc_static_auth is supported)
-	GRPCAuthPluginImpl = flag.String("grpc_auth_plugin_impl", "", "Which auth plugin implementation to use (grpc_static_auth)")
+	// GRPCAuth which auth plugin to use (at the moment now only static is supported)
+	GRPCAuth = flag.String("grpc_server_auth", "", "Which auth plugin implementation to use (eg: static)")
 
 	// GRPCServer is the global server to serve gRPC.
 	GRPCServer *grpc.Server
@@ -72,6 +72,8 @@ var (
 	// GRPCMaxConnectionAgeGrace is an additional grace period after GRPCMaxConnectionAge, after which
 	// connections are forcibly closed.
 	GRPCMaxConnectionAgeGrace = flag.Duration("grpc_max_connection_age_grace", time.Duration(math.MaxInt64), "Additional grace period after grpc_max_connection_age, after which connections are forcibly closed.")
+
+	authPlugin AuthPlugin
 )
 
 // isGRPCEnabled returns true if gRPC server is set
@@ -129,12 +131,14 @@ func createGRPCServer() {
 		opts = append(opts, grpc.KeepaliveParams(ka))
 	}
 
-	for _, initAuthPlugin := range authPluginInitializers {
-		initAuthPlugin()
-	}
-
-	if *GRPCAuthPluginImpl != "" {
-		log.Infof("Using vitess auth plugin to: %q", *GRPCAuthPluginImpl)
+	if *GRPCAuth != "" {
+		log.Infof("enabling auth plugin %v", *GRPCAuth)
+		pluginInitializer := GetAuthPlugin(*GRPCAuth)
+		authPluginImpl, err := pluginInitializer()
+		if err != nil {
+			log.Fatalf("Failed to load auth plugin: %v", err)
+		}
+		authPlugin = authPluginImpl
 		opts = append(opts, grpc.StreamInterceptor(streamInterceptor))
 		opts = append(opts, grpc.UnaryInterceptor(unaryInterceptor))
 	}
@@ -184,7 +188,6 @@ func GRPCCheckServiceMap(name string) bool {
 }
 
 func streamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	authPlugin := GetAuthPlugin(*GRPCAuthPluginImpl)
 	newCtx, err := authPlugin.Authenticate(stream.Context(), info.FullMethod)
 
 	if err != nil {
@@ -197,7 +200,6 @@ func streamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.Str
 }
 
 func unaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	authPlugin := GetAuthPlugin(*GRPCAuthPluginImpl)
 	newCtx, err := authPlugin.Authenticate(ctx, info.FullMethod)
 	if err != nil {
 		return nil, err
@@ -206,14 +208,7 @@ func unaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return handler(newCtx, req)
 }
 
-var authPluginInitializers []func()
-
-// RegisterAuthPluginInitializer lets plugins register themselves to be init'ed at servenv.OnRun-time
-func RegisterAuthPluginInitializer(initializer func()) {
-	authPluginInitializers = append(authPluginInitializers, initializer)
-}
-
-// Based out of service stream wrapper from: https://github.com/grpc-ecosystem/go-grpc-middleware
+// WrappedServerStream based out of service stream wrapper from: https://github.com/grpc-ecosystem/go-grpc-middleware
 type WrappedServerStream struct {
 	grpc.ServerStream
 	WrappedContext context.Context
