@@ -19,6 +19,10 @@ package servenv
 import (
 	"golang.org/x/net/context"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+
 	log "github.com/golang/glog"
 )
 
@@ -44,4 +48,35 @@ func GetAuthPlugin(name string) VitessAuthPlugin {
 		log.Fatalf("no AuthPlugin name %v registered", name)
 	}
 	return authPlugin
+}
+
+// FakeAuthStreamInterceptor fake interceptor to test plugin
+func FakeAuthStreamInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	if fakeDummyAuthenticate(stream.Context()) {
+		return handler(srv, stream)
+	}
+	return grpc.Errorf(codes.Unauthenticated, "username and password must be provided")
+}
+
+// FakeAuthUnaryInterceptor fake interceptor to test plugin
+func FakeAuthUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	if fakeDummyAuthenticate(ctx) {
+		return handler(ctx, req)
+	}
+	return nil, grpc.Errorf(codes.Unauthenticated, "username and password must be provided")
+}
+
+func fakeDummyAuthenticate(ctx context.Context) bool {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if len(md["username"]) == 0 || len(md["password"]) == 0 {
+			return false
+		}
+		username := md["username"][0]
+		password := md["password"][0]
+		if username == "valid" && password == "valid" {
+			return true
+		}
+		return false
+	}
+	return false
 }
