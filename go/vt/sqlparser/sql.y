@@ -41,6 +41,9 @@ func decNesting(yylex interface{}) {
   yylex.(*Tokenizer).nesting--
 }
 
+// forceEOF forces the lexer to end prematurely. Not all SQL statements
+// are supported by the Parser, thus calling forceEOF will make the lexer
+// return EOF early.
 func forceEOF(yylex interface{}) {
   yylex.(*Tokenizer).ForceEOF = true
 }
@@ -131,7 +134,7 @@ func forceEOF(yylex interface{}) {
 %left <bytes> '^'
 %right <bytes> '~' UNARY
 %left <bytes> COLLATE
-%right <bytes> BINARY
+%right <bytes> BINARY UNDERSCORE_BINARY
 %right <bytes> INTERVAL
 %nonassoc <bytes> '.'
 
@@ -180,7 +183,7 @@ func forceEOF(yylex interface{}) {
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
 %type <statement> insert_statement update_statement delete_statement set_statement
-%type <statement> create_statement alter_statement rename_statement drop_statement
+%type <statement> create_statement alter_statement rename_statement drop_statement truncate_statement
 %type <ddl> create_table_prefix
 %type <statement> analyze_statement show_statement use_statement other_statement
 %type <bytes2> comment_opt comment_list
@@ -242,7 +245,7 @@ func forceEOF(yylex interface{}) {
 %type <str> show_statement_type
 %type <columnType> column_type
 %type <columnType> int_type decimal_type numeric_type time_type char_type
-%type <optVal> length_opt column_default_opt column_comment_opt
+%type <optVal> length_opt column_default_opt column_comment_opt on_update_opt
 %type <str> charset_opt collate_opt
 %type <boolVal> unsigned_opt zero_fill_opt
 %type <LengthScaleOption> float_length_opt decimal_length_opt
@@ -288,6 +291,7 @@ command:
 | alter_statement
 | rename_statement
 | drop_statement
+| truncate_statement
 | analyze_statement
 | show_statement
 | use_statement
@@ -477,13 +481,14 @@ table_column_list:
   }
 
 column_definition:
-  ID column_type null_opt column_default_opt auto_increment_opt column_key_opt column_comment_opt
+  ID column_type null_opt column_default_opt on_update_opt auto_increment_opt column_key_opt column_comment_opt
   {
     $2.NotNull = $3
     $2.Default = $4
-    $2.Autoincrement = $5
-    $2.KeyOpt = $6
-    $2.Comment = $7
+    $2.OnUpdate = $5
+    $2.Autoincrement = $6
+    $2.KeyOpt = $7
+    $2.Comment = $8
     $$ = &ColumnDefinition{Name: NewColIdent(string($1)), Type: $2}
   }
 column_type:
@@ -751,6 +756,19 @@ column_default_opt:
   {
     $$ = NewValArg($2)
   }
+| DEFAULT CURRENT_TIMESTAMP
+  {
+    $$ = NewValArg($2)
+  }
+
+on_update_opt:
+  {
+    $$ = nil
+  }
+| ON UPDATE CURRENT_TIMESTAMP
+{
+  $$ = NewValArg($3)
+}
 
 auto_increment_opt:
   {
@@ -971,7 +989,7 @@ drop_statement:
     }
     $$ = &DDL{Action: DropStr, Table: $4, IfExists: exists}
   }
-| DROP INDEX ID ON table_name
+| DROP INDEX ID ON table_name ddl_force_eof
   {
     // Change this to an alter statement
     $$ = &DDL{Action: AlterStr, Table: $5, NewName: $5}
@@ -985,6 +1003,15 @@ drop_statement:
     $$ = &DDL{Action: DropStr, Table: $4.ToViewName(), IfExists: exists}
   }
 
+truncate_statement:
+  TRUNCATE TABLE table_name
+  {
+    $$ = &DDL{Action: TruncateStr, Table: $3}
+  }
+| TRUNCATE table_name
+  {
+    $$ = &DDL{Action: TruncateStr, Table: $2}
+  }
 analyze_statement:
   ANALYZE TABLE table_name
   {
@@ -1049,10 +1076,6 @@ other_statement:
     $$ = &OtherAdmin{}
   }
 | OPTIMIZE force_eof
-  {
-    $$ = &OtherAdmin{}
-  }
-| TRUNCATE force_eof
   {
     $$ = &OtherAdmin{}
   }
@@ -1648,6 +1671,10 @@ value_expression:
 | BINARY value_expression %prec UNARY
   {
     $$ = &UnaryExpr{Operator: BinaryStr, Expr: $2}
+  }
+| UNDERSCORE_BINARY value_expression %prec UNARY
+  {
+    $$ = &UnaryExpr{Operator: UBinaryStr, Expr: $2}
   }
 | '+'  value_expression %prec UNARY
   {
@@ -2477,7 +2504,6 @@ non_reserved_keyword:
 | TINYBLOB
 | TINYINT
 | TINYTEXT
-| TRUNCATE
 | UNSIGNED
 | UNUSED
 | VARBINARY

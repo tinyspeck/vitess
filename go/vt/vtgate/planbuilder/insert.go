@@ -48,7 +48,7 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 		Table:    table,
 		Keyspace: table.Keyspace,
 	}
-	if !validateSubquerySamePlan(ins, eRoute, vschema) {
+	if !validateSubquerySamePlan(eRoute, vschema, ins) {
 		return nil, errors.New("unsupported: sharded subquery in insert values")
 	}
 	var rows sqlparser.Values
@@ -95,7 +95,7 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 		eRoute.Opcode = engine.InsertShardedIgnore
 	}
 	if ins.OnDup != nil {
-		if isIndexChanging(sqlparser.UpdateExprs(ins.OnDup), eRoute.Table.ColumnVindexes) {
+		if isVindexChanging(sqlparser.UpdateExprs(ins.OnDup), eRoute.Table.ColumnVindexes) {
 			return nil, errors.New("unsupported: DML cannot change vindex column")
 		}
 		eRoute.Opcode = engine.InsertShardedIgnore
@@ -206,4 +206,17 @@ func findOrAddColumn(ins *sqlparser.Insert, col sqlparser.ColIdent) int {
 		rows[i] = append(rows[i], &sqlparser.NullVal{})
 	}
 	return len(ins.Columns) - 1
+}
+
+// isVindexChanging returns true if any of the update
+// expressions modify a vindex column.
+func isVindexChanging(setClauses sqlparser.UpdateExprs, colVindexes []*vindexes.ColumnVindex) bool {
+	for _, assignment := range setClauses {
+		for _, vcol := range colVindexes {
+			if vcol.Column.Equal(assignment.Name.Name) {
+				return true
+			}
+		}
+	}
+	return false
 }

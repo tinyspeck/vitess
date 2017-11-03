@@ -27,12 +27,12 @@ import (
 )
 
 var (
-	buildHost      = ""
-	buildUser      = ""
-	buildTime      = ""
-	buildGitRev    = ""
-	buildGitBranch = ""
-	buildNumberStr = ""
+	buildHost             = ""
+	buildUser             = ""
+	buildTime             = ""
+	buildGitRev           = ""
+	buildGitBranch        = ""
+	jenkinsBuildNumberStr = ""
 
 	// Version registers the command line flag to expose build info.
 	Version = flag.Bool("version", false, "print binary version")
@@ -42,20 +42,24 @@ var (
 var AppVersion versionInfo
 
 type versionInfo struct {
-	buildHost       string
-	buildUser       string
-	buildTime       int64
-	buildTimePretty string
-	buildGitRev     string
-	buildGitBranch  string
-	buildNumber     int64
-	goVersion       string
-	goOS            string
-	goArch          string
+	buildHost          string
+	buildUser          string
+	buildTime          int64
+	buildTimePretty    string
+	buildGitRev        string
+	buildGitBranch     string
+	jenkinsBuildNumber int64
+	goVersion          string
+	goOS               string
+	goArch             string
 }
 
 func (v *versionInfo) Print() {
-	fmt.Printf("Version: %s (%d) (Git branch '%s') built on %s by %s@%s using %s %s/%s\n", v.buildGitRev, v.buildNumber, v.buildGitBranch, v.buildTimePretty, v.buildUser, v.buildHost, v.goVersion, v.goOS, v.goArch)
+	version := fmt.Sprintf("Version: %s", v.buildGitRev)
+	if v.jenkinsBuildNumber != 0 {
+		version = fmt.Sprintf("Version: %s (Jenkins build %d)", v.buildGitRev, v.jenkinsBuildNumber)
+	}
+	fmt.Printf("%s (Git branch '%s') built on %s by %s@%s using %s %s/%s\n", version, v.buildGitBranch, v.buildTimePretty, v.buildUser, v.buildHost, v.goVersion, v.goOS, v.goArch)
 }
 
 func init() {
@@ -64,22 +68,22 @@ func init() {
 		panic(fmt.Sprintf("Couldn't parse build timestamp %q: %v", buildTime, err))
 	}
 
-	buildNumber, err := strconv.ParseInt(buildNumberStr, 10, 64)
+	jenkinsBuildNumber, err := strconv.ParseInt(jenkinsBuildNumberStr, 10, 64)
 	if err != nil {
-		buildNumber = 0
+		jenkinsBuildNumber = 0
 	}
 
 	AppVersion = versionInfo{
-		buildHost:       buildHost,
-		buildUser:       buildUser,
-		buildTime:       t.Unix(),
-		buildTimePretty: buildTime,
-		buildGitRev:     buildGitRev,
-		buildGitBranch:  buildGitBranch,
-		buildNumber:     buildNumber,
-		goVersion:       runtime.Version(),
-		goOS:            runtime.GOOS,
-		goArch:          runtime.GOARCH,
+		buildHost:          buildHost,
+		buildUser:          buildUser,
+		buildTime:          t.Unix(),
+		buildTimePretty:    buildTime,
+		buildGitRev:        buildGitRev,
+		buildGitBranch:     buildGitBranch,
+		jenkinsBuildNumber: jenkinsBuildNumber,
+		goVersion:          runtime.Version(),
+		goOS:               runtime.GOOS,
+		goArch:             runtime.GOARCH,
 	}
 
 	stats.NewString("BuildHost").Set(AppVersion.buildHost)
@@ -87,7 +91,7 @@ func init() {
 	stats.NewInt("BuildTimestamp").Set(AppVersion.buildTime)
 	stats.NewString("BuildGitRev").Set(AppVersion.buildGitRev)
 	stats.NewString("BuildGitBranch").Set(AppVersion.buildGitBranch)
-	stats.NewInt("BuildNumber").Set(AppVersion.buildNumber)
+	stats.NewInt("BuildNumber").Set(AppVersion.jenkinsBuildNumber)
 	stats.NewString("GoVersion").Set(AppVersion.goVersion)
 	stats.NewString("GoOS").Set(AppVersion.goOS)
 	stats.NewString("GoArch").Set(AppVersion.goArch)

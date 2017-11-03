@@ -31,8 +31,8 @@ import (
 
 	"github.com/youtube/vitess/go/sqltypes"
 	vtenv "github.com/youtube/vitess/go/vt/env"
-	"github.com/youtube/vitess/go/vt/servenv/grpcutils"
 	"github.com/youtube/vitess/go/vt/tlstest"
+	"github.com/youtube/vitess/go/vt/vttls"
 
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
 )
@@ -72,8 +72,8 @@ func (th *testHandler) NewConnection(c *Conn) {
 func (th *testHandler) ConnectionClosed(c *Conn) {
 }
 
-func (th *testHandler) ComQuery(c *Conn, q []byte, callback func(*sqltypes.Result) error) error {
-	switch query := string(q); query {
+func (th *testHandler) ComQuery(c *Conn, query string, callback func(*sqltypes.Result) error) error {
+	switch query {
 	case "error":
 		return NewSQLError(ERUnknownComError, SSUnknownComError, "forced query handling error for: %v", query)
 	case "panic":
@@ -665,7 +665,7 @@ func TestTLSServer(t *testing.T) {
 	tlstest.CreateSignedCert(root, tlstest.CA, "02", "client", "Client Cert")
 
 	// Create the server with TLS config.
-	serverConfig, err := grpcutils.TLSServerConfig(
+	serverConfig, err := vttls.ServerConfig(
 		path.Join(root, "server-cert.pem"),
 		path.Join(root, "server-key.pem"),
 		path.Join(root, "ca-cert.pem"))

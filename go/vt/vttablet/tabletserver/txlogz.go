@@ -85,7 +85,8 @@ func txlogzHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	io.WriteString(w, `
+	if *tabletenv.RedactDebugUIQueries {
+		io.WriteString(w, `
 <!DOCTYPE html>
 <html>
 <body>
@@ -93,8 +94,9 @@ func txlogzHandler(w http.ResponseWriter, req *http.Request) {
 <p>/txlogz has been redacted for your protection</p>
 </body>
 </html>
-	`)
-	return;
+`)
+		return
+	}
 
 	timeout, limit := parseTimeoutLimitParams(req)
 	ch := tabletenv.TxLogger.Subscribe("txlogz")

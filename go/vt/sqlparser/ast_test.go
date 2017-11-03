@@ -297,7 +297,9 @@ func TestColIdentMarshal(t *testing.T) {
 		t.Errorf("json.Marshal()= %s, want %s", got, want)
 	}
 	var out ColIdent
-	err = json.Unmarshal(b, &out)
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Errorf("Unmarshal err: %v, want nil", err)
+	}
 	if !reflect.DeepEqual(out, str) {
 		t.Errorf("Unmarshal: %v, want %v", out, str)
 	}
@@ -323,7 +325,9 @@ func TestTableIdentMarshal(t *testing.T) {
 		t.Errorf("json.Marshal()= %s, want %s", got, want)
 	}
 	var out TableIdent
-	err = json.Unmarshal(b, &out)
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Errorf("Unmarshal err: %v, want nil", err)
+	}
 	if !reflect.DeepEqual(out, str) {
 		t.Errorf("Unmarshal: %v, want %v", out, str)
 	}
@@ -383,24 +387,6 @@ func TestCompliantName(t *testing.T) {
 		out = NewTableIdent(tc.in).CompliantName()
 		if out != tc.out {
 			t.Errorf("TableIdent(%s).CompliantNamt: %s, want %s", tc.in, out, tc.out)
-		}
-	}
-}
-
-func TestEscape(t *testing.T) {
-	testcases := []struct {
-		in, out string
-	}{{
-		in:  "aa",
-		out: "`aa`",
-	}, {
-		in:  "a`a",
-		out: "`a``a`",
-	}}
-	for _, tc := range testcases {
-		out := Backtick(tc.in)
-		if out != tc.out {
-			t.Errorf("Escape(%s): %s, want %s", tc.in, out, tc.out)
 		}
 	}
 }

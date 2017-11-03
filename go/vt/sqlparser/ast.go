@@ -20,15 +20,16 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
+	"io"
 	"strings"
 
 	log "github.com/golang/glog"
 
 	"github.com/youtube/vitess/go/sqltypes"
+	"github.com/youtube/vitess/go/vt/vterrors"
+
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
 	vtrpcpb "github.com/youtube/vitess/go/vt/proto/vtrpc"
-	"github.com/youtube/vitess/go/vt/vterrors"
 )
 
 // Instructions for creating new types: If a type
@@ -43,7 +44,7 @@ import (
 // a set of types, define the function as iTypeName.
 // This will help avoid name collisions.
 
-// Parse parses the sql and returns a Statement, which
+// Parse parses the SQL in full and returns a Statement, which
 // is the AST representation of the query. If a DDL statement
 // is partially parsed but still contains a syntax error, the
 // error is ignored and the DDL is returned anyway.
@@ -55,7 +56,7 @@ func Parse(sql string) (Statement, error) {
 			tokenizer.ParseTree = tokenizer.partialDDL
 			return tokenizer.ParseTree, nil
 		}
-		return nil, vterrors.New(vtrpcpb.Code_INVALID_ARGUMENT, tokenizer.LastError)
+		return nil, vterrors.New(vtrpcpb.Code_INVALID_ARGUMENT, tokenizer.LastError.Error())
 	}
 	return tokenizer.ParseTree, nil
 }
@@ -65,9 +66,55 @@ func Parse(sql string) (Statement, error) {
 func ParseStrictDDL(sql string) (Statement, error) {
 	tokenizer := NewStringTokenizer(sql)
 	if yyParse(tokenizer) != 0 {
-		return nil, errors.New(tokenizer.LastError)
+		return nil, tokenizer.LastError
 	}
 	return tokenizer.ParseTree, nil
+}
+
+// ParseNext parses a single SQL statement from the tokenizer
+// returning a Statement which is the AST representation of the query.
+// The tokenizer will always read up to the end of the statement, allowing for
+// the next call to ParseNext to parse any subsequent SQL statements. When
+// there are no more statements to parse, a error of io.EOF is returned.
+func ParseNext(tokenizer *Tokenizer) (Statement, error) {
+	if tokenizer.lastChar == ';' {
+		tokenizer.next()
+		tokenizer.skipBlank()
+	}
+	if tokenizer.lastChar == eofChar {
+		return nil, io.EOF
+	}
+
+	tokenizer.reset()
+	tokenizer.multi = true
+	if yyParse(tokenizer) != 0 {
+		if tokenizer.partialDDL != nil {
+			tokenizer.ParseTree = tokenizer.partialDDL
+			return tokenizer.ParseTree, nil
+		}
+		return nil, tokenizer.LastError
+	}
+	return tokenizer.ParseTree, nil
+}
+
+// SplitStatement returns the first sql statement up to either a ; or EOF
+// and the remainder from the given buffer
+func SplitStatement(blob string) (string, string, error) {
+	tokenizer := NewStringTokenizer(blob)
+	tkn := 0
+	for {
+		tkn, _ = tokenizer.Scan()
+		if tkn == 0 || tkn == ';' || tkn == eofChar {
+			break
+		}
+	}
+	if tokenizer.LastError != nil {
+		return "", "", tokenizer.LastError
+	}
+	if tkn == ';' {
+		return blob[:tokenizer.Position-2], blob[tokenizer.Position-1:], nil
+	}
+	return blob, "", nil
 }
 
 // SQLNode defines the interface for all nodes
@@ -109,6 +156,10 @@ func Walk(visit Visit, nodes ...SQLNode) error {
 
 // String returns a string representation of an SQLNode.
 func String(node SQLNode) string {
+	if node == nil {
+		return "<nil>"
+	}
+
 	buf := NewTrackedBuffer(nil)
 	buf.Myprintf("%v", node)
 	return buf.String()
@@ -358,6 +409,7 @@ func (node *Union) WalkSubtree(visit Visit) error {
 // the row and re-inserts with new values. For that reason we keep it as an Insert struct.
 // Replaces are currently disallowed in sharded schemas because
 // of the implications the deletion part may have on vindexes.
+// If you add fields here, consider adding them to calls to validateSubquerySamePlan.
 type Insert struct {
 	Action   string
 	Comments Comments
@@ -409,6 +461,7 @@ func (Values) iInsertRows()       {}
 func (*ParenSelect) iInsertRows() {}
 
 // Update represents an UPDATE statement.
+// If you add fields here, consider adding them to calls to validateSubquerySamePlan.
 type Update struct {
 	Comments   Comments
 	TableExprs TableExprs
@@ -442,6 +495,7 @@ func (node *Update) WalkSubtree(visit Visit) error {
 }
 
 // Delete represents a DELETE statement.
+// If you add fields here, consider adding them to calls to validateSubquerySamePlan.
 type Delete struct {
 	Comments   Comments
 	Targets    TableNames
@@ -500,8 +554,8 @@ func (node *Set) WalkSubtree(visit Visit) error {
 	)
 }
 
-// DDL represents a CREATE, ALTER, DROP or RENAME statement.
-// Table is set for AlterStr, DropStr, RenameStr
+// DDL represents a CREATE, ALTER, DROP, RENAME or TRUNCATE statement.
+// Table is set for AlterStr, DropStr, RenameStr, TruncateStr
 // NewName is set for AlterStr, CreateStr, RenameStr.
 type DDL struct {
 	Action        string
@@ -514,10 +568,11 @@ type DDL struct {
 
 // DDL strings.
 const (
-	CreateStr = "create"
-	AlterStr  = "alter"
-	DropStr   = "drop"
-	RenameStr = "rename"
+	CreateStr   = "create"
+	AlterStr    = "alter"
+	DropStr     = "drop"
+	RenameStr   = "rename"
+	TruncateStr = "truncate"
 )
 
 // Format formats the node.
@@ -695,7 +750,7 @@ type ColumnDefinition struct {
 
 // Format formats the node.
 func (col *ColumnDefinition) Format(buf *TrackedBuffer) {
-	buf.Myprintf("`%s` %v", col.Name.String(), &col.Type)
+	buf.Myprintf("%v %v", col.Name, &col.Type)
 }
 
 // WalkSubtree walks the nodes of the subtree.
@@ -720,6 +775,7 @@ type ColumnType struct {
 	NotNull       BoolVal
 	Autoincrement BoolVal
 	Default       *SQLVal
+	OnUpdate      *SQLVal
 	Comment       *SQLVal
 
 	// Numeric field options
@@ -772,6 +828,9 @@ func (ct *ColumnType) Format(buf *TrackedBuffer) {
 	}
 	if ct.Default != nil {
 		opts = append(opts, keywordStrings[DEFAULT], String(ct.Default))
+	}
+	if ct.OnUpdate != nil {
+		opts = append(opts, keywordStrings[ON], keywordStrings[UPDATE], String(ct.OnUpdate))
 	}
 	if ct.Autoincrement {
 		opts = append(opts, keywordStrings[AUTO_INCREMENT])
@@ -885,7 +944,7 @@ func (ct *ColumnType) SQLType() querypb.Type {
 		return sqltypes.Timestamp
 	case keywordStrings[YEAR]:
 		return sqltypes.Year
-	case keywordStrings[FLOAT]:
+	case keywordStrings[FLOAT_TYPE]:
 		return sqltypes.Float32
 	case keywordStrings[DOUBLE]:
 		return sqltypes.Float64
@@ -917,9 +976,9 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 	buf.Myprintf("%v (", idx.Info)
 	for i, col := range idx.Columns {
 		if i != 0 {
-			buf.Myprintf(", `%s`", col.Column.String())
+			buf.Myprintf(", %v", col.Column)
 		} else {
-			buf.Myprintf("`%s`", col.Column.String())
+			buf.Myprintf("%v", col.Column)
 		}
 		if col.Length != nil {
 			buf.Myprintf("(%v)", col.Length)
@@ -956,17 +1015,13 @@ func (ii *IndexInfo) Format(buf *TrackedBuffer) {
 	if ii.Primary {
 		buf.Myprintf("%s", ii.Type)
 	} else {
-		buf.Myprintf("%s `%v`", ii.Type, ii.Name)
+		buf.Myprintf("%s %v", ii.Type, ii.Name)
 	}
 }
 
 // WalkSubtree walks the nodes of the subtree.
 func (ii *IndexInfo) WalkSubtree(visit Visit) error {
-	if err := Walk(visit, ii.Name); err != nil {
-		return err
-	}
-
-	return nil
+	return Walk(visit, ii.Name)
 }
 
 // IndexColumn describes a column in an index definition with optional length
@@ -2056,11 +2111,12 @@ type UnaryExpr struct {
 
 // UnaryExpr.Operator
 const (
-	UPlusStr  = "+"
-	UMinusStr = "-"
-	TildaStr  = "~"
-	BangStr   = "!"
-	BinaryStr = "binary "
+	UPlusStr   = "+"
+	UMinusStr  = "-"
+	TildaStr   = "~"
+	BangStr    = "!"
+	BinaryStr  = "binary "
+	UBinaryStr = "_binary "
 )
 
 // Format formats the node.
@@ -2382,10 +2438,7 @@ func (node *CaseExpr) WalkSubtree(visit Visit) error {
 			return err
 		}
 	}
-	if err := Walk(visit, node.Else); err != nil {
-		return err
-	}
-	return nil
+	return Walk(visit, node.Else)
 }
 
 // Default represents a DEFAULT expression.
@@ -2756,20 +2809,6 @@ func (node *TableIdent) UnmarshalJSON(b []byte) error {
 	}
 	node.v = result
 	return nil
-}
-
-// Backtick produces a backticked literal given an input string.
-func Backtick(in string) string {
-	var buf bytes.Buffer
-	buf.WriteByte('`')
-	for _, c := range in {
-		buf.WriteRune(c)
-		if c == '`' {
-			buf.WriteByte('`')
-		}
-	}
-	buf.WriteByte('`')
-	return buf.String()
 }
 
 func formatID(buf *TrackedBuffer, original, lowered string) {
