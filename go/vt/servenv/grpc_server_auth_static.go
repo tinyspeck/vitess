@@ -32,11 +32,11 @@ import (
 
 var (
 	credsFile = flag.String("grpc_server_auth_static_file", "", "JSON File to read the users/passwords from.")
-	// StaticAuthPluginConfig implements AuthPlugin interface
-	_ AuthPlugin = (*StaticAuthPluginConfig)(nil)
+	// StaticAuthPlugin implements AuthPlugin interface
+	_ AuthPlugin = (*StaticAuthPlugin)(nil)
 )
 
-// StaticAuthConfigEntry holder for server side credentials. Current implementation matches the
+// StaticAuthConfigEntry is the container for server side credentials. Current implementation matches the
 // the one from the client but this will change in the future as we hooked this pluging into ACL
 // features.
 type StaticAuthConfigEntry struct {
@@ -45,15 +45,15 @@ type StaticAuthConfigEntry struct {
 	// TODO (@rafael) Add authorization parameters
 }
 
-// StaticAuthPluginConfig config for static auth plugin. It contains an array of username/passwords
+// StaticAuthPlugin  implements static username/password authentication for grpc. It contains an array of username/passwords
 // that will be authorized to connect to the grpc server.
-type StaticAuthPluginConfig struct {
+type StaticAuthPlugin struct {
 	entries []StaticAuthConfigEntry
 }
 
 // Authenticate implements AuthPlugin interface. This method will be used inside a middleware in grpc_server to authenticate
 // incoming requests.
-func (sa *StaticAuthPluginConfig) Authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
+func (sa *StaticAuthPlugin) Authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if len(md["username"]) == 0 || len(md["password"]) == 0 {
 			return nil, grpc.Errorf(codes.Unauthenticated, "username and password must be provided")
@@ -88,7 +88,7 @@ func staticAuthPluginInitializer() (AuthPlugin, error) {
 		err := fmt.Errorf("fail to load static auth plugin: %v", err)
 		return nil, err
 	}
-	staticAuthPlugin := &StaticAuthPluginConfig{
+	staticAuthPlugin := &StaticAuthPlugin{
 		entries: entries,
 	}
 	log.Info("static auth plugin have initialized successfully with config from grpc_server_auth_static_file")

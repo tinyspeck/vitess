@@ -50,8 +50,7 @@ func gRPCVtctlClientFactory(addr string, dialTimeout time.Duration) (vtctlclient
 	if err != nil {
 		return nil, err
 	}
-	opts := []grpc.DialOption{opt}
-	opts = append(opts, grpc.WithTimeout(dialTimeout))
+	opts := []grpc.DialOption{opt, grpc.WithTimeout(dialTimeout)}
 	opts, err = grpcclient.StaticAuthDialOption(opts, *staticAuthCreds)
 	if err != nil {
 		return nil, err

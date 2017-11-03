@@ -41,7 +41,7 @@ func (c *StaticAuthClientCreds) GetRequestMetadata(context.Context, ...string) (
 }
 
 // RequireTransportSecurity indicates whether the credentials requires transport security.
-// Given that people can use this in conjuction with TLS, at the moment we are not enforcing
+// Given that people can use this with or without TLS, at the moment we are not enforcing
 // transport security
 func (c *StaticAuthClientCreds) RequireTransportSecurity() bool {
 	return false

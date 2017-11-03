@@ -208,7 +208,7 @@ func unaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return handler(newCtx, req)
 }
 
-// WrappedServerStream based out of service stream wrapper from: https://github.com/grpc-ecosystem/go-grpc-middleware
+// WrappedServerStream is based on the service stream wrapper from: https://github.com/grpc-ecosystem/go-grpc-middleware
 type WrappedServerStream struct {
 	grpc.ServerStream
 	WrappedContext context.Context
