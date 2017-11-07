@@ -38,11 +38,10 @@ import (
 )
 
 var (
-	cert            = flag.String("vtgate_grpc_cert", "", "the cert to use to connect")
-	key             = flag.String("vtgate_grpc_key", "", "the key to use to connect")
-	ca              = flag.String("vtgate_grpc_ca", "", "the server ca to use to validate servers when connecting")
-	name            = flag.String("vtgate_grpc_server_name", "", "the server name to use to validate server certificate")
-	staticAuthCreds = flag.String("vtgate_grpc_static_auth_creds", "", "when using grpc_static_auth in the server, this file provides the credentials to use to authenticate with server")
+	cert = flag.String("vtgate_grpc_cert", "", "the cert to use to connect")
+	key  = flag.String("vtgate_grpc_key", "", "the key to use to connect")
+	ca   = flag.String("vtgate_grpc_ca", "", "the server ca to use to validate servers when connecting")
+	name = flag.String("vtgate_grpc_server_name", "", "the server name to use to validate server certificate")
 )
 
 func init() {
@@ -61,7 +60,7 @@ func dial(ctx context.Context, addr string, timeout time.Duration) (vtgateconn.I
 	}
 
 	opts := []grpc.DialOption{secureOption}
-	opts, err = grpcclient.StaticAuthDialOption(opts, *staticAuthCreds)
+	opts, err = grpcclient.StaticAuthDialOption(opts, grpcclient.GetAuthStaticClientCreds())
 	if err != nil {
 		return nil, err
 	}
