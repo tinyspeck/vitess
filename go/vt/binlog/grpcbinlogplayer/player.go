@@ -41,7 +41,17 @@ type client struct {
 func (client *client) Dial(tablet *topodatapb.Tablet, connTimeout time.Duration) error {
 	addr := netutil.JoinHostPort(tablet.Hostname, tablet.PortMap["grpc"])
 	var err error
-	client.cc, err = grpcclient.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(connTimeout))
+
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithTimeout(connTimeout),
+	}
+	opts, err = grpcclient.StaticAuthDialOption(opts, grpcclient.GetAuthStaticClientCreds())
+	if err != nil {
+		return err
+	}
+
+	client.cc, err = grpcclient.Dial(addr, opts...)
 	if err != nil {
 		return err
 	}
