@@ -159,11 +159,12 @@ func (tc *TabletStatsCache) getOrCreateEntry(target *querypb.Target) *tabletStat
 
 // StatsUpdate is part of the HealthCheckStatsListener interface.
 func (tc *TabletStatsCache) StatsUpdate(ts *TabletStats) {
-	if ts.Target.TabletType != topodatapb.TabletType_MASTER && ts.Tablet.Alias.Cell != tc.cell &&
-		// cell to regions lookup is available, and found different region
-		(tc.regions[tc.cell] == "" || tc.regions[ts.Tablet.Alias.Cell] != tc.regions[tc.cell]) {
-		// this is for a non-master tablet in a different cell and a different region, drop it
-		return
+	if ts.Target.TabletType != topodatapb.TabletType_MASTER && ts.Tablet.Alias.Cell != tc.cell {
+		// further check if `region` feature is available and if the tablet is in a different region
+		if tc.regions[tc.cell] == "" || tc.regions[ts.Tablet.Alias.Cell] != tc.regions[tc.cell] {
+			// this is for a non-master tablet in a different cell and a different region, drop it
+			return
+		}
 	}
 
 	e := tc.getOrCreateEntry(ts.Target)
