@@ -70,6 +70,10 @@ func (s *Server) GetKnownCells(ctx context.Context) ([]string, error) {
 	return getNodeNames(resp)
 }
 
+func (s *Server) GetRegionByCell(cell string) (string, error) {
+	return "", nil
+}
+
 // NewServer returns a new etcdtopo.Server.
 func NewServer() *Server {
 	return &Server{

@@ -25,6 +25,7 @@ import (
 	"github.com/youtube/vitess/go/sqltypes"
 	"github.com/youtube/vitess/go/vt/discovery"
 	"github.com/youtube/vitess/go/vt/topo"
+	"github.com/youtube/vitess/go/vt/topo/test/faketopo"
 	"github.com/youtube/vitess/go/vt/topotools"
 	"github.com/youtube/vitess/go/vt/vterrors"
 
@@ -124,6 +125,40 @@ func TestDiscoveryGatewayGetTablets(t *testing.T) {
 	tsl = dg.tsc.GetHealthyTabletStats(keyspace, shard, topodatapb.TabletType_MASTER)
 	if len(tsl) != 1 || !topo.TabletEquality(tsl[0].Tablet, ep1) {
 		t.Errorf("want %+v, got %+v", ep1, tsl)
+	}
+}
+func TestDiscoveryGatewayGetTabletsWithRegion(t *testing.T) {
+	keyspace := "ks"
+	shard := "0"
+	hc := discovery.NewFakeHealthCheck()
+	tp := topo.Server{faketopo.FakeTopo{}}
+	dg := createDiscoveryGateway(hc, tp, nil, "local", 2).(*discoveryGateway)
+	dg.tsc.UpdateCellsToRegions(map[string]string{
+		"local-west": "local",
+		"local-east": "local",
+		"local":      "local",
+		"remote":     "remote",
+	})
+
+	r1, _ := tp.GetRegionByCell("local-west")
+	if r1 != "local" {
+		t.Errorf("want %+v, got %+v", "local", r1)
+	}
+
+	r2, _ := tp.GetRegionByCell("local-east")
+	if r2 != "local" {
+		t.Errorf("want %+v, got %+v", "local", r2)
+	}
+
+	// replica should only use local ones
+	hc.Reset()
+	dg.tsc.ResetForTesting()
+	hc.AddTestTablet("remote", "1.1.1.1", 1001, keyspace, shard, topodatapb.TabletType_REPLICA, true, 10, nil)
+	ep1 := hc.AddTestTablet("local-west", "2.2.2.2", 1001, keyspace, shard, topodatapb.TabletType_REPLICA, true, 10, nil).Tablet()
+	ep2 := hc.AddTestTablet("local-east", "3.3.3.3", 1001, keyspace, shard, topodatapb.TabletType_REPLICA, true, 10, nil).Tablet()
+	tsl := dg.tsc.GetHealthyTabletStats(keyspace, shard, topodatapb.TabletType_REPLICA)
+	if len(tsl) != 2 || (!topo.TabletEquality(tsl[0].Tablet, ep1) && !topo.TabletEquality(tsl[0].Tablet, ep2)) {
+		t.Errorf("want %+v or %+v, got %+v", ep1, ep2, tsl)
 	}
 }
 

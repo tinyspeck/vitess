@@ -101,6 +101,9 @@ type Impl interface {
 	// They shall be sorted.
 	GetKnownCells(ctx context.Context) ([]string, error)
 
+	// GetCellsToRegions returns a cell's belonging region
+	GetRegionByCell(cell string) (string, error)
+
 	//
 	// Keyspace management, global.
 	//

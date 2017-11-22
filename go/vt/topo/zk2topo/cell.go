@@ -29,3 +29,7 @@ import (
 func (zs *Server) GetKnownCells(ctx context.Context) ([]string, error) {
 	return zs.ListDir(ctx, topo.GlobalCell, cellsPath)
 }
+
+func (zs *Server) GetRegionByCell(cell string) (string, error) {
+	return "", nil
+}

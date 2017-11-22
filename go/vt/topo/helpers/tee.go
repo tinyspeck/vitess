@@ -182,6 +182,10 @@ func (tee *Tee) GetKnownCells(ctx context.Context) ([]string, error) {
 	return tee.readFrom.GetKnownCells(ctx)
 }
 
+func (tee *Tee) GetRegionByCell(cell string) (string, error) {
+	return "", nil
+}
+
 //
 // Keyspace management, global.
 //

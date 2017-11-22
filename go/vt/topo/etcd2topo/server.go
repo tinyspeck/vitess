@@ -102,6 +102,11 @@ func (s *Server) GetKnownCells(ctx context.Context) ([]string, error) {
 	return result, nil
 }
 
+func (s *Server) GetRegionByCell(cell string) (string, error) {
+
+	return "", nil
+}
+
 // NewServer returns a new etcdtopo.Server.
 func NewServer(serverAddr, root string) (*Server, error) {
 	global, err := newCellClient(serverAddr, root)
