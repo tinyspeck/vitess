@@ -74,6 +74,7 @@ func (ft FakeTopo) GetKnownCells(ctx context.Context) ([]string, error) {
 	return nil, errNotImplemented
 }
 
+// GetRegionByCell is part of the topo.Server interface
 func (ft FakeTopo) GetRegionByCell(cell string) (string, error) {
 	if strings.HasPrefix(cell, "local") {
 		return "local", nil
@@ -81,7 +82,7 @@ func (ft FakeTopo) GetRegionByCell(cell string) (string, error) {
 	if strings.HasPrefix(cell, "remote") {
 		return "remote", nil
 	}
-	return cell, nil
+	return "", errNotImplemented
 }
 
 // CreateKeyspace is part of the topo.Server interface.

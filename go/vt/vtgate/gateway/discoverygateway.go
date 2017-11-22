@@ -85,18 +85,7 @@ type discoveryGateway struct {
 
 func createDiscoveryGateway(hc discovery.HealthCheck, topoServer topo.Server, serv topo.SrvTopoServer, cell string, retryCount int) Gateway {
 
-	cellsToRegions := make(map[string]string)
-
-	for _, c := range strings.Split(*cellsToWatch, ",") {
-		if c == "" {
-			continue
-		}
-
-		region, error := topoServer.GetRegionByCell(c)
-		if error == nil {
-			cellsToRegions[c] = region
-		}
-	}
+	cellsToRegions := buildCellsToRegions(topoServer, append(strings.Split(*cellsToWatch, ","), cell))
 
 	dg := &discoveryGateway{
 		hc:                hc,
@@ -134,6 +123,24 @@ func createDiscoveryGateway(hc discovery.HealthCheck, topoServer topo.Server, se
 	}
 	dg.QueryService = queryservice.Wrap(dg, dg.withRetry)
 	return dg
+}
+
+func buildCellsToRegions(topoServer topo.Server, cells []string) map[string]string {
+
+	cellsToRegions := make(map[string]string)
+
+	for _, c := range cells {
+		if c == "" {
+			continue
+		}
+		println(c)
+		region, error := topoServer.GetRegionByCell(c)
+		if error == nil {
+			cellsToRegions[c] = region
+		}
+	}
+
+	return cellsToRegions
 }
 
 // StatsUpdate forwards HealthCheck updates to TabletStatsCache and MasterBuffer.
@@ -290,20 +297,21 @@ func (dg *discoveryGateway) withRetry(ctx context.Context, target *querypb.Targe
 
 func shuffleTablets(cell string, tablets []discovery.TabletStats) {
 
-	sameCellMax := -1
+	sameCell, diffCell, sameCellMax := 0, 0, -1
 	length := len(tablets)
 
 	//move all same cell tablets to the front
-	for sameCell, diffCell := 0, 0; ; {
+	for {
 		sameCellMax = diffCell - 1
 		sameCell := nextTablet(cell, tablets, sameCell, length, true)
 		diffCell := nextTablet(cell, tablets, diffCell, length, false)
+		// either no more diffs or no more same cells should stop the iteration
 		if sameCell < 0 || diffCell < 0 {
 			break
 		}
 
 		if sameCell < diffCell {
-			//fast forward the `sameCell` lookup to `diffCell + 1`
+			// fast forward the `sameCell` lookup to `diffCell + 1`, `diffCell` unchanged
 			sameCell = diffCell + 1
 		} else {
 			// sameCell > diffCell, swap needed
