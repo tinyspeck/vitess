@@ -29,8 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/youtube/vitess/go/vt/topo/helpers"
-
 	log "github.com/golang/glog"
 	"golang.org/x/net/context"
 
@@ -133,7 +131,7 @@ func newBinlogPlayerController(ts topo.Server, vtClientFactory func() binlogplay
 		// of whether the BinlogPlayerController is Start()'d or Stop()'d.
 		// Use Close() after Stop() to finally close them and free their resources.
 		healthCheck:             healthCheck,
-		tabletStatsCache:        discovery.NewTabletStatsCache(healthCheck, cell, helpers.BuildCellToRegion(ts)),
+		tabletStatsCache:        discovery.NewTabletStatsCache(healthCheck, cell, ts.CellToRegionMapper()),
 		shardReplicationWatcher: discovery.NewShardReplicationWatcher(ts, healthCheck, cell, sourceShard.Keyspace, sourceShard.Shard, *healthCheckTopologyRefresh, discovery.DefaultTopoReadConcurrency),
 	}
 }

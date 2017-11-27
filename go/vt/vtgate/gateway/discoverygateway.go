@@ -31,7 +31,6 @@ import (
 	"github.com/youtube/vitess/go/flagutil"
 	"github.com/youtube/vitess/go/vt/discovery"
 	"github.com/youtube/vitess/go/vt/topo"
-	"github.com/youtube/vitess/go/vt/topo/helpers"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vtgate/buffer"
 	"github.com/youtube/vitess/go/vt/vtgate/masterbuffer"
@@ -88,7 +87,7 @@ func createDiscoveryGateway(hc discovery.HealthCheck, topoServer topo.Server, se
 
 	dg := &discoveryGateway{
 		hc:                hc,
-		tsc:               discovery.NewTabletStatsCacheDoNotSetListener(cell, helpers.BuildCellToRegion(topoServer)),
+		tsc:               discovery.NewTabletStatsCacheDoNotSetListener(cell, topoServer.CellToRegionMapper()),
 		topoServer:        topoServer,
 		srvTopoServer:     serv,
 		localCell:         cell,

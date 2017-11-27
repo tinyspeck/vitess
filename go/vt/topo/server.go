@@ -287,6 +287,23 @@ type Server struct {
 	Impl
 }
 
+// CellToRegionMapper function is a wrapper around topo.Server#GetRegionByCell with caching and error handling
+func (s Server) CellToRegionMapper() func(cell string) string {
+
+	memoize := make(map[string]string)
+
+	return func(cell string) string {
+		if region, ok := memoize[cell]; ok {
+			return region
+		}
+		if region, err := s.GetRegionByCell(cell); err == nil {
+			memoize[cell] = region
+			return region
+		}
+		return ""
+	}
+}
+
 // SrvTopoServer is a subset of the Server API that only contains the serving
 // graph read-only calls used by clients to resolve serving addresses,
 // and how to get VSchema. It is mostly used by our discovery modules,

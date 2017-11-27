@@ -23,8 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/youtube/vitess/go/vt/topo/helpers"
-
 	"github.com/youtube/vitess/go/event"
 	"github.com/youtube/vitess/go/vt/concurrency"
 	"github.com/youtube/vitess/go/vt/discovery"
@@ -509,7 +507,7 @@ func (wr *Wrangler) waitForDrainInCell(ctx context.Context, cell, keyspace, shar
 	// Create the healthheck module, with a cache.
 	hc := discovery.NewHealthCheck(healthCheckTimeout /* connectTimeout */, healthcheckRetryDelay, healthCheckTimeout)
 	defer hc.Close()
-	tsc := discovery.NewTabletStatsCache(hc, cell, helpers.BuildCellToRegion(wr.TopoServer()))
+	tsc := discovery.NewTabletStatsCache(hc, cell, wr.TopoServer().CellToRegionMapper())
 
 	// Create a tablet watcher.
 	watcher := discovery.NewShardReplicationWatcher(wr.TopoServer(), hc, cell, keyspace, shard, healthCheckTopologyRefresh, discovery.DefaultTopoReadConcurrency)

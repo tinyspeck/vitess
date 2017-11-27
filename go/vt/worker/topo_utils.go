@@ -22,8 +22,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/youtube/vitess/go/vt/topo/helpers"
-
 	log "github.com/golang/glog"
 
 	"github.com/youtube/vitess/go/vt/discovery"
@@ -52,7 +50,7 @@ func FindHealthyRdonlyTablet(ctx context.Context, wr *wrangler.Wrangler, tsc *di
 	if tsc == nil {
 		// No healthcheck instance provided. Create one.
 		healthCheck := discovery.NewHealthCheck(*remoteActionsTimeout, *healthcheckRetryDelay, *healthCheckTimeout)
-		tsc = discovery.NewTabletStatsCache(healthCheck, cell, helpers.BuildCellToRegion(wr.TopoServer()))
+		tsc = discovery.NewTabletStatsCache(healthCheck, cell, wr.TopoServer().CellToRegionMapper())
 		watcher := discovery.NewShardReplicationWatcher(wr.TopoServer(), healthCheck, cell, keyspace, shard, *healthCheckTopologyRefresh, discovery.DefaultTopoReadConcurrency)
 		defer watcher.Stop()
 		defer healthCheck.Close()
