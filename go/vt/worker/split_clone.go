@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/youtube/vitess/go/vt/topo/helpers"
+
 	"golang.org/x/net/context"
 
 	"github.com/youtube/vitess/go/event"
@@ -553,25 +555,9 @@ func (scw *SplitCloneWorker) init(ctx context.Context) error {
 		}
 	}
 
-	cellsToRegions := make(map[string]string)
-	for _, sourceTablet := range scw.sourceTablets {
-		sourceRegion, err := scw.wr.TopoServer().GetRegionByCell(sourceTablet.Alias.Cell)
-		if err != nil {
-			cellsToRegions[sourceTablet.Alias.Cell] = sourceRegion
-		}
-	}
-	for _, destShard := range scw.destinationShards {
-		for _, destCell := range destShard.Shard.Cells {
-			destRegion, err := scw.wr.TopoServer().GetRegionByCell(destCell)
-			if err != nil {
-				cellsToRegions[destCell] = destRegion
-			}
-		}
-	}
-
 	// Initialize healthcheck and add destination shards to it.
 	scw.healthCheck = discovery.NewHealthCheck(*remoteActionsTimeout, *healthcheckRetryDelay, *healthCheckTimeout)
-	scw.tsc = discovery.NewTabletStatsCacheDoNotSetListener(scw.cell, cellsToRegions)
+	scw.tsc = discovery.NewTabletStatsCacheDoNotSetListener(scw.cell, helpers.BuildCellToRegion(scw.wr.TopoServer()))
 	// We set sendDownEvents=true because it's required by TabletStatsCache.
 	scw.healthCheck.SetListener(scw, true /* sendDownEvents */)
 

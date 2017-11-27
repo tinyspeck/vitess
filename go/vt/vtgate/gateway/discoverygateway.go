@@ -31,6 +31,7 @@ import (
 	"github.com/youtube/vitess/go/flagutil"
 	"github.com/youtube/vitess/go/vt/discovery"
 	"github.com/youtube/vitess/go/vt/topo"
+	"github.com/youtube/vitess/go/vt/topo/helpers"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vtgate/buffer"
 	"github.com/youtube/vitess/go/vt/vtgate/masterbuffer"
@@ -85,11 +86,9 @@ type discoveryGateway struct {
 
 func createDiscoveryGateway(hc discovery.HealthCheck, topoServer topo.Server, serv topo.SrvTopoServer, cell string, retryCount int) Gateway {
 
-	cellsToRegions := buildCellsToRegions(topoServer, append(strings.Split(*cellsToWatch, ","), cell))
-
 	dg := &discoveryGateway{
 		hc:                hc,
-		tsc:               discovery.NewTabletStatsCacheDoNotSetListener(cell, cellsToRegions),
+		tsc:               discovery.NewTabletStatsCacheDoNotSetListener(cell, helpers.BuildCellToRegion(topoServer)),
 		topoServer:        topoServer,
 		srvTopoServer:     serv,
 		localCell:         cell,
@@ -123,24 +122,6 @@ func createDiscoveryGateway(hc discovery.HealthCheck, topoServer topo.Server, se
 	}
 	dg.QueryService = queryservice.Wrap(dg, dg.withRetry)
 	return dg
-}
-
-func buildCellsToRegions(topoServer topo.Server, cells []string) map[string]string {
-
-	cellsToRegions := make(map[string]string)
-
-	for _, c := range cells {
-		if c == "" {
-			continue
-		}
-		println(c)
-		region, error := topoServer.GetRegionByCell(c)
-		if error == nil {
-			cellsToRegions[c] = region
-		}
-	}
-
-	return cellsToRegions
 }
 
 // StatsUpdate forwards HealthCheck updates to TabletStatsCache and MasterBuffer.
@@ -300,7 +281,7 @@ func shuffleTablets(cell string, tablets []discovery.TabletStats) {
 	sameCell, diffCell, sameCellMax := 0, 0, -1
 	length := len(tablets)
 
-	//move all same cell tablets to the front
+	//move all same cell tablets to the front, this is O(n)
 	for {
 		sameCellMax = diffCell - 1
 		sameCell := nextTablet(cell, tablets, sameCell, length, true)
@@ -329,7 +310,7 @@ func shuffleTablets(cell string, tablets []discovery.TabletStats) {
 
 	//shuffle in diff cell tablets
 	for i, diffCellMin := length-1, sameCellMax+1; i > diffCellMin; i-- {
-		swap := rand.Intn(i+1-diffCellMin) + diffCellMin
+		swap := rand.Intn(i-sameCellMax) + diffCellMin
 		tablets[i], tablets[swap] = tablets[swap], tablets[i]
 	}
 }

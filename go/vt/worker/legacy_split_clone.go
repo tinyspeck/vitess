@@ -27,6 +27,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/youtube/vitess/go/vt/topo/helpers"
+
 	"golang.org/x/net/context"
 
 	"github.com/youtube/vitess/go/event"
@@ -374,7 +376,7 @@ func (scw *LegacySplitCloneWorker) findTargets(ctx context.Context) error {
 
 	// Initialize healthcheck and add destination shards to it.
 	scw.healthCheck = discovery.NewHealthCheck(*remoteActionsTimeout, *healthcheckRetryDelay, *healthCheckTimeout)
-	scw.tsc = discovery.NewTabletStatsCache(scw.healthCheck, scw.cell)
+	scw.tsc = discovery.NewTabletStatsCache(scw.healthCheck, scw.cell, helpers.BuildCellToRegion(scw.wr.TopoServer()))
 	for _, si := range scw.destinationShards {
 		watcher := discovery.NewShardReplicationWatcher(scw.wr.TopoServer(), scw.healthCheck,
 			scw.cell, si.Keyspace(), si.ShardName(),
