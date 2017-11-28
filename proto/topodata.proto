@@ -323,4 +323,7 @@ message CellInfo {
   // Root is the path to store data in. It is only used when talking
   // to server_address.
   string root = 2;
+
+  // Region is the higher level topo upon cell
+  string region = 3;
 }

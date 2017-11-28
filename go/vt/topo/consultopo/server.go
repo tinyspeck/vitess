@@ -89,12 +89,6 @@ func (s *Server) GetKnownCells(ctx context.Context) ([]string, error) {
 	return result, nil
 }
 
-// GetRegionByCell implements topo.Server.GetRegionByCell
-func (s *Server) GetRegionByCell(cell string) (string, error) {
-
-	return "", nil
-}
-
 // NewServer returns a new consultopo.Server.
 func NewServer(serverAddr, root string) (*Server, error) {
 	global, err := newCellClient(serverAddr, root)

@@ -101,9 +101,6 @@ type Impl interface {
 	// They shall be sorted.
 	GetKnownCells(ctx context.Context) ([]string, error)
 
-	// GetCellsToRegions returns a cell's belonging region
-	GetRegionByCell(cell string) (string, error)
-
 	//
 	// Keyspace management, global.
 	//
@@ -288,15 +285,16 @@ type Server struct {
 }
 
 // CellToRegionMapper function is a wrapper around topo.Server#GetRegionByCell with caching and error handling
-func (s Server) CellToRegionMapper() func(cell string) string {
+func (ts Server) CellToRegionMapper() func(cell string) string {
 
 	memoize := make(map[string]string)
+	ctx := context.Background()
 
 	return func(cell string) string {
 		if region, ok := memoize[cell]; ok {
 			return region
 		}
-		if region, err := s.GetRegionByCell(cell); err == nil {
+		if region, err := ts.GetRegionByCell(ctx, cell); err == nil {
 			memoize[cell] = region
 			return region
 		}
