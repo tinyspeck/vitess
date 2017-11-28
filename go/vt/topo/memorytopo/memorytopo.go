@@ -226,7 +226,3 @@ func (mt *MemoryTopo) GetKnownCells(ctx context.Context) ([]string, error) {
 	sort.Strings(result)
 	return result, nil
 }
-
-func (mt *MemoryTopo) GetRegionByCell(cell string) (string, error) {
-	return "", nil
-}

@@ -20,7 +20,6 @@ package faketopo
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/youtube/vitess/go/vt/topo"
 	"golang.org/x/net/context"
@@ -72,17 +71,6 @@ func (ft FakeTopo) Watch(ctx context.Context, cell string, path string) (*topo.W
 // GetKnownCells is part of the topo.Server interface.
 func (ft FakeTopo) GetKnownCells(ctx context.Context) ([]string, error) {
 	return nil, errNotImplemented
-}
-
-// GetRegionByCell is part of the topo.Server interface
-func (ft FakeTopo) GetRegionByCell(cell string) (string, error) {
-	if strings.HasPrefix(cell, "local") {
-		return "local", nil
-	}
-	if strings.HasPrefix(cell, "remote") {
-		return "remote", nil
-	}
-	return "", errNotImplemented
 }
 
 // CreateKeyspace is part of the topo.Server interface.
