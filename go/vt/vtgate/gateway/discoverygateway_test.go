@@ -140,16 +140,6 @@ func TestDiscoveryGatewayGetTabletsWithRegion(t *testing.T) {
 		"remote":     "remote",
 	})
 
-	r1, _ := tp.GetRegionByCell(context.Background(), "local-west")
-	if r1 != "local" {
-		t.Errorf("want %+v, got %+v", "local", r1)
-	}
-
-	r2, _ := tp.GetRegionByCell(context.Background(), "local-east")
-	if r2 != "local" {
-		t.Errorf("want %+v, got %+v", "local", r2)
-	}
-
 	// replica should only use local ones
 	hc.Reset()
 	dg.tsc.ResetForTesting()

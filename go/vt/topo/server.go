@@ -298,7 +298,8 @@ func (ts Server) CellToRegionMapper() func(cell string) string {
 			memoize[cell] = region
 			return region
 		}
-		return ""
+		// for backward compatibility, when region isn't available, it's the same as given cell
+		return cell
 	}
 }
 
