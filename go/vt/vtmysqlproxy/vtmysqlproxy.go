@@ -19,6 +19,7 @@ package vtmysqlproxy
 
 import (
 	"context"
+	"flag"
 	"fmt"
 
 	log "github.com/golang/glog"
@@ -27,6 +28,7 @@ import (
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/mysqlctl"
 	"github.com/youtube/vitess/go/vt/servenv"
+	"github.com/youtube/vitess/go/vt/sqlparser"
 	"github.com/youtube/vitess/go/vt/tableacl"
 	"github.com/youtube/vitess/go/vt/tableacl/simpleacl"
 	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
@@ -43,6 +45,8 @@ var (
 		TabletType: topodatapb.TabletType_MASTER,
 		Keyspace:   "",
 	}
+
+	normalizeQueries = flag.Bool("normalize_queries", true, "Rewrite queries with bind vars. Turn this off if the app itself sends normalized queries with bind vars.")
 )
 
 type MysqlProxy struct {
@@ -50,11 +54,46 @@ type MysqlProxy struct {
 }
 
 func (mp *MysqlProxy) Execute(ctx context.Context, session *MysqlProxySession, sql string, bindVariables map[string]*querypb.BindVariable) (*MysqlProxySession, *sqltypes.Result, error) {
-	result, err := mp.qs.Execute(ctx, &target, sql, bindVariables, session.transactionID, session.Options)
-	if err != nil {
-		return nil, nil, err
+	switch sqlparser.Preview(sql) {
+	case sqlparser.StmtBegin:
+		txID, err := mp.qs.Begin(ctx, &target, session.Options)
+		if err != nil {
+			return nil, nil, err
+		}
+		session.transactionID = txID
+		return session, &sqltypes.Result{}, err
+	case sqlparser.StmtCommit:
+		err := mp.qs.Commit(ctx, &target, session.transactionID)
+		if err != nil {
+			return nil, nil, err
+		}
+		session.transactionID = 0
+		return session, &sqltypes.Result{}, err
+	case sqlparser.StmtRollback:
+		err := mp.qs.Rollback(ctx, &target, session.transactionID)
+		if err != nil {
+			return nil, nil, err
+		}
+		session.transactionID = 0
+		return session, &sqltypes.Result{}, err
+	default:
+		if *normalizeQueries {
+			query, comments := sqlparser.SplitTrailingComments(sql)
+			stmt, err := sqlparser.Parse(query)
+			if err != nil {
+				return nil, nil, err
+			}
+			sqlparser.Normalize(stmt, bindVariables, "vtp")
+			normalized := sqlparser.String(stmt)
+			sql = normalized + comments
+		}
+
+		result, err := mp.qs.Execute(ctx, &target, sql, bindVariables, session.transactionID, session.Options)
+		if err != nil {
+			return nil, nil, err
+		}
+		return session, result, nil
 	}
-	return session, result, nil
 }
 
 func (mp *MysqlProxy) Rollback(ctx context.Context, transactionID int64) error {
