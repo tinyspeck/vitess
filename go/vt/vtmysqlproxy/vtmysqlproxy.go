@@ -14,24 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// vtmysqlproxy is a standalone version of the tablet server
+// Package vtmysqlproxy is a standalone version of the tablet server
 package vtmysqlproxy
 
 import (
-	"context"
 	"flag"
 	"fmt"
 
 	log "github.com/golang/glog"
 
-	"github.com/youtube/vitess/go/sqltypes"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/mysqlctl"
+	"github.com/youtube/vitess/go/vt/mysqlproxy"
 	"github.com/youtube/vitess/go/vt/servenv"
-	"github.com/youtube/vitess/go/vt/sqlparser"
 	"github.com/youtube/vitess/go/vt/tableacl"
 	"github.com/youtube/vitess/go/vt/tableacl/simpleacl"
-	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
@@ -40,87 +37,29 @@ import (
 )
 
 var (
-	mysqlProxy *MysqlProxy
+	mysqlProxy *mysqlproxy.Proxy
 	target     = querypb.Target{
 		TabletType: topodatapb.TabletType_MASTER,
 		Keyspace:   "",
 	}
 
+	targetKeyspace   = flag.String("target", "", "Target keyspace name")
 	normalizeQueries = flag.Bool("normalize_queries", true, "Rewrite queries with bind vars. Turn this off if the app itself sends normalized queries with bind vars.")
 )
 
-type MysqlProxy struct {
-	qs queryservice.QueryService
-}
-
-func (mp *MysqlProxy) Execute(ctx context.Context, session *MysqlProxySession, sql string, bindVariables map[string]*querypb.BindVariable) (*MysqlProxySession, *sqltypes.Result, error) {
-	switch sqlparser.Preview(sql) {
-	case sqlparser.StmtBegin:
-		txID, err := mp.qs.Begin(ctx, &target, session.Options)
-		if err != nil {
-			return nil, nil, err
-		}
-		session.transactionID = txID
-		return session, &sqltypes.Result{}, err
-	case sqlparser.StmtCommit:
-		err := mp.qs.Commit(ctx, &target, session.transactionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		session.transactionID = 0
-		return session, &sqltypes.Result{}, err
-	case sqlparser.StmtRollback:
-		err := mp.qs.Rollback(ctx, &target, session.transactionID)
-		if err != nil {
-			return nil, nil, err
-		}
-		session.transactionID = 0
-		return session, &sqltypes.Result{}, err
-	default:
-		if *normalizeQueries {
-			query, comments := sqlparser.SplitTrailingComments(sql)
-			stmt, err := sqlparser.Parse(query)
-			if err != nil {
-				return nil, nil, err
-			}
-			sqlparser.Normalize(stmt, bindVariables, "vtp")
-			normalized := sqlparser.String(stmt)
-			sql = normalized + comments
-		}
-
-		result, err := mp.qs.Execute(ctx, &target, sql, bindVariables, session.transactionID, session.Options)
-		if err != nil {
-			return nil, nil, err
-		}
-		return session, result, nil
-	}
-}
-
-func (mp *MysqlProxy) Rollback(ctx context.Context, transactionID int64) error {
-	return nil
-}
-
-type MysqlProxySession struct {
-	transactionID int64
-	TargetString  string
-	Options       *querypb.ExecuteOptions
-}
-
 // Init initializes the proxy
 func Init(dbcfgs *dbconfigs.DBConfigs, tableACLConfig string) error {
-	log.Infof("initalizing vtmysqlproxy")
+	target.Keyspace = *targetKeyspace
+	log.Infof("initalizing vtmysqlproxy.Proxy for target %s", target.Keyspace)
 
 	// creates and registers the query service
 	qs := tabletserver.NewTabletServerWithNilTopoServer(tabletenv.Config)
 
-	mysqlProxy = &MysqlProxy{
-		qs: qs,
-	}
+	mysqlProxy = mysqlproxy.NewProxy(&target, qs, *normalizeQueries)
 
 	servenv.OnRun(func() {
 		qs.Register()
-		//		qs.SetServingType(topodatapb.TabletType_MASTER, true, []topodatapb.TabletType{})
-		//		addStatusParts(qs)
+		addStatusParts(qs)
 	})
 
 	servenv.OnClose(func() {
