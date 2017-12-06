@@ -22,6 +22,8 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/golang/glog"
+
 	"github.com/youtube/vitess/go/sqltypes"
 	"github.com/youtube/vitess/go/vt/sqlparser"
 	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
@@ -34,6 +36,7 @@ type ProxySession struct {
 	TransactionID int64
 	TargetString  string
 	Options       *querypb.ExecuteOptions
+	Autocommit    bool
 }
 
 // Proxy wraps the standalone query service
@@ -59,11 +62,37 @@ func (mp *Proxy) Execute(ctx context.Context, session *ProxySession, sql string,
 
 	switch sqlparser.Preview(sql) {
 	case sqlparser.StmtBegin:
-		err = mp.Begin(ctx, session)
+		err = mp.doBegin(ctx, session)
 	case sqlparser.StmtCommit:
-		err = mp.Commit(ctx, session)
+		err = mp.doCommit(ctx, session)
 	case sqlparser.StmtRollback:
-		err = mp.Rollback(ctx, session)
+		err = mp.doRollback(ctx, session)
+	case sqlparser.StmtSet:
+		result, err = mp.doSet(ctx, session, sql, bindVariables)
+	case sqlparser.StmtInsert, sqlparser.StmtReplace, sqlparser.StmtUpdate, sqlparser.StmtDelete:
+		autocommit := false
+		if session.Autocommit && session.TransactionID == 0 {
+			autocommit = true
+			if err = mp.doBegin(ctx, session); err != nil {
+				return nil, nil, err
+			}
+
+			// The defer acts as a failsafe. If commit was successful,
+			// the rollback will be a no-op.
+			defer mp.doRollback(ctx, session)
+		}
+
+		result, err = mp.doExecute(ctx, session, sql, bindVariables)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if autocommit {
+			if err = mp.doCommit(ctx, session); err != nil {
+				return nil, nil, err
+			}
+		}
+
 	default:
 		result, err = mp.doExecute(ctx, session, sql, bindVariables)
 	}
@@ -75,8 +104,12 @@ func (mp *Proxy) Execute(ctx context.Context, session *ProxySession, sql string,
 	return session, result, nil
 }
 
-// Begin starts a new transaction in the current session
-func (mp *Proxy) Begin(ctx context.Context, session *ProxySession) error {
+// Rollback rolls back the session
+func (mp *Proxy) Rollback(ctx context.Context, session *ProxySession) error {
+	return mp.doRollback(ctx, session)
+}
+
+func (mp *Proxy) doBegin(ctx context.Context, session *ProxySession) error {
 	txID, err := mp.qs.Begin(ctx, mp.target, session.Options)
 	if err != nil {
 		return err
@@ -85,8 +118,7 @@ func (mp *Proxy) Begin(ctx context.Context, session *ProxySession) error {
 	return nil
 }
 
-// Commit commits the in-flight transaction (if any).
-func (mp *Proxy) Commit(ctx context.Context, session *ProxySession) error {
+func (mp *Proxy) doCommit(ctx context.Context, session *ProxySession) error {
 	if session.TransactionID == 0 {
 		return fmt.Errorf("commit: no open transaction")
 
@@ -97,13 +129,37 @@ func (mp *Proxy) Commit(ctx context.Context, session *ProxySession) error {
 }
 
 // Rollback rolls back the session
-func (mp *Proxy) Rollback(ctx context.Context, session *ProxySession) error {
+func (mp *Proxy) doRollback(ctx context.Context, session *ProxySession) error {
 	if session.TransactionID != 0 {
 		err := mp.qs.Rollback(ctx, mp.target, session.TransactionID)
 		session.TransactionID = 0
 		return err
 	}
 	return nil
+}
+
+// Set is currently ignored
+func (mp *Proxy) doSet(ctx context.Context, session *ProxySession, sql string, bindVariables map[string]*querypb.BindVariable) (*sqltypes.Result, error) {
+	vals, charset, err := sqlparser.ExtractSetValues(sql)
+	if err != nil {
+		return nil, err
+	}
+	if len(vals) > 0 && charset != "" {
+		return nil, err
+	}
+
+	switch charset {
+	case "", "utf8", "utf8mb4", "latin1", "default":
+		break
+	default:
+		return nil, fmt.Errorf("unexpected value for charset: %v", charset)
+	}
+
+	for k, v := range vals {
+		log.Warningf("Ignored inapplicable SET %v = %v", k, v)
+	}
+
+	return &sqltypes.Result{}, nil
 }
 
 // doExecute runs the given query

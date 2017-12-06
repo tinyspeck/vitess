@@ -97,6 +97,7 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 			Options: &querypb.ExecuteOptions{
 				IncludedFields: querypb.ExecuteOptions_ALL,
 			},
+			Autocommit: true,
 		}
 		if c.Capabilities&mysql.CapabilityClientFoundRows != 0 {
 			session.Options.ClientFoundRows = true
@@ -111,8 +112,6 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 	if err != nil {
 		return err
 	}
-
-	//	Execute(ctx context.Context, target *querypb.Target, sql string, bindVariables map[string]*querypb.BindVariable, transactionID int64, options *querypb.ExecuteOptions) (*sqltypes.Result, error)
 
 	return callback(result)
 }
