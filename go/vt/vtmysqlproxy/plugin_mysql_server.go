@@ -29,6 +29,7 @@ import (
 	"github.com/youtube/vitess/go/mysql"
 	"github.com/youtube/vitess/go/sqltypes"
 	"github.com/youtube/vitess/go/vt/callerid"
+	"github.com/youtube/vitess/go/vt/mysqlproxy"
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/vttls"
 
@@ -53,10 +54,10 @@ var (
 // It stores the Session in the ClientData of a Connection, if a transaction
 // is in progress.
 type proxyHandler struct {
-	mp *MysqlProxy
+	mp *mysqlproxy.Proxy
 }
 
-func newMysqlProxyHandler(mp *MysqlProxy) *proxyHandler {
+func newProxyHandler(mp *mysqlproxy.Proxy) *proxyHandler {
 	return &proxyHandler{
 		mp: mp,
 	}
@@ -68,9 +69,9 @@ func (mh *proxyHandler) NewConnection(c *mysql.Conn) {
 func (mh *proxyHandler) ConnectionClosed(c *mysql.Conn) {
 	// Rollback if there is an ongoing transaction. Ignore error.
 	ctx := context.Background()
-	session, _ := c.ClientData.(*MysqlProxySession)
-	if session != nil && session.transactionID != 0 {
-		_ = mh.mp.Rollback(ctx, session.transactionID)
+	session, _ := c.ClientData.(*mysqlproxy.ProxySession)
+	if session != nil && session.TransactionID != 0 {
+		_ = mh.mp.Rollback(ctx, session)
 	}
 }
 
@@ -90,9 +91,9 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 		"mysqlproxy MySQL Connector" /* subcomponent: part of the client */)
 	ctx = callerid.NewContext(ctx, ef, im)
 
-	session, _ := c.ClientData.(*MysqlProxySession)
+	session, _ := c.ClientData.(*mysqlproxy.ProxySession)
 	if session == nil {
-		session = &MysqlProxySession{
+		session = &mysqlproxy.ProxySession{
 			Options: &querypb.ExecuteOptions{
 				IncludedFields: querypb.ExecuteOptions_ALL,
 			},
@@ -143,7 +144,7 @@ func initMySQLProtocol() {
 
 	// Create a Listener.
 	var err error
-	mh := newMysqlProxyHandler(mysqlProxy)
+	mh := newProxyHandler(mysqlProxy)
 	if *mysqlServerPort >= 0 {
 		mysqlListener, err = mysql.NewListener("tcp", net.JoinHostPort(*mysqlServerBindAddress, fmt.Sprintf("%v", *mysqlServerPort)), authServer, mh)
 		if err != nil {
