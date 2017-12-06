@@ -24,7 +24,6 @@ import (
 	log "github.com/golang/glog"
 
 	"github.com/youtube/vitess/go/vt/dbconfigs"
-	"github.com/youtube/vitess/go/vt/mysqlctl"
 	"github.com/youtube/vitess/go/vt/mysqlproxy"
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/tableacl"
@@ -84,15 +83,7 @@ func Init(dbcfgs *dbconfigs.DBConfigs, tableACLConfig string) error {
 		}
 	}
 
-	// XXX/demmer replace this with a thinner interface that doesn't include
-	// all of mysqlctl
-	mysqld := mysqlctl.NewMysqld(
-		&mysqlctl.Mycnf{},
-		dbcfgs,
-		dbconfigs.AppConfig,
-	)
-
-	err := qs.StartService(target, *dbcfgs, mysqld)
+	err := qs.StartService(target, *dbcfgs)
 	if err != nil {
 		return err
 	}
