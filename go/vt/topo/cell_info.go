@@ -76,6 +76,16 @@ func (ts Server) GetCellInfo(ctx context.Context, cell string) (*topodatapb.Cell
 	return ci, nil
 }
 
+// GetRegionByCell implements topo.Server.GetRegionByCell
+func (ts *Server) GetRegionByCell(ctx context.Context, cell string) (string, error) {
+
+	cellInfo, err := ts.GetCellInfo(ctx, cell)
+	if err == nil {
+		return cellInfo.Region, nil
+	}
+	return "", err
+}
+
 // CreateCellInfo creates a new CellInfo with the provided content.
 func (ts Server) CreateCellInfo(ctx context.Context, cell string, ci *topodatapb.CellInfo) error {
 	// Pack the content.
