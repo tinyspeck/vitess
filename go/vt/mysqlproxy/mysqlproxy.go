@@ -69,30 +69,6 @@ func (mp *Proxy) Execute(ctx context.Context, session *ProxySession, sql string,
 		err = mp.doRollback(ctx, session)
 	case sqlparser.StmtSet:
 		result, err = mp.doSet(ctx, session, sql, bindVariables)
-	case sqlparser.StmtInsert, sqlparser.StmtReplace, sqlparser.StmtUpdate, sqlparser.StmtDelete:
-		autocommit := false
-		if session.Autocommit && session.TransactionID == 0 {
-			autocommit = true
-			if err = mp.doBegin(ctx, session); err != nil {
-				return nil, nil, err
-			}
-
-			// The defer acts as a failsafe. If commit was successful,
-			// the rollback will be a no-op.
-			defer mp.doRollback(ctx, session)
-		}
-
-		result, err = mp.doExecute(ctx, session, sql, bindVariables)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if autocommit {
-			if err = mp.doCommit(ctx, session); err != nil {
-				return nil, nil, err
-			}
-		}
-
 	default:
 		result, err = mp.doExecute(ctx, session, sql, bindVariables)
 	}

@@ -51,6 +51,9 @@ func Init(dbcfgs *dbconfigs.DBConfigs, tableACLConfig string) error {
 	target.Keyspace = *targetKeyspace
 	log.Infof("initalizing vtmysqlproxy.Proxy for target %s", target.Keyspace)
 
+	// force autocommit to be enabled
+	tabletenv.Config.EnableAutoCommit = true
+
 	// creates and registers the query service
 	qs := tabletserver.NewTabletServerWithNilTopoServer(tabletenv.Config)
 
