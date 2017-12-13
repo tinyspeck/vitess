@@ -200,6 +200,11 @@ var (
 
 	// factories has the factories for the Conn objects.
 	factories = make(map[string]Factory)
+
+	// regions has the cell to region map with mutex protecting it
+	regions = cellsToRegionsMap{
+		cellsToRegions: make(map[string]string),
+	}
 )
 
 // RegisterFactory registers a Factory for an implementation for a Server.
