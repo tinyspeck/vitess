@@ -178,6 +178,14 @@ type SrvTopoServer interface {
 	WatchSrvVSchema(ctx context.Context, cell string) (*WatchSrvVSchemaData, <-chan *WatchSrvVSchemaData, CancelFunc)
 }
 
+type cellsToRegionsMap struct {
+	mu sync.Mutex
+	// topo server in use
+	ts *Server
+	// cellsToRegions contains all cell->region mappings
+	cellsToRegions map[string]string
+}
+
 var (
 	// topoImplementation is the flag for which implementation to use.
 	topoImplementation = flag.String("topo_implementation", "zookeeper", "the topology implementation to use")
@@ -192,6 +200,10 @@ var (
 
 	// factories has the factories for the Conn objects.
 	factories = make(map[string]Factory)
+
+	regions = cellsToRegionsMap{
+		cellsToRegions: make(map[string]string),
+	}
 )
 
 // RegisterFactory registers a Factory for an implementation for a Server.
@@ -247,6 +259,9 @@ func Open() *Server {
 	if err != nil {
 		log.Exitf("Failed to open topo server (%v,%v,%v): %v", *topoImplementation, *topoGlobalServerAddress, *topoGlobalRoot, err)
 	}
+	defer regions.mu.Unlock()
+	regions.mu.Lock()
+	regions.ts = ts
 	return ts
 }
 
@@ -294,26 +309,30 @@ func (ts *Server) ConnForCell(ctx context.Context, cell string) (Conn, error) {
 	return conn, nil
 }
 
-// CellToRegionMapper function is a wrapper around topo.Server#GetRegionByCell with caching and error handling
-func (ts *Server) CellToRegionMapper() func(cell string) string {
-
-	memoize := make(map[string]string)
-	ctx := context.Background()
-
-	return func(cell string) string {
-		if ts == nil {
-			return cell
-		}
-		if region, ok := memoize[cell]; ok {
-			return region
-		}
-		if region, err := ts.GetRegionByCell(ctx, cell); err == nil {
-			memoize[cell] = region
-			return region
-		}
-		// for backward compatibility, when region isn't available, it's the same as given cell
-		return cell
+// GetRegionByCell returns the region group this `cell` belongs to, if there's none, it returns the `cell` as region.
+func GetRegionByCell(cell string) string {
+	defer regions.mu.Unlock()
+	regions.mu.Lock()
+	if region, ok := regions.cellsToRegions[cell]; ok {
+		return region
 	}
+	// lazily get the region from cell info if `regions.ts` is available
+	ctx := context.Background()
+	if regions.ts != nil {
+		info, err := regions.ts.GetCellInfo(ctx, cell, false)
+		if err == nil && info.Region != "" {
+			regions.cellsToRegions[cell] = info.Region
+			return info.Region
+		}
+	}
+	return cell
+}
+
+// UpdateCellsToRegions overwrites the global map built by topo server init, and is meant for testing purpose only.
+func UpdateCellsToRegions(cellsToRegions map[string]string) {
+	defer regions.mu.Unlock()
+	regions.mu.Lock()
+	regions.cellsToRegions = cellsToRegions
 }
 
 // Close will close all connections to underlying topo Server.
