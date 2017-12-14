@@ -22,6 +22,7 @@ import (
 	log "github.com/golang/glog"
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
 	topodatapb "github.com/youtube/vitess/go/vt/proto/topodata"
+	"github.com/youtube/vitess/go/vt/topo"
 	"github.com/youtube/vitess/go/vt/topo/topoproto"
 )
 
@@ -40,7 +41,6 @@ type TabletStatsCache struct {
 	// cell is the cell we are keeping all tablets for.
 	// Note we keep track of all master tablets in all cells.
 	cell string
-
 	// mu protects the entries map. It does not protect individual
 	// entries in the map.
 	mu sync.RWMutex
@@ -144,8 +144,8 @@ func (tc *TabletStatsCache) getOrCreateEntry(target *querypb.Target) *tabletStat
 
 // StatsUpdate is part of the HealthCheckStatsListener interface.
 func (tc *TabletStatsCache) StatsUpdate(ts *TabletStats) {
-	if ts.Target.TabletType != topodatapb.TabletType_MASTER && ts.Tablet.Alias.Cell != tc.cell {
-		// this is for a non-master tablet in a different cell, drop it
+	if ts.Target.TabletType != topodatapb.TabletType_MASTER && ts.Tablet.Alias.Cell != tc.cell && topo.GetRegionByCell(ts.Tablet.Alias.Cell) != topo.GetRegionByCell(tc.cell) {
+		// this is for a non-master tablet in a different cell and a different region, drop it
 		return
 	}
 
