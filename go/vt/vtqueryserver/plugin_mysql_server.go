@@ -75,6 +75,10 @@ func (mh *proxyHandler) ConnectionClosed(c *mysql.Conn) {
 	}
 }
 
+func (vh *proxyHandler) ConnectionNegotiated(c *mysql.Conn) error {
+	return nil
+}
+
 func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {
 	// FIXME(alainjobart): Add some kind of timeout to the context.
 	ctx := context.Background()
