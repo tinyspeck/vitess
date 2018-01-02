@@ -70,7 +70,6 @@ func init() {
 func commandAddCellInfo(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
 	serverAddress := subFlags.String("server_address", "", "The address the topology server is using for that cell.")
 	root := subFlags.String("root", "", "The root path the topology server is using for that cell.")
-	region := subFlags.String("region", "", "The region this cell belongs to.")
 	if err := subFlags.Parse(args); err != nil {
 		return err
 	}
@@ -82,14 +81,12 @@ func commandAddCellInfo(ctx context.Context, wr *wrangler.Wrangler, subFlags *fl
 	return wr.TopoServer().CreateCellInfo(ctx, cell, &topodatapb.CellInfo{
 		ServerAddress: *serverAddress,
 		Root:          *root,
-		Region:        *region,
 	})
 }
 
 func commandUpdateCellInfo(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
 	serverAddress := subFlags.String("server_address", "", "The address the topology server is using for that cell.")
 	root := subFlags.String("root", "", "The root path the topology server is using for that cell.")
-	region := subFlags.String("region", "", "The region this cell belongs to.")
 	if err := subFlags.Parse(args); err != nil {
 		return err
 	}
@@ -100,8 +97,7 @@ func commandUpdateCellInfo(ctx context.Context, wr *wrangler.Wrangler, subFlags 
 
 	return wr.TopoServer().UpdateCellInfoFields(ctx, cell, func(ci *topodatapb.CellInfo) error {
 		if (*serverAddress == "" || ci.ServerAddress == *serverAddress) &&
-			(*root == "" || ci.Root == *root) &&
-			(*region == "" || ci.Region == *region) {
+			(*root == "" || ci.Root == *root) {
 			return topo.ErrNoUpdateNeeded
 		}
 		if *serverAddress != "" {
@@ -109,9 +105,6 @@ func commandUpdateCellInfo(ctx context.Context, wr *wrangler.Wrangler, subFlags 
 		}
 		if *root != "" {
 			ci.Root = *root
-		}
-		if *region != "" {
-			ci.Region = *region
 		}
 		return nil
 	})
