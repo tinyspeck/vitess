@@ -59,7 +59,6 @@ func Dial(target string, failFast FailFast, opts ...grpc.DialOption) (*grpc.Clie
 			log.Fatalf("There was an error initializing client grpc.DialOption: %v", err)
 		}
 	}
-	grpc.EnableTracing = true
 	return grpc.Dial(target, newopts...)
 }
 
