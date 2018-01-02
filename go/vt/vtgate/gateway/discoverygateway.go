@@ -86,7 +86,7 @@ type discoveryGateway struct {
 func createDiscoveryGateway(hc discovery.HealthCheck, topoServer *topo.Server, serv topo.SrvTopoServer, cell string, retryCount int) Gateway {
 	dg := &discoveryGateway{
 		hc:                hc,
-		tsc:               discovery.NewTabletStatsCacheDoNotSetListener(cell),
+		tsc:               discovery.NewTabletStatsCacheDoNotSetListener(cell, topoServer.CellToRegionMapper()),
 		topoServer:        topoServer,
 		srvTopoServer:     serv,
 		localCell:         cell,
@@ -277,11 +277,11 @@ func shuffleTablets(cell string, tablets []discovery.TabletStats) {
 	sameCell, diffCell, sameCellMax := 0, 0, -1
 	length := len(tablets)
 
-	// move all same cell tablets to the front, this is O(n)
+	//move all same cell tablets to the front, this is O(n)
 	for {
 		sameCellMax = diffCell - 1
-		sameCell = nextTablet(cell, tablets, sameCell, length, true)
-		diffCell = nextTablet(cell, tablets, diffCell, length, false)
+		sameCell := nextTablet(cell, tablets, sameCell, length, true)
+		diffCell := nextTablet(cell, tablets, diffCell, length, false)
 		// either no more diffs or no more same cells should stop the iteration
 		if sameCell < 0 || diffCell < 0 {
 			break
