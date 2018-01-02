@@ -97,8 +97,8 @@ func (c *TeeConn) Close() {
 }
 
 // ListDir is part of the topo.Conn interface.
-func (c *TeeConn) ListDir(ctx context.Context, dirPath string) ([]string, error) {
-	return c.primary.ListDir(ctx, dirPath)
+func (c *TeeConn) ListDir(ctx context.Context, dirPath string, full bool) ([]topo.DirEntry, error) {
+	return c.primary.ListDir(ctx, dirPath, full)
 }
 
 // Create is part of the topo.Conn interface.
@@ -198,6 +198,14 @@ func (c *TeeConn) Lock(ctx context.Context, dirPath, contents string) (topo.Lock
 		firstLockDescriptor:  fLD,
 		secondLockDescriptor: sLD,
 	}, nil
+}
+
+// Check is part of the topo.LockDescriptor interface.
+func (ld *teeTopoLockDescriptor) Check(ctx context.Context) error {
+	if err := ld.firstLockDescriptor.Check(ctx); err != nil {
+		return err
+	}
+	return ld.secondLockDescriptor.Check(ctx)
 }
 
 // Unlock is part of the topo.LockDescriptor interface.

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	log "github.com/golang/glog"
 	"github.com/youtube/vitess/go/sqltypes"
 )
 
@@ -40,6 +41,7 @@ func init() {
 // LookupHash defines a vindex that uses a lookup table.
 // The table is expected to define the id column as unique. It's
 // NonUnique and a Lookup.
+// Warning: This Vindex is being depcreated in favor of Lookup
 type LookupHash struct {
 	name string
 	lkp  lookupInternal
@@ -47,6 +49,7 @@ type LookupHash struct {
 
 // NewLookupHash creates a LookupHash vindex.
 func NewLookupHash(name string, m map[string]string) (Vindex, error) {
+	log.Warningf("LookupHash index (%q) it's being deprecated. Please use Lookup", name)
 	lh := &LookupHash{name: name}
 	lh.lkp.Init(m)
 	return lh, nil
@@ -95,21 +98,21 @@ func (lh *LookupHash) Verify(vcursor VCursor, ids []sqltypes.Value, ksids [][]by
 }
 
 // Create reserves the id by inserting it into the vindex table.
-func (lh *LookupHash) Create(vcursor VCursor, ids []sqltypes.Value, ksids [][]byte, ignoreMode bool) error {
+func (lh *LookupHash) Create(vcursor VCursor, rowsColValues [][]sqltypes.Value, ksids [][]byte, ignoreMode bool) error {
 	values, err := unhashList(ksids)
 	if err != nil {
 		return fmt.Errorf("lookup.Create.vunhash: %v", err)
 	}
-	return lh.lkp.Create(vcursor, ids, values, ignoreMode)
+	return lh.lkp.Create(vcursor, rowsColValues, values, ignoreMode)
 }
 
 // Delete deletes the entry from the vindex table.
-func (lh *LookupHash) Delete(vcursor VCursor, ids []sqltypes.Value, ksid []byte) error {
+func (lh *LookupHash) Delete(vcursor VCursor, rowsColValues [][]sqltypes.Value, ksid []byte) error {
 	v, err := vunhash(ksid)
 	if err != nil {
 		return fmt.Errorf("lookup.Delete.vunhash: %v", err)
 	}
-	return lh.lkp.Delete(vcursor, ids, sqltypes.NewUint64(v))
+	return lh.lkp.Delete(vcursor, rowsColValues, sqltypes.NewUint64(v))
 }
 
 // MarshalJSON returns a JSON representation of LookupHash.
@@ -135,6 +138,7 @@ func unhashList(ksids [][]byte) ([]sqltypes.Value, error) {
 // LookupHashUnique defines a vindex that uses a lookup table.
 // The table is expected to define the id column as unique. It's
 // Unique and a Lookup.
+// Warning: This Vindex is being depcreated in favor of LookupUnique
 type LookupHashUnique struct {
 	name string
 	lkp  lookupInternal
@@ -142,6 +146,7 @@ type LookupHashUnique struct {
 
 // NewLookupHashUnique creates a LookupHashUnique vindex.
 func NewLookupHashUnique(name string, m map[string]string) (Vindex, error) {
+	log.Warningf("LookupHashUnique index (%q) it's being deprecated. Please use LookupUnique", name)
 	lhu := &LookupHashUnique{name: name}
 	lhu.lkp.Init(m)
 	return lhu, nil
@@ -192,21 +197,21 @@ func (lhu *LookupHashUnique) Verify(vcursor VCursor, ids []sqltypes.Value, ksids
 }
 
 // Create reserves the id by inserting it into the vindex table.
-func (lhu *LookupHashUnique) Create(vcursor VCursor, ids []sqltypes.Value, ksids [][]byte, ignoreMode bool) error {
+func (lhu *LookupHashUnique) Create(vcursor VCursor, rowsColValues [][]sqltypes.Value, ksids [][]byte, ignoreMode bool) error {
 	values, err := unhashList(ksids)
 	if err != nil {
 		return fmt.Errorf("lookup.Create.vunhash: %v", err)
 	}
-	return lhu.lkp.Create(vcursor, ids, values, ignoreMode)
+	return lhu.lkp.Create(vcursor, rowsColValues, values, ignoreMode)
 }
 
 // Delete deletes the entry from the vindex table.
-func (lhu *LookupHashUnique) Delete(vcursor VCursor, ids []sqltypes.Value, ksid []byte) error {
+func (lhu *LookupHashUnique) Delete(vcursor VCursor, rowsColValues [][]sqltypes.Value, ksid []byte) error {
 	v, err := vunhash(ksid)
 	if err != nil {
 		return fmt.Errorf("lookup.Delete.vunhash: %v", err)
 	}
-	return lhu.lkp.Delete(vcursor, ids, sqltypes.NewUint64(v))
+	return lhu.lkp.Delete(vcursor, rowsColValues, sqltypes.NewUint64(v))
 }
 
 // MarshalJSON returns a JSON representation of LookupHashUnique.

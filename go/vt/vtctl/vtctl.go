@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package vtctl contains the implementation of all the Vitess management
+// commands.
+package vtctl
+
 // The following comment section contains definitions for command arguments.
+// It is parsed to generate the vtctl documentation automatically.
 /*
 COMMAND ARGUMENT DEFINITIONS
 
@@ -84,8 +89,6 @@ COMMAND ARGUMENT DEFINITIONS
   -- spare: A slaved copy of data that is ready but not serving query traffic.
             The data could be a potential master tablet.
 */
-
-package vtctl
 
 import (
 	"bytes"
@@ -397,6 +400,9 @@ var commands = []commandGroup{
 			{"GetSrvVSchema", commandGetSrvVSchema,
 				"<cell>",
 				"Outputs a JSON structure that contains information about the SrvVSchema."},
+			{"DeleteSrvVSchema", commandDeleteSrvVSchema,
+				"<cell>",
+				"Deletes the SrvVSchema object in the given cell."},
 		},
 	},
 	{
@@ -2088,7 +2094,7 @@ func commandApplyVSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *f
 		return err
 	}
 
-	b, err := json.MarshalIndent(&vs, "", "  ")
+	b, err := json2.MarshalIndentPB(&vs, "  ")
 	if err != nil {
 		wr.Logger().Errorf("Failed to marshal VSchema for display: %v", err)
 	} else {
@@ -2148,6 +2154,17 @@ func commandGetSrvVSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *
 		return err
 	}
 	return printJSON(wr.Logger(), srvVSchema)
+}
+
+func commandDeleteSrvVSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
+	if err := subFlags.Parse(args); err != nil {
+		return err
+	}
+	if subFlags.NArg() != 1 {
+		return fmt.Errorf("the <cell> argument is required for the DeleteSrvVSchema command")
+	}
+
+	return wr.TopoServer().DeleteSrvVSchema(ctx, subFlags.Arg(0))
 }
 
 func commandGetShardReplication(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
