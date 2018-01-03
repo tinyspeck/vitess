@@ -1054,16 +1054,6 @@ type Show struct {
 	Type string
 }
 
-// The frollowing constants represent SHOW statements.
-const (
-	ShowDatabasesStr     = "databases"
-	ShowKeyspacesStr     = "vitess_keyspaces"
-	ShowShardsStr        = "vitess_shards"
-	ShowTablesStr        = "tables"
-	ShowVSchemaTablesStr = "vschema_tables"
-	ShowUnsupportedStr   = "unsupported"
-)
-
 // Format formats the node.
 func (node *Show) Format(buf *TrackedBuffer) {
 	buf.Myprintf("show %s", node.Type)
@@ -2566,6 +2556,13 @@ func (node *Order) Format(buf *TrackedBuffer) {
 		buf.Myprintf("%v", node)
 		return
 	}
+	if node, ok := node.Expr.(*FuncExpr); ok {
+		if node.Name.Lowered() == "rand" {
+			buf.Myprintf("%v", node)
+			return
+		}
+	}
+
 	buf.Myprintf("%v %s", node.Expr, node.Direction)
 }
 

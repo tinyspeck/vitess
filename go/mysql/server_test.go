@@ -69,6 +69,10 @@ func (th *testHandler) NewConnection(c *Conn) {
 	th.lastConn = c
 }
 
+func (vh *testHandler) ConnectionNegotiated(c *Conn) error {
+	return nil
+}
+
 func (th *testHandler) ConnectionClosed(c *Conn) {
 }
 
@@ -145,6 +149,19 @@ func (th *testHandler) ComQuery(c *Conn, query string, callback func(*sqltypes.R
 	return nil
 }
 
+func getHostPort(t *testing.T, a net.Addr) (string, int) {
+	// For the host name, we resolve 'localhost' into an address.
+	// This works around a few travis issues where IPv6 is not 100% enabled.
+	hosts, err := net.LookupHost("localhost")
+	if err != nil {
+		t.Fatalf("LookupHost(localhost) failed: %v", err)
+	}
+	host := hosts[0]
+	port := a.(*net.TCPAddr).Port
+	t.Logf("listening on address '%v' port %v", host, port)
+	return host, port
+}
+
 func TestConnectionWithoutSourceHost(t *testing.T) {
 	th := &testHandler{}
 
@@ -160,8 +177,7 @@ func TestConnectionWithoutSourceHost(t *testing.T) {
 	defer l.Close()
 	go l.Accept()
 
-	host := l.Addr().(*net.TCPAddr).IP.String()
-	port := l.Addr().(*net.TCPAddr).Port
+	host, port := getHostPort(t, l.Addr())
 
 	// Setup the right parameters.
 	params := &ConnParams{
@@ -198,8 +214,7 @@ func TestConnectionWithSourceHost(t *testing.T) {
 	defer l.Close()
 	go l.Accept()
 
-	host := l.Addr().(*net.TCPAddr).IP.String()
-	port := l.Addr().(*net.TCPAddr).Port
+	host, port := getHostPort(t, l.Addr())
 
 	// Setup the right parameters.
 	params := &ConnParams{
@@ -271,8 +286,7 @@ func TestClientFoundRows(t *testing.T) {
 	defer l.Close()
 	go l.Accept()
 
-	host := l.Addr().(*net.TCPAddr).IP.String()
-	port := l.Addr().(*net.TCPAddr).Port
+	host, port := getHostPort(t, l.Addr())
 
 	// Setup the right parameters.
 	params := &ConnParams{
@@ -324,8 +338,7 @@ func TestServer(t *testing.T) {
 	defer l.Close()
 	go l.Accept()
 
-	host := l.Addr().(*net.TCPAddr).IP.String()
-	port := l.Addr().(*net.TCPAddr).Port
+	host, port := getHostPort(t, l.Addr())
 
 	// Setup the right parameters.
 	params := &ConnParams{
@@ -348,7 +361,7 @@ func TestServer(t *testing.T) {
 	}
 	if !strings.Contains(output, "ERROR 1047 (08S01)") ||
 		!strings.Contains(output, "forced query handling error for") {
-		t.Errorf("Unexpected output for 'error'")
+		t.Errorf("Unexpected output for 'error': %v", output)
 	}
 	if connCount.Get() != 0 {
 		t.Errorf("Expected ConnCount=0, got %d", connCount.Get())
@@ -513,8 +526,7 @@ func TestClearTextServer(t *testing.T) {
 	defer l.Close()
 	go l.Accept()
 
-	host := l.Addr().(*net.TCPAddr).IP.String()
-	port := l.Addr().(*net.TCPAddr).Port
+	host, port := getHostPort(t, l.Addr())
 
 	// Setup the right parameters.
 	params := &ConnParams{
@@ -600,8 +612,7 @@ func TestDialogServer(t *testing.T) {
 	defer l.Close()
 	go l.Accept()
 
-	host := l.Addr().(*net.TCPAddr).IP.String()
-	port := l.Addr().(*net.TCPAddr).Port
+	host, port := getHostPort(t, l.Addr())
 
 	// Setup the right parameters.
 	params := &ConnParams{
@@ -762,6 +773,7 @@ func runMysql(t *testing.T, params *ConnParams, command string) (string, bool) {
 		"LD_LIBRARY_PATH=" + path.Join(dir, "lib/mysql"),
 	}
 
+	t.Logf("Running mysql command: %v %v", name, args)
 	cmd := exec.Command(name, args...)
 	cmd.Env = env
 	cmd.Dir = dir

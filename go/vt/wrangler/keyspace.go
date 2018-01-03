@@ -507,7 +507,7 @@ func (wr *Wrangler) waitForDrainInCell(ctx context.Context, cell, keyspace, shar
 	// Create the healthheck module, with a cache.
 	hc := discovery.NewHealthCheck(healthcheckRetryDelay, healthCheckTimeout)
 	defer hc.Close()
-	tsc := discovery.NewTabletStatsCache(hc, cell)
+	tsc := discovery.NewTabletStatsCache(hc, wr.TopoServer(), cell)
 
 	// Create a tablet watcher.
 	watcher := discovery.NewShardReplicationWatcher(wr.TopoServer(), hc, cell, keyspace, shard, healthCheckTopologyRefresh, discovery.DefaultTopoReadConcurrency)
@@ -827,6 +827,12 @@ func (wr *Wrangler) RefreshTabletsByShard(ctx context.Context, si *topo.ShardInf
 	wg := sync.WaitGroup{}
 	for _, ti := range tabletMap {
 		if tabletTypes != nil && !topoproto.IsTypeInList(ti.Type, tabletTypes) {
+			continue
+		}
+		if ti.Hostname == "" {
+			// The tablet is not running, we don't have the host
+			// name to connect to, so we just skip this tablet.
+			wr.Logger().Infof("Tablet %v has no hostname, skipping its RefreshState", ti.AliasString())
 			continue
 		}
 

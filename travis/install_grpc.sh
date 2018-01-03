@@ -19,18 +19,15 @@
 # as root in the image.
 set -ex
 
-# grpc_dist can be empty, in which case we just install to the default paths
-grpc_dist="$1"
-if [ -n "$grpc_dist" ]; then
-  cd $grpc_dist
+# Import prepend_path function.
+dir="$(dirname "${BASH_SOURCE[0]}")"
+source "${dir}/../tools/shell_functions.inc"
+if [ $? -ne 0 ]; then
+      echo "failed to load ../tools/shell_functions.inc"
+      return 1
 fi
 
-if [[ -z "$PIP" ]]; then
-  # PIP is not set i.e. dev.env was not loaded.
-  # We're probably doing a system-wide installation when building the Docker
-  # bootstrap image. Set the variable now.
-  PIP=pip
-fi
+cd $grpc_dist
 
 # Python requires a very recent version of virtualenv.
 # We also require a recent version of pip, as we use it to
@@ -38,18 +35,35 @@ fi
 # For instance, setuptools doesn't work with pip 6.0:
 # https://github.com/pypa/setuptools/issues/945
 # (and setuptools is used by grpc install).
-if [ -n "$grpc_dist" ]; then
-  # Non-system wide installation. Create a virtualenv, which also creates a
-  # virtualenv-boxed pip.
+$VIRTUALENV -v $grpc_dist/usr/local
+PIP=$grpc_dist/usr/local/bin/pip
+$PIP install --upgrade pip
+$PIP install --upgrade --ignore-installed virtualenv
 
-  # Update both pip and virtualenv.
-  $VIRTUALENV -v $grpc_dist/usr/local
-  PIP=$grpc_dist/usr/local/bin/pip
-  $PIP install --upgrade pip
-  $PIP install --upgrade --ignore-installed virtualenv
+# clone the repository, setup the submodules
+git clone https://github.com/grpc/grpc.git
+cd grpc
+git checkout $grpc_ver
+git submodule update --init
+
+# OSX specific setting + dependencies
+if [ `uname -s` == "Darwin" ]; then
+     export GRPC_PYTHON_BUILD_WITH_CYTHON=1
+     $PIP install Cython
+
+     # Work-around macOS Sierra blocker, see: https://github.com/youtube/vitess/issues/2115
+     # TODO(mberlin): Remove this when the underlying issue is fixed and available
+     #                in the gRPC version used by Vitess.
+     #                See: https://github.com/google/protobuf/issues/2182
+     export CPPFLAGS="-Wno-deprecated-declarations"
 fi
 
 # Install gRPC python libraries from PyPI.
 # Dependencies like protobuf python will be installed automatically.
 grpcio_ver=1.7.0
 $PIP install --upgrade grpcio==$grpcio_ver
+
+# now install grpc_python_plugin, which also builds the protoc compiler.
+make grpc_python_plugin
+ln -sf $grpc_dist/grpc/bins/opt/protobuf/protoc $VTROOT/bin/protoc
+ln -sf $grpc_dist/grpc/bins/opt/protobuf/grpc_python_plugin $VTROOT/bin/grpc_python_plugin

@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package vtgate provides query routing rpc services
-// for vttablets.
 package vtgate
 
 import (
@@ -86,7 +84,7 @@ func (res *Resolver) ExecuteKeyspaceIds(ctx context.Context, sql string, bindVar
 			tabletType,
 			keyspaceIds)
 	}
-	return res.Execute(ctx, sql, bindVariables, keyspace, tabletType, session, mapToShards, notInTransaction, options)
+	return res.Execute(ctx, sql, bindVariables, keyspace, tabletType, session, mapToShards, notInTransaction, options, nil /* LogStats */)
 }
 
 // ExecuteKeyRanges executes a non-streaming query based on KeyRanges.
@@ -101,7 +99,7 @@ func (res *Resolver) ExecuteKeyRanges(ctx context.Context, sql string, bindVaria
 			tabletType,
 			keyRanges)
 	}
-	return res.Execute(ctx, sql, bindVariables, keyspace, tabletType, session, mapToShards, notInTransaction, options)
+	return res.Execute(ctx, sql, bindVariables, keyspace, tabletType, session, mapToShards, notInTransaction, options, nil)
 }
 
 // Execute executes a non-streaming query based on shards resolved by given func.
@@ -116,10 +114,14 @@ func (res *Resolver) Execute(
 	mapToShards func(string) (string, []string, error),
 	notInTransaction bool,
 	options *querypb.ExecuteOptions,
+	logStats *LogStats,
 ) (*sqltypes.Result, error) {
 	keyspace, shards, err := mapToShards(keyspace)
 	if err != nil {
 		return nil, err
+	}
+	if logStats != nil {
+		logStats.ShardQueries = uint32(len(shards))
 	}
 	for {
 		qr, err := res.scatterConn.Execute(

@@ -440,6 +440,7 @@ func (tsv *TabletServer) decideAction(tabletType topodatapb.TabletType, serving 
 func (tsv *TabletServer) fullStart() (err error) {
 	c, err := dbconnpool.NewDBConnection(&tsv.dbconfigs.App, tabletenv.MySQLStats)
 	if err != nil {
+		log.Errorf("error creating db app connection: %v", err)
 		return err
 	}
 	c.Close()
@@ -1712,6 +1713,11 @@ func (tsv *TabletServer) BroadcastHealth(terTimestamp int64, stats *querypb.Real
 // package, if heartbeat is enabled. Otherwise returns 0.
 func (tsv *TabletServer) HeartbeatLag() (time.Duration, error) {
 	return tsv.hr.GetLatest()
+}
+
+// TopoServer returns the topo server.
+func (tsv *TabletServer) TopoServer() *topo.Server {
+	return tsv.topoServer
 }
 
 // UpdateStream streams binlog events.

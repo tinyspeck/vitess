@@ -31,6 +31,7 @@ import (
 	"github.com/youtube/vitess/go/cache"
 	"github.com/youtube/vitess/go/mysql"
 	"github.com/youtube/vitess/go/stats"
+	"github.com/youtube/vitess/go/streamlog"
 	"github.com/youtube/vitess/go/sync2"
 	"github.com/youtube/vitess/go/trace"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
@@ -220,6 +221,7 @@ func NewQueryEngine(checker connpool.MySQLChecker, se *schema.Engine, config tab
 		stats.Publish("QueryCacheLength", stats.IntFunc(qe.plans.Length))
 		stats.Publish("QueryCacheSize", stats.IntFunc(qe.plans.Size))
 		stats.Publish("QueryCacheCapacity", stats.IntFunc(qe.plans.Capacity))
+		stats.Publish("QueryCacheEvictions", stats.IntFunc(qe.plans.Evictions))
 		stats.Publish("QueryCacheOldest", stats.StringFunc(func() string {
 			return fmt.Sprintf("%v", qe.plans.Oldest())
 		}))
@@ -555,7 +557,7 @@ func (qe *QueryEngine) handleHTTPQueryRules(response http.ResponseWriter, reques
 
 // ServeHTTP lists the most recent, cached queries and their count.
 func (qe *QueryEngine) handleHTTPConsolidations(response http.ResponseWriter, request *http.Request) {
-	if *tabletenv.RedactDebugUIQueries {
+	if *streamlog.RedactDebugUIQueries {
 		response.Write([]byte(`
 	<!DOCTYPE html>
 	<html>

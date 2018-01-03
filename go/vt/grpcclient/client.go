@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package grpcclient contains utility methods for gRPC client implementations
+// to use. It also supports plug-in authentication.
 package grpcclient
 
 import (
@@ -41,6 +43,7 @@ func RegisterGRPCDialOptions(grpcDialOptionsFunc func(opts []grpc.DialOption) ([
 // failFast is a non-optional parameter because callers are required to specify
 // what that should be.
 func Dial(target string, failFast FailFast, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	grpccommon.EnableTracingOpt()
 	newopts := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(*grpccommon.MaxMessageSize),
