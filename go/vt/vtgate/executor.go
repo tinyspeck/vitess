@@ -73,6 +73,7 @@ type Executor struct {
 	normalize        bool
 	streamSize       int
 	legacyAutocommit bool
+	tabletAutocommit bool
 	plans            *cache.LRUCache
 	vschemaStats     *VSchemaStats
 }
@@ -80,7 +81,7 @@ type Executor struct {
 var executorOnce sync.Once
 
 // NewExecutor creates a new Executor.
-func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64, legacyAutocommit bool) *Executor {
+func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64, legacyAutocommit bool, tabletAutocommit bool) *Executor {
 	e := &Executor{
 		serv:             serv,
 		cell:             cell,
@@ -91,6 +92,7 @@ func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName s
 		normalize:        normalize,
 		streamSize:       streamSize,
 		legacyAutocommit: legacyAutocommit,
+		tabletAutocommit: tabletAutocommit,
 	}
 	e.watchSrvVSchema(ctx, cell)
 	executorOnce.Do(func() {
@@ -144,11 +146,11 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 
 	switch stmtType {
 	case sqlparser.StmtSelect:
-		return e.handleExec(ctx, session, sql, bindVars, target, logStats)
+		return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* safeToAutoCommit */)
 	case sqlparser.StmtInsert, sqlparser.StmtReplace, sqlparser.StmtUpdate, sqlparser.StmtDelete:
 		// In legacy mode, we ignore autocommit settings.
 		if e.legacyAutocommit {
-			return e.handleExec(ctx, session, sql, bindVars, target, logStats)
+			return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* safeToAutoCommit */)
 		}
 
 		nsf := NewSafeSession(session)
@@ -163,7 +165,7 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 			defer e.txConn.Rollback(ctx, nsf)
 		}
 
-		qr, err := e.handleExec(ctx, session, sql, bindVars, target, logStats)
+		qr, err := e.handleExec(ctx, session, sql, bindVars, target, logStats, autocommit)
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +198,7 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 	return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unrecognized statement: %s", sql)
 }
 
-func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, logStats *LogStats) (*sqltypes.Result, error) {
+func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, logStats *LogStats, safeToAutoCommit bool) (*sqltypes.Result, error) {
 	if target.Shard != "" {
 		// V1 mode or V3 mode with a forced shard target
 		sql = sqlannotation.AnnotateIfDML(sql, nil)
@@ -237,12 +239,20 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 		skipQueryPlanCache(session),
 		logStats,
 	)
+
 	execStart := time.Now()
 	logStats.PlanTime = execStart.Sub(logStats.StartTime)
 
 	if err != nil {
 		logStats.Error = err
 		return nil, err
+	}
+
+	if e.tabletAutocommit && plan.SafeToAutocommit {
+		// It is safe to autocommit this plan, which means that we treat it as not being in a transaction
+		// This will have the side effect that the gate won't do a Begin to the tablet and will run the execute
+		// directly. In combination with autocommit enabled on the tablets, it will execute this transaction in one round trip.
+		session.InTransaction = false
 	}
 
 	qr, err := plan.Instructions.Execute(vcursor, bindVars, make(map[string]*querypb.BindVariable), true)

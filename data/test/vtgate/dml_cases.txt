@@ -481,7 +481,8 @@
         1
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # insert unsharded, column absent
@@ -506,7 +507,8 @@
         null
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # insert unsharded, column absent
@@ -531,7 +533,8 @@
         null
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # insert unsharded, multi-val
@@ -557,7 +560,8 @@
         null
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 
@@ -802,7 +806,8 @@
     },
     "Prefix": "insert into user_extra(nonid, extra_id, user_id) values ",
     "Mid": ["(2, :__seq0, :_user_id0)"]
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # insert for non-compliant names
@@ -822,7 +827,8 @@
     "Mid": [
       "(:_a_b_c0, 2)"
     ]
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # unsharded insert from union
@@ -938,7 +944,8 @@
         1
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # replace unsharded, column absent
@@ -963,7 +970,8 @@
         null
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # replace unsharded, multi-val
@@ -989,7 +997,8 @@
         null
       ]
     }
-  }
+  },
+  "SafeToAutocommit": true
 }
 
 # replace invalid table

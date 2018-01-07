@@ -502,6 +502,32 @@ func TestExecutorLegacyAutocommit(t *testing.T) {
 	}
 }
 
+func TestExecutorSafeAutocommit(t *testing.T) {
+	executor, _, _, sbclookup := createExecutorEnv()
+	session := &vtgatepb.Session{TargetString: "@master", Autocommit: false}
+
+	// If tabletAutocommit is on and it's safe to do so, there should not be an implicit transaction
+	executor.tabletAutocommit = true
+	startCount := sbclookup.BeginCount.Get()
+	_, err := executor.Execute(context.Background(), "TestExecute", session, "insert into main1(id) values (1)", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := sbclookup.BeginCount.Get(), startCount; got != want {
+		t.Errorf("Begin count: %d, want %d", got, want)
+	}
+
+	// If tabletAutocommit is off, there should be an implicit begin.
+	executor.tabletAutocommit = false
+	_, err = executor.Execute(context.Background(), "TestExecute", session, "insert into main1(id) values (1)", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := sbclookup.BeginCount.Get(), startCount+1; got != want {
+		t.Errorf("Begin count: %d, want %d", got, want)
+	}
+}
+
 func TestExecutorShow(t *testing.T) {
 	executor, _, _, _ := createExecutorEnv()
 	session := &vtgatepb.Session{TargetString: "@master"}
