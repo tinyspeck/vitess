@@ -73,8 +73,8 @@ type Plan struct {
 	Rows uint64
 	// Total number of errors
 	Errors uint64
-	// SafeToAutoCommit
-	SafeToAutocommit bool `json:",omitempty"`
+	// TabletAutocommitAllowed
+	TabletAutocommitAllowed bool `json:",omitempty"`
 }
 
 // AddStats updates the plan execution statistics

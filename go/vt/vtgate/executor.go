@@ -68,31 +68,31 @@ type Executor struct {
 	scatterConn *ScatterConn
 	txConn      *TxConn
 
-	mu               sync.Mutex
-	vschema          *vindexes.VSchema
-	normalize        bool
-	streamSize       int
-	legacyAutocommit bool
-	tabletAutocommit bool
-	plans            *cache.LRUCache
-	vschemaStats     *VSchemaStats
+	mu                          sync.Mutex
+	vschema                     *vindexes.VSchema
+	normalize                   bool
+	streamSize                  int
+	legacyAutocommit            bool
+	tabletAutocommitWhenAllowed bool
+	plans                       *cache.LRUCache
+	vschemaStats                *VSchemaStats
 }
 
 var executorOnce sync.Once
 
 // NewExecutor creates a new Executor.
-func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64, legacyAutocommit bool, tabletAutocommit bool) *Executor {
+func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64, legacyAutocommit bool, tabletAutocommitWhenAllowed bool) *Executor {
 	e := &Executor{
-		serv:             serv,
-		cell:             cell,
-		resolver:         resolver,
-		scatterConn:      resolver.scatterConn,
-		txConn:           resolver.scatterConn.txConn,
-		plans:            cache.NewLRUCache(queryPlanCacheSize),
-		normalize:        normalize,
-		streamSize:       streamSize,
-		legacyAutocommit: legacyAutocommit,
-		tabletAutocommit: tabletAutocommit,
+		serv:                        serv,
+		cell:                        cell,
+		resolver:                    resolver,
+		scatterConn:                 resolver.scatterConn,
+		txConn:                      resolver.scatterConn.txConn,
+		plans:                       cache.NewLRUCache(queryPlanCacheSize),
+		normalize:                   normalize,
+		streamSize:                  streamSize,
+		legacyAutocommit:            legacyAutocommit,
+		tabletAutocommitWhenAllowed: tabletAutocommitWhenAllowed,
 	}
 	e.watchSrvVSchema(ctx, cell)
 	executorOnce.Do(func() {
@@ -248,7 +248,7 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 		return nil, err
 	}
 
-	if e.tabletAutocommit && plan.SafeToAutocommit {
+	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed {
 		// It is safe to autocommit this plan, which means that we treat it as not being in a transaction
 		// This will have the side effect that the gate won't do a Begin to the tablet and will run the execute
 		// directly. In combination with autocommit enabled on the tablets, it will execute this transaction in one round trip.
