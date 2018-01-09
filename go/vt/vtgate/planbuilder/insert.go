@@ -58,7 +58,7 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 			return nil, false, errors.New("unsupported: auto-inc and select in insert")
 		}
 		eRoute.Query = generateQuery(ins)
-		return eRoute, false, nil
+		return eRoute, true, nil
 	case sqlparser.Values:
 		rows = insertValues
 	default:
@@ -66,7 +66,7 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 	}
 	if eRoute.Table.AutoIncrement == nil {
 		eRoute.Query = generateQuery(ins)
-		return eRoute, false, nil
+		return eRoute, true, nil
 	}
 
 	// Table has auto-inc and has a VALUES clause.
@@ -246,15 +246,6 @@ func isVindexChanging(setClauses sqlparser.UpdateExprs, colVindexes []*vindexes.
 					return true
 				}
 			}
-		}
-	}
-	return false
-}
-
-func hasOwnedLookupVindex(colVindexes []*vindexes.ColumnVindex) bool {
-	for _, vcol := range colVindexes {
-		if _, ok := vcol.Vindex.(vindexes.Lookup); ok && vcol.Owned {
-			return true
 		}
 	}
 	return false
