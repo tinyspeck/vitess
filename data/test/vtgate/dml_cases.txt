@@ -641,7 +641,8 @@
     },
     "Prefix": "insert ignore into user(id, Name, Costly) values ",
     "Mid":["(:_Id0, :_Name0, :_Costly0)"]
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert on duplicate key
@@ -672,7 +673,8 @@
       "(:_Id0, :_Name0, :_Costly0)"
     ],
     "Suffix": " on duplicate key update col = 2"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert with one vindex and bind var

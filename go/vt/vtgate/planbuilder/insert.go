@@ -165,7 +165,7 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 	eRoute.Values = routeValues
 	eRoute.Query = generateQuery(ins)
 	generateInsertShardedQuery(ins, eRoute, rows)
-	autocommitAllowed := len(rows) <= 1 && !hasOwnedLookupVindex(eRoute.Table.ColumnVindexes)
+	autocommitAllowed := eRoute.Opcode == engine.InsertShardedIgnore || (len(rows) <= 1 && !hasOwnedLookupVindex(eRoute.Table.ColumnVindexes))
 	return eRoute, autocommitAllowed, nil
 }
 
