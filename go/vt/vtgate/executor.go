@@ -239,7 +239,6 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 		skipQueryPlanCache(session),
 		logStats,
 	)
-
 	execStart := time.Now()
 	logStats.PlanTime = execStart.Sub(logStats.StartTime)
 
@@ -248,10 +247,23 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 		return nil, err
 	}
 
+	// The following is an optimization feature for autocommit transactions.
+	// By default, vtgate commits all transactions in two round trips to the
+	// tablet.
+	// With this feature on, vgate plan builder will identify which
+	// transactions are safe to commit in a single round trip (e.g transactions
+	// for tables that do not have owned lookup vindexes) and gain the
+	// performance of skipping an extra hop in the network.
+	//
+	// NOTE: This feature requires to have autocommit setting enabled on the
+	// tablet as well.
+	// The way this work is to explicitly set InTransaction to false.
+	// In normal autocommit flow, the executor would have set this
+	// to true, which causes the gate to issue a BeginExecute command
+	// to the tablet (see Execute method in scatter_conn for more details).
+	// By setting this back to false, vgate will only send an Execute command to
+	// the tablet, which then will be commited automatically.
 	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed && inAutocommit {
-		// It is safe to autocommit this plan, which means that we treat it as not being in a transaction
-		// This will have the side effect that the gate won't do a Begin to the tablet and will run the execute
-		// directly. In combination with autocommit enabled on the tablets, it will execute this transaction in one round trip.
 		session.InTransaction = false
 	}
 
