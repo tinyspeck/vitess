@@ -517,6 +517,16 @@ func TestExecutorAutocommitWhenAllowed(t *testing.T) {
 		t.Errorf("Begin count: %d, want %d", got, want)
 	}
 
+	// If autcommit is not set, it should do a BeginExecute, so BEGIN count is changed by 1
+	session = &vtgatepb.Session{TargetString: "@master", Autocommit: false}
+	startCount = sbclookup.BeginCount.Get()
+	_, err = executor.Execute(context.Background(), "TestExecute", session, "insert into main1(id) values (1)", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := sbclookup.BeginCount.Get(), startCount+1; got != want {
+		t.Errorf("Begin count: %d, want %d", got, want)
+	}
 	// If tabletAutocommitWhenAllowed is false, there should be an implicit begin.
 	executor.tabletAutocommitWhenAllowed = false
 	_, err = executor.Execute(context.Background(), "TestExecute", session, "insert into main1(id) values (1)", nil)
