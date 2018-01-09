@@ -146,11 +146,11 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 
 	switch stmtType {
 	case sqlparser.StmtSelect:
-		return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* safeToAutoCommit */)
+		return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* inAutocommit */)
 	case sqlparser.StmtInsert, sqlparser.StmtReplace, sqlparser.StmtUpdate, sqlparser.StmtDelete:
 		// In legacy mode, we ignore autocommit settings.
 		if e.legacyAutocommit {
-			return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* safeToAutoCommit */)
+			return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* inAutocommit */)
 		}
 
 		nsf := NewSafeSession(session)
@@ -198,7 +198,7 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 	return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unrecognized statement: %s", sql)
 }
 
-func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, logStats *LogStats, safeToAutoCommit bool) (*sqltypes.Result, error) {
+func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, logStats *LogStats, inAutocommit bool) (*sqltypes.Result, error) {
 	if target.Shard != "" {
 		// V1 mode or V3 mode with a forced shard target
 		sql = sqlannotation.AnnotateIfDML(sql, nil)
@@ -248,7 +248,7 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 		return nil, err
 	}
 
-	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed {
+	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed && !session.InTransaction {
 		// It is safe to autocommit this plan, which means that we treat it as not being in a transaction
 		// This will have the side effect that the gate won't do a Begin to the tablet and will run the execute
 		// directly. In combination with autocommit enabled on the tablets, it will execute this transaction in one round trip.

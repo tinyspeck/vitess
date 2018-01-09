@@ -52,12 +52,12 @@ import (
 )
 
 var (
-	transactionMode    = flag.String("transaction_mode", "MULTI", "SINGLE: disallow multi-db transactions, MULTI: allow multi-db transactions with best effort commit, TWOPC: allow multi-db transactions with 2pc commit")
-	normalizeQueries   = flag.Bool("normalize_queries", true, "Rewrite queries with bind vars. Turn this off if the app itself sends normalized queries with bind vars.")
-	streamBufferSize   = flag.Int("stream_buffer_size", 32*1024, "the number of bytes sent from vtgate for each stream call. It's recommended to keep this value in sync with vttablet's query-server-config-stream-buffer-size.")
-	queryPlanCacheSize = flag.Int64("gate_query_cache_size", 10000, "gate server query cache size, maximum number of queries to be cached. vtgate analyzes every incoming query and generate a query plan, these plans are being cached in a lru cache. This config controls the capacity of the lru cache.")
-	legacyAutocommit   = flag.Bool("legacy_autocommit", false, "DEPRECATED: set this flag to true to get the legacy behavior: all transactions will need an explicit begin, and DMLs outside transactions will return an error.")
-	tabletAutocommit   = flag.Bool("tablet_autocommit", false, "set this flag to true when using enable autocommit in tablets. This will allow to safely commit in one round trip.")
+	transactionMode             = flag.String("transaction_mode", "MULTI", "SINGLE: disallow multi-db transactions, MULTI: allow multi-db transactions with best effort commit, TWOPC: allow multi-db transactions with 2pc commit")
+	normalizeQueries            = flag.Bool("normalize_queries", true, "Rewrite queries with bind vars. Turn this off if the app itself sends normalized queries with bind vars.")
+	streamBufferSize            = flag.Int("stream_buffer_size", 32*1024, "the number of bytes sent from vtgate for each stream call. It's recommended to keep this value in sync with vttablet's query-server-config-stream-buffer-size.")
+	queryPlanCacheSize          = flag.Int64("gate_query_cache_size", 10000, "gate server query cache size, maximum number of queries to be cached. vtgate analyzes every incoming query and generate a query plan, these plans are being cached in a lru cache. This config controls the capacity of the lru cache.")
+	legacyAutocommit            = flag.Bool("legacy_autocommit", false, "DEPRECATED: set this flag to true to get the legacy behavior: all transactions will need an explicit begin, and DMLs outside transactions will return an error.")
+	tabletAutocommitWhenAllowed = flag.Bool("tablet_autocommit_when_allowed", false, "set this flag to true when using enable autocommit in tablets. By default, vtgate always wraps DML's in an implicit transaction. With this setting on, vtgate will commit transactions in one round trip when is safe to do so.")
 )
 
 func getTxMode() vtgatepb.TransactionMode {
@@ -163,7 +163,7 @@ func Init(ctx context.Context, hc discovery.HealthCheck, topoServer *topo.Server
 	resolver := NewResolver(serv, cell, sc)
 
 	rpcVTGate = &VTGate{
-		executor:     NewExecutor(ctx, serv, cell, "VTGateExecutor", resolver, *normalizeQueries, *streamBufferSize, *queryPlanCacheSize, *legacyAutocommit, *tabletAutocommit),
+		executor:     NewExecutor(ctx, serv, cell, "VTGateExecutor", resolver, *normalizeQueries, *streamBufferSize, *queryPlanCacheSize, *legacyAutocommit, *tabletAutocommitWhenAllowed),
 		resolver:     resolver,
 		txConn:       tc,
 		timings:      stats.NewMultiTimings("VtgateApi", []string{"Operation", "Keyspace", "DbType"}),

@@ -482,7 +482,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, column absent
@@ -508,7 +508,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, column absent
@@ -534,7 +534,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, multi-val
@@ -561,7 +561,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 
@@ -807,7 +807,7 @@
     "Prefix": "insert into user_extra(nonid, extra_id, user_id) values ",
     "Mid": ["(2, :__seq0, :_user_id0)"]
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # insert for non-compliant names
@@ -828,7 +828,7 @@
       "(:_a_b_c0, 2)"
     ]
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # unsharded insert from union
@@ -945,7 +945,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # replace unsharded, column absent
@@ -971,7 +971,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # replace unsharded, multi-val
@@ -998,7 +998,7 @@
       ]
     }
   },
-  "SafeToAutocommit": true
+  "TabletAutocommitAllowed": true
 }
 
 # replace invalid table

@@ -160,9 +160,9 @@ func (vw *vschemaWrapper) DefaultKeyspace() (*vindexes.Keyspace, error) {
 // For the purposes of this set of tests, just compare the actual plan
 // and ignore all the metrics.
 type testPlan struct {
-	Original         string           `json:",omitempty"`
-	Instructions     engine.Primitive `json:",omitempty"`
-	SafeToAutocommit bool             `json:",omitempty"`
+	Original                string           `json:",omitempty"`
+	Instructions            engine.Primitive `json:",omitempty"`
+	TabletAutocommitAllowed bool             `json:",omitempty"`
 }
 
 func testFile(t *testing.T, filename string, vschema *vindexes.VSchema) {
@@ -175,9 +175,9 @@ func testFile(t *testing.T, filename string, vschema *vindexes.VSchema) {
 			out = err.Error()
 		} else {
 			bout, _ := json.Marshal(testPlan{
-				Original:         plan.Original,
-				Instructions:     plan.Instructions,
-				SafeToAutocommit: plan.SafeToAutocommit,
+				Original:                plan.Original,
+				Instructions:            plan.Instructions,
+				TabletAutocommitAllowed: plan.TabletAutocommitAllowed,
 			})
 			out = string(bout)
 		}
