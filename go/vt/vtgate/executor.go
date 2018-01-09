@@ -248,7 +248,7 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 		return nil, err
 	}
 
-	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed && !session.InTransaction {
+	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed && inAutocommit {
 		// It is safe to autocommit this plan, which means that we treat it as not being in a transaction
 		// This will have the side effect that the gate won't do a Begin to the tablet and will run the execute
 		// directly. In combination with autocommit enabled on the tablets, it will execute this transaction in one round trip.

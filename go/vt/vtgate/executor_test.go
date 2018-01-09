@@ -504,7 +504,7 @@ func TestExecutorLegacyAutocommit(t *testing.T) {
 
 func TestExecutorAutocommitWhenAllowed(t *testing.T) {
 	executor, _, _, sbclookup := createExecutorEnv()
-	session := &vtgatepb.Session{TargetString: "@master", Autocommit: false}
+	session := &vtgatepb.Session{TargetString: "@master", Autocommit: true}
 
 	// If tabletAutocommitWhenAllowedWhenAllowed is on and it's safe to do so, there should not be an implicit transaction
 	executor.tabletAutocommitWhenAllowed = true
@@ -517,7 +517,7 @@ func TestExecutorAutocommitWhenAllowed(t *testing.T) {
 		t.Errorf("Begin count: %d, want %d", got, want)
 	}
 
-	// If tabletAutocommitWhenAllowed is off, there should be an implicit begin.
+	// If tabletAutocommitWhenAllowed is false, there should be an implicit begin.
 	executor.tabletAutocommitWhenAllowed = false
 	_, err = executor.Execute(context.Background(), "TestExecute", session, "insert into main1(id) values (1)", nil)
 	if err != nil {
@@ -526,7 +526,6 @@ func TestExecutorAutocommitWhenAllowed(t *testing.T) {
 	if got, want := sbclookup.BeginCount.Get(), startCount+1; got != want {
 		t.Errorf("Begin count: %d, want %d", got, want)
 	}
-
 }
 
 func TestExecutorShow(t *testing.T) {
