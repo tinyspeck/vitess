@@ -42,8 +42,8 @@ func buildInsertPlan(ins *sqlparser.Insert, vschema VSchema) (*engine.Route, boo
 	return buildInsertShardedPlan(ins, table)
 }
 
-func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vschema VSchema) (*engine.Route, bool, error) {
-	eRoute := &engine.Route{
+func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vschema VSchema) (eRoute *engine.Route, tableAutocommitAllowed bool, err error) {
+	eRoute = &engine.Route{
 		Opcode:   engine.InsertUnsharded,
 		Table:    table,
 		Keyspace: table.Keyspace,
@@ -85,8 +85,8 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 	return eRoute, true, nil
 }
 
-func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engine.Route, bool, error) {
-	eRoute := &engine.Route{
+func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (eRoute *engine.Route, tabletAutocommitAllowed bool, err error) {
+	eRoute = &engine.Route{
 		Opcode:   engine.InsertSharded,
 		Table:    table,
 		Keyspace: table.Keyspace,
