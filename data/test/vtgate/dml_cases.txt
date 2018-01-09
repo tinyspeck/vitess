@@ -17,7 +17,8 @@
       "Sharded": false
     },
     "Query": "update m1 set val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update unsharded
@@ -31,7 +32,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # subqueries in unsharded update
@@ -45,7 +47,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set col = (select col from unsharded limit 1)"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # unsharded union in subquery of unsharded update
@@ -59,7 +62,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set col = (select id from unsharded union select id from unsharded)"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # unsharded join in subquery of unsharded update
@@ -73,7 +77,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set col = (select id from unsharded as a join unsharded as b on a.id = b.id)"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update with join subquery
@@ -87,7 +92,8 @@
       "Sharded": false
     },
     "Query": "update unsharded as foo left join (select id from unsharded where col is not null order by col desc limit 10) as keepers on foo.id = keepers.id set col1 = 'asdf' where keepers.id is null and foo.col is not null and foo.col \u003c 1000"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # delete unsharded
@@ -118,7 +124,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id with parenthesized expression
@@ -137,7 +144,8 @@
       1
     ],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id, changing one vindex column
@@ -220,7 +228,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id, stray where clause with conversion error
@@ -237,7 +246,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # delete from by primary keyspace id
@@ -314,7 +324,8 @@
     "Vindex": "music_user_map",
     "Values": [1],
     "Table": "music"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update multi-table ansi join
@@ -328,7 +339,8 @@
           "Sharded": false
      },
     "Query": "update unsharded_a as a join unsharded_b as b on a.id = b.id set a.val = 'foo' where b.val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update multi-table comma join
@@ -342,7 +354,8 @@
       "Sharded": false
     },
     "Query": "update unsharded_a as a, unsharded_b as b set a.val = 'foo' where a.id = b.id and b.val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # delete from by lookup
