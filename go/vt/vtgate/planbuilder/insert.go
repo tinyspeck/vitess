@@ -28,37 +28,37 @@ import (
 )
 
 // buildInsertPlan builds the route for an INSERT statement.
-func buildInsertPlan(ins *sqlparser.Insert, vschema VSchema) (*engine.Route, error) {
+func buildInsertPlan(ins *sqlparser.Insert, vschema VSchema) (*engine.Route, bool, error) {
 	table, err := vschema.FindTable(ins.Table)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !table.Keyspace.Sharded {
 		return buildInsertUnshardedPlan(ins, table, vschema)
 	}
 	if ins.Action == sqlparser.ReplaceStr {
-		return nil, errors.New("unsupported: REPLACE INTO with sharded schema")
+		return nil, false, errors.New("unsupported: REPLACE INTO with sharded schema")
 	}
 	return buildInsertShardedPlan(ins, table)
 }
 
-func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vschema VSchema) (*engine.Route, error) {
-	eRoute := &engine.Route{
+func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vschema VSchema) (eRoute *engine.Route, tableAutocommitAllowed bool, err error) {
+	eRoute = &engine.Route{
 		Opcode:   engine.InsertUnsharded,
 		Table:    table,
 		Keyspace: table.Keyspace,
 	}
 	if !validateSubquerySamePlan(eRoute, vschema, ins) {
-		return nil, errors.New("unsupported: sharded subquery in insert values")
+		return nil, false, errors.New("unsupported: sharded subquery in insert values")
 	}
 	var rows sqlparser.Values
 	switch insertValues := ins.Rows.(type) {
 	case *sqlparser.Select, *sqlparser.Union:
 		if eRoute.Table.AutoIncrement != nil {
-			return nil, errors.New("unsupported: auto-inc and select in insert")
+			return nil, false, errors.New("unsupported: auto-inc and select in insert")
 		}
 		eRoute.Query = generateQuery(ins)
-		return eRoute, nil
+		return eRoute, true, nil
 	case sqlparser.Values:
 		rows = insertValues
 	default:
@@ -66,27 +66,27 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 	}
 	if eRoute.Table.AutoIncrement == nil {
 		eRoute.Query = generateQuery(ins)
-		return eRoute, nil
+		return eRoute, true, nil
 	}
 
 	// Table has auto-inc and has a VALUES clause.
 	if len(ins.Columns) == 0 {
-		return nil, errors.New("column list required for tables with auto-inc columns")
+		return nil, false, errors.New("column list required for tables with auto-inc columns")
 	}
 	for _, row := range rows {
 		if len(ins.Columns) != len(row) {
-			return nil, errors.New("column list doesn't match values")
+			return nil, false, errors.New("column list doesn't match values")
 		}
 	}
 	if err := modifyForAutoinc(ins, eRoute); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	eRoute.Query = generateQuery(ins)
-	return eRoute, nil
+	return eRoute, true, nil
 }
 
-func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engine.Route, error) {
-	eRoute := &engine.Route{
+func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (eRoute *engine.Route, tabletAutocommitAllowed bool, err error) {
+	eRoute = &engine.Route{
 		Opcode:   engine.InsertSharded,
 		Table:    table,
 		Keyspace: table.Keyspace,
@@ -96,34 +96,34 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 	}
 	if ins.OnDup != nil {
 		if isVindexChanging(sqlparser.UpdateExprs(ins.OnDup), eRoute.Table.ColumnVindexes) {
-			return nil, errors.New("unsupported: DML cannot change vindex column")
+			return nil, false, errors.New("unsupported: DML cannot change vindex column")
 		}
 		eRoute.Opcode = engine.InsertShardedIgnore
 	}
 	if len(ins.Columns) == 0 {
-		return nil, errors.New("no column list")
+		return nil, false, errors.New("no column list")
 	}
 	var rows sqlparser.Values
 	switch insertValues := ins.Rows.(type) {
 	case *sqlparser.Select, *sqlparser.Union:
-		return nil, errors.New("unsupported: insert into select")
+		return nil, false, errors.New("unsupported: insert into select")
 	case sqlparser.Values:
 		rows = insertValues
 		if hasSubquery(rows) {
-			return nil, errors.New("unsupported: subquery in insert values")
+			return nil, false, errors.New("unsupported: subquery in insert values")
 		}
 	default:
 		panic(fmt.Sprintf("BUG: unexpected construct in insert: %T", insertValues))
 	}
 	for _, value := range rows {
 		if len(ins.Columns) != len(value) {
-			return nil, errors.New("column list doesn't match values")
+			return nil, false, errors.New("column list doesn't match values")
 		}
 	}
 
 	if eRoute.Table.AutoIncrement != nil {
 		if err := modifyForAutoinc(ins, eRoute); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
 
@@ -155,7 +155,7 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 			for rowNum, row := range rows {
 				innerpv, err := sqlparser.NewPlanValue(row[colNum])
 				if err != nil {
-					return nil, fmt.Errorf("could not compute value for vindex or auto-inc column: %v", err)
+					return nil, false, fmt.Errorf("could not compute value for vindex or auto-inc column: %v", err)
 				}
 				routeValues[vIdx].Values[rowNum].Values = append(routeValues[vIdx].Values[rowNum].Values, innerpv)
 				row[colNum] = sqlparser.NewValArg([]byte(baseName + strconv.Itoa(rowNum)))
@@ -165,7 +165,8 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 	eRoute.Values = routeValues
 	eRoute.Query = generateQuery(ins)
 	generateInsertShardedQuery(ins, eRoute, rows)
-	return eRoute, nil
+	autocommitAllowed := eRoute.Opcode == engine.InsertShardedIgnore || (len(rows) <= 1 && !hasOwnedLookupVindex(eRoute.Table.ColumnVindexes))
+	return eRoute, autocommitAllowed, nil
 }
 
 func generateInsertShardedQuery(node *sqlparser.Insert, eRoute *engine.Route, valueTuples sqlparser.Values) {

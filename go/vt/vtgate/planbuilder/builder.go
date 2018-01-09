@@ -145,11 +145,11 @@ func BuildFromStmt(query string, stmt sqlparser.Statement, vschema VSchema) (*en
 	case *sqlparser.Select:
 		plan.Instructions, err = buildSelectPlan(stmt, vschema)
 	case *sqlparser.Insert:
-		plan.Instructions, err = buildInsertPlan(stmt, vschema)
+		plan.Instructions, plan.TabletAutocommitAllowed, err = buildInsertPlan(stmt, vschema)
 	case *sqlparser.Update:
-		plan.Instructions, err = buildUpdatePlan(stmt, vschema)
+		plan.Instructions, plan.TabletAutocommitAllowed, err = buildUpdatePlan(stmt, vschema)
 	case *sqlparser.Delete:
-		plan.Instructions, err = buildDeletePlan(stmt, vschema)
+		plan.Instructions, plan.TabletAutocommitAllowed, err = buildDeletePlan(stmt, vschema)
 	case *sqlparser.Union:
 		plan.Instructions, err = buildUnionPlan(stmt, vschema)
 	case *sqlparser.Set:

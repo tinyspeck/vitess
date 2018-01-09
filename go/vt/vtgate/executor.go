@@ -68,29 +68,31 @@ type Executor struct {
 	scatterConn *ScatterConn
 	txConn      *TxConn
 
-	mu               sync.Mutex
-	vschema          *vindexes.VSchema
-	normalize        bool
-	streamSize       int
-	legacyAutocommit bool
-	plans            *cache.LRUCache
-	vschemaStats     *VSchemaStats
+	mu                          sync.Mutex
+	vschema                     *vindexes.VSchema
+	normalize                   bool
+	streamSize                  int
+	legacyAutocommit            bool
+	tabletAutocommitWhenAllowed bool
+	plans                       *cache.LRUCache
+	vschemaStats                *VSchemaStats
 }
 
 var executorOnce sync.Once
 
 // NewExecutor creates a new Executor.
-func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64, legacyAutocommit bool) *Executor {
+func NewExecutor(ctx context.Context, serv topo.SrvTopoServer, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64, legacyAutocommit bool, tabletAutocommitWhenAllowed bool) *Executor {
 	e := &Executor{
-		serv:             serv,
-		cell:             cell,
-		resolver:         resolver,
-		scatterConn:      resolver.scatterConn,
-		txConn:           resolver.scatterConn.txConn,
-		plans:            cache.NewLRUCache(queryPlanCacheSize),
-		normalize:        normalize,
-		streamSize:       streamSize,
-		legacyAutocommit: legacyAutocommit,
+		serv:                        serv,
+		cell:                        cell,
+		resolver:                    resolver,
+		scatterConn:                 resolver.scatterConn,
+		txConn:                      resolver.scatterConn.txConn,
+		plans:                       cache.NewLRUCache(queryPlanCacheSize),
+		normalize:                   normalize,
+		streamSize:                  streamSize,
+		legacyAutocommit:            legacyAutocommit,
+		tabletAutocommitWhenAllowed: tabletAutocommitWhenAllowed,
 	}
 	e.watchSrvVSchema(ctx, cell)
 	executorOnce.Do(func() {
@@ -144,11 +146,11 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 
 	switch stmtType {
 	case sqlparser.StmtSelect:
-		return e.handleExec(ctx, session, sql, bindVars, target, logStats)
+		return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* inAutocommit */)
 	case sqlparser.StmtInsert, sqlparser.StmtReplace, sqlparser.StmtUpdate, sqlparser.StmtDelete:
 		// In legacy mode, we ignore autocommit settings.
 		if e.legacyAutocommit {
-			return e.handleExec(ctx, session, sql, bindVars, target, logStats)
+			return e.handleExec(ctx, session, sql, bindVars, target, logStats, false /* inAutocommit */)
 		}
 
 		nsf := NewSafeSession(session)
@@ -163,7 +165,7 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 			defer e.txConn.Rollback(ctx, nsf)
 		}
 
-		qr, err := e.handleExec(ctx, session, sql, bindVars, target, logStats)
+		qr, err := e.handleExec(ctx, session, sql, bindVars, target, logStats, autocommit)
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +198,7 @@ func (e *Executor) execute(ctx context.Context, method string, session *vtgatepb
 	return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unrecognized statement: %s", sql)
 }
 
-func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, logStats *LogStats) (*sqltypes.Result, error) {
+func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, logStats *LogStats, inAutocommit bool) (*sqltypes.Result, error) {
 	if target.Shard != "" {
 		// V1 mode or V3 mode with a forced shard target
 		sql = sqlannotation.AnnotateIfDML(sql, nil)
@@ -243,6 +245,26 @@ func (e *Executor) handleExec(ctx context.Context, session *vtgatepb.Session, sq
 	if err != nil {
 		logStats.Error = err
 		return nil, err
+	}
+
+	// The following is an optimization feature for autocommit transactions.
+	// By default, vtgate commits all transactions in two round trips to the
+	// tablet.
+	// With this feature on, vgate plan builder will identify which
+	// transactions are safe to commit in a single round trip (e.g transactions
+	// for tables that do not have owned lookup vindexes) and gain the
+	// performance of skipping an extra hop in the network.
+	//
+	// NOTE: This feature requires to have autocommit setting enabled on the
+	// tablet as well.
+	// The way this work is to explicitly set InTransaction to false.
+	// In normal autocommit flow, the executor would have set this
+	// to true, which causes the gate to issue a BeginExecute command
+	// to the tablet (see Execute method in scatter_conn for more details).
+	// By setting this back to false, vgate will only send an Execute command to
+	// the tablet, which then will be commited automatically.
+	if e.tabletAutocommitWhenAllowed && plan.TabletAutocommitAllowed && inAutocommit {
+		session.InTransaction = false
 	}
 
 	qr, err := plan.Instructions.Execute(vcursor, bindVars, make(map[string]*querypb.BindVariable), true)

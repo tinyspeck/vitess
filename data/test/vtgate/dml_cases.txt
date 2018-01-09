@@ -17,7 +17,8 @@
       "Sharded": false
     },
     "Query": "update m1 set val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update unsharded
@@ -31,7 +32,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # subqueries in unsharded update
@@ -45,7 +47,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set col = (select col from unsharded limit 1)"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # unsharded union in subquery of unsharded update
@@ -59,7 +62,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set col = (select id from unsharded union select id from unsharded)"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # unsharded join in subquery of unsharded update
@@ -73,7 +77,8 @@
       "Sharded": false
     },
     "Query": "update unsharded set col = (select id from unsharded as a join unsharded as b on a.id = b.id)"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update with join subquery
@@ -87,7 +92,8 @@
       "Sharded": false
     },
     "Query": "update unsharded as foo left join (select id from unsharded where col is not null order by col desc limit 10) as keepers on foo.id = keepers.id set col1 = 'asdf' where keepers.id is null and foo.col is not null and foo.col \u003c 1000"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # delete unsharded
@@ -101,7 +107,8 @@
       "Sharded": false
     },
     "Query": "delete from unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id
@@ -118,7 +125,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id with parenthesized expression
@@ -137,7 +145,8 @@
       1
     ],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id, changing one vindex column
@@ -220,7 +229,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by primary keyspace id, stray where clause with conversion error
@@ -237,7 +247,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "user"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # delete from by primary keyspace id
@@ -269,7 +280,8 @@
       "Sharded": false
     },
     "Query": "delete a from unsharded_a as a, unsharded_b as b where a.id = b.id and b.val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # multi-table delete with ansi join
@@ -283,7 +295,8 @@
       "Sharded": false
     },
     "Query": "delete a from unsharded_a as a join unsharded_b as b on a.id = b.id where b.val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 #delete with join from subquery
@@ -297,7 +310,8 @@
       "Sharded": false
     },
     "Query": "delete foo from unsharded as foo left join (select id from unsharded where col is not null order by col desc limit 10) as keepers on foo.id = keepers.id where keepers.id is null and foo.col is not null and foo.col \u003c 1000"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update by lookup
@@ -314,7 +328,8 @@
     "Vindex": "music_user_map",
     "Values": [1],
     "Table": "music"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update multi-table ansi join
@@ -328,7 +343,8 @@
           "Sharded": false
      },
     "Query": "update unsharded_a as a join unsharded_b as b on a.id = b.id set a.val = 'foo' where b.val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # update multi-table comma join
@@ -342,7 +358,8 @@
       "Sharded": false
     },
     "Query": "update unsharded_a as a, unsharded_b as b set a.val = 'foo' where a.id = b.id and b.val = 1"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # delete from by lookup
@@ -377,7 +394,8 @@
     "Vindex": "user_index",
     "Values": [1],
     "Table": "music_extra"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # simple insert, no values
@@ -392,7 +410,8 @@
     },
     "Query": "insert into unsharded values ()",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # simple insert unsharded
@@ -407,7 +426,8 @@
     },
     "Query": "insert into unsharded values (1, 2)",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # simple upsert unsharded
@@ -422,7 +442,8 @@
     },
     "Query": "insert into unsharded values (1, 2) on duplicate key update x = 3",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded with select
@@ -437,7 +458,8 @@
     },
     "Query": "insert into unsharded select id from unsharded_auto",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded with select with join
@@ -452,7 +474,8 @@
     },
     "Query": "insert into unsharded select id from unsharded join unsharded_auto",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, invalid value for auto-inc
@@ -481,7 +504,8 @@
         1
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, column absent
@@ -506,7 +530,8 @@
         null
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, column absent
@@ -531,7 +556,8 @@
         null
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert unsharded, multi-val
@@ -557,7 +583,8 @@
         null
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 
@@ -573,7 +600,8 @@
     },
     "Query": "insert into unsharded values ((select 1 from dual), 1)",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert no column list
@@ -637,7 +665,8 @@
     },
     "Prefix": "insert ignore into user(id, Name, Costly) values ",
     "Mid":["(:_Id0, :_Name0, :_Costly0)"]
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert on duplicate key
@@ -668,7 +697,8 @@
       "(:_Id0, :_Name0, :_Costly0)"
     ],
     "Suffix": " on duplicate key update col = 2"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert with one vindex and bind var
@@ -802,7 +832,8 @@
     },
     "Prefix": "insert into user_extra(nonid, extra_id, user_id) values ",
     "Mid": ["(2, :__seq0, :_user_id0)"]
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert for non-compliant names
@@ -822,7 +853,8 @@
     "Mid": [
       "(:_a_b_c0, 2)"
     ]
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # unsharded insert from union
@@ -837,7 +869,8 @@
     },
     "Query": "insert into unsharded select 1 from dual union select 1 from dual",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # insert for non-vindex autoinc, invalid value
@@ -894,7 +927,8 @@
     },
     "Query": "replace into unsharded values (1, 2)",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # replace unsharded with select
@@ -909,7 +943,8 @@
     },
     "Query": "replace into unsharded select id from unsharded_auto",
     "Table": "unsharded"
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # replace unsharded, invalid value for auto-inc
@@ -938,7 +973,8 @@
         1
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # replace unsharded, column absent
@@ -963,7 +999,8 @@
         null
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # replace unsharded, multi-val
@@ -989,7 +1026,8 @@
         null
       ]
     }
-  }
+  },
+  "TabletAutocommitAllowed": true
 }
 
 # replace invalid table
