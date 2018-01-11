@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// vt tablet server: Serves queries and performs housekeeping jobs.
 package main
 
 import (
@@ -24,14 +23,11 @@ import (
 	log "github.com/golang/glog"
 	"github.com/youtube/vitess/go/vt/dbconfigs"
 	"github.com/youtube/vitess/go/vt/servenv"
-	"github.com/youtube/vitess/go/vt/vtmysqlproxy"
+	"github.com/youtube/vitess/go/vt/vtqueryserver"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 )
 
 var (
-	enforceTableACLConfig = flag.Bool("enforce-tableacl-config", false, "if this flag is true, vttablet will fail to start if a valid tableacl config does not exist")
-	tableACLConfig        = flag.String("table-acl-config", "", "path to table access checker config file")
-
 	mysqlSocketFile = flag.String("mysql-socket-file", "", "path to unix socket file to connect to mysql")
 )
 
@@ -51,7 +47,7 @@ func main() {
 
 	if len(flag.Args()) > 0 {
 		flag.Usage()
-		log.Exit("vtmysqlproxy doesn't take any positional arguments")
+		log.Exit("vtqueryserver doesn't take any positional arguments")
 	}
 	if err := tabletenv.VerifyConfig(); err != nil {
 		log.Exitf("invalid config: %v", err)
@@ -66,11 +62,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if *enforceTableACLConfig && *tableACLConfig != "" {
-		log.Exit("table acl config has to be specified with table-acl-config flag because enforce-tableacl-config is set.")
-	}
-
-	err = vtmysqlproxy.Init(dbcfgs, *tableACLConfig)
+	err = vtqueryserver.Init(dbcfgs)
 	if err != nil {
 		log.Exitf("error initializing proxy: %v", err)
 	}

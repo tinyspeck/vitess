@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vtmysqlproxy
+package vtqueryserver
 
 import (
 	"flag"
@@ -73,10 +73,6 @@ func (mh *proxyHandler) ConnectionClosed(c *mysql.Conn) {
 	if session != nil && session.TransactionID != 0 {
 		_ = mh.mp.Rollback(ctx, session)
 	}
-}
-
-func (vh *proxyHandler) ConnectionNegotiated(c *mysql.Conn) error {
-	return nil
 }
 
 func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {

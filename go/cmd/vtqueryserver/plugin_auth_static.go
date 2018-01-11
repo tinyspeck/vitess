@@ -20,9 +20,9 @@ package main
 
 import (
 	"github.com/youtube/vitess/go/mysql"
-	"github.com/youtube/vitess/go/vt/vtmysqlproxy"
+	"github.com/youtube/vitess/go/vt/vtqueryserver"
 )
 
 func init() {
-	vtmysqlproxy.RegisterPluginInitializer(func() { mysql.InitAuthServerStatic() })
+	vtqueryserver.RegisterPluginInitializer(func() { mysql.InitAuthServerStatic() })
 }
