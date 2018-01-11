@@ -28,6 +28,7 @@ import (
 	"github.com/youtube/vitess/go/vt/mysqlproxy"
 	"github.com/youtube/vitess/go/vt/servenv"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver"
+	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/planbuilder"
 	"github.com/youtube/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
 	querypb "github.com/youtube/vitess/go/vt/proto/query"
@@ -43,6 +44,7 @@ var (
 
 	targetKeyspace   = flag.String("target", "", "Target database name")
 	normalizeQueries = flag.Bool("normalize_queries", true, "Rewrite queries with bind vars. Turn this off if the app itself sends normalized queries with bind vars.")
+	passthroughDMLs  = flag.Bool("passthrough_dmls", true, "Pass through DML statements unmodified")
 )
 
 // Init initializes the proxy
@@ -52,6 +54,10 @@ func Init(dbcfgs *dbconfigs.DBConfigs) error {
 
 	// force autocommit to be enabled
 	tabletenv.Config.EnableAutoCommit = true
+
+	if *passthroughDMLs {
+		planbuilder.DisableDMLRewrite = true
+	}
 
 	// creates and registers the query service
 	qs := tabletserver.NewTabletServerWithNilTopoServer(tabletenv.Config)
