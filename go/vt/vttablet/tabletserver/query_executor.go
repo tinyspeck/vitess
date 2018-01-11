@@ -125,6 +125,8 @@ func (qre *QueryExecutor) Execute() (reply *sqltypes.Result, err error) {
 				return nil, vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: cannot identify primary key of statement")
 			}
 			return qre.txFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, nil, false, true)
+		case planbuilder.PlanUnmodifiedDML:
+			return qre.txFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, nil, false, true)
 		case planbuilder.PlanInsertPK:
 			return qre.execInsertPK(conn)
 		case planbuilder.PlanInsertMessage:
@@ -170,6 +172,8 @@ func (qre *QueryExecutor) Execute() (reply *sqltypes.Result, err error) {
 			return qre.execSQL(conn, qre.query, true)
 
 		case planbuilder.PlanPassDML:
+			fallthrough
+		case planbuilder.PlanUnmodifiedDML:
 			fallthrough
 		case planbuilder.PlanInsertPK:
 			fallthrough
@@ -262,6 +266,8 @@ func (qre *QueryExecutor) execDmlAutoCommit() (reply *sqltypes.Result, err error
 			if qre.tsv.qe.binlogFormat != connpool.BinlogFormatRow {
 				return nil, vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "unsupported: cannot identify primary key of statement")
 			}
+			reply, err = qre.txFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, nil, false, true)
+		case planbuilder.PlanUnmodifiedDML:
 			reply, err = qre.txFetch(conn, qre.plan.FullQuery, qre.bindVars, nil, nil, false, true)
 		case planbuilder.PlanInsertPK:
 			reply, err = qre.execInsertPK(conn)
