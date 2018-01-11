@@ -32,6 +32,10 @@ var (
 	// ErrTooComplex indicates given sql query is too complex.
 	ErrTooComplex = vterrors.New(vtrpcpb.Code_INVALID_ARGUMENT, "Complex")
 	execLimit     = &sqlparser.Limit{Rowcount: sqlparser.NewValArg([]byte(":#maxLimit"))}
+
+	// DisableDMLRewrite will cause all DML statements to be planned as
+	// PlanUnmodifiedDML
+	DisableDMLRewrite = false
 )
 
 //_______________________________________________
@@ -49,6 +53,7 @@ const (
 	PlanNextval
 	// PlanPassDML is pass through update & delete statements. This is
 	// the default plan for update and delete statements.
+	// It is only allowed in row based replication mode
 	PlanPassDML
 	// PlanDMLPK is an update or delete with an equality where clause(s)
 	// on primary key(s).
@@ -64,6 +69,10 @@ const (
 	PlanUpsertPK
 	// PlanInsertMessage is for inserting into message tables.
 	PlanInsertMessage
+	// PlanUnmodifiedDML is a pass through for all DML statements exactly
+	// as sent by the client. It is used only when the DisableDMLRewrite
+	// option is used.
+	PlanUnmodifiedDML
 	// PlanSet is for SET statements.
 	PlanSet
 	// PlanDDL is for DDL statements.
@@ -92,6 +101,7 @@ var planName = [NumPlans]string{
 	"INSERT_SUBQUERY",
 	"UPSERT_PK",
 	"INSERT_MESSAGE",
+	"UNMODIFIED_DML",
 	"SET",
 	"DDL",
 	"SELECT_STREAM",
@@ -134,6 +144,8 @@ func (pt PlanType) MinRole() tableacl.Role {
 
 //_______________________________________________
 
+//_______________________________________________
+
 var tableACLRoles = map[PlanType]tableacl.Role{
 	PlanPassSelect:     tableacl.READER,
 	PlanSelectLock:     tableacl.READER,
@@ -144,6 +156,7 @@ var tableACLRoles = map[PlanType]tableacl.Role{
 	PlanInsertPK:       tableacl.WRITER,
 	PlanInsertSubquery: tableacl.WRITER,
 	PlanInsertMessage:  tableacl.WRITER,
+	PlanUnmodifiedDML:  tableacl.WRITER,
 	PlanDDL:            tableacl.ADMIN,
 	PlanSelectStream:   tableacl.READER,
 	PlanOtherRead:      tableacl.READER,
