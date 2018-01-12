@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package mysqlproxy is a simple interface used for executing queries to a
-// queryservice with session management for transactions
+// Package mysqlproxy is a basic module that proxies a mysql server
+// session to appropriate calls in a queryservice back end, with optional
+// query normalization.
 package mysqlproxy
 
 import (

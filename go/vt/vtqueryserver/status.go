@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vtmysqlproxy
+package vtqueryserver
 
 import (
 	"github.com/youtube/vitess/go/vt/servenv"
