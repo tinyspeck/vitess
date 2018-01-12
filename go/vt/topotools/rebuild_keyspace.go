@@ -136,15 +136,23 @@ func RebuildKeyspaceLocked(ctx context.Context, log logutil.Logger, ts *topo.Ser
 	// And then finally save the keyspace objects, in parallel.
 	rec := concurrency.AllErrorRecorder{}
 	wg := sync.WaitGroup{}
-	for cell, srvKeyspace := range srvKeyspaceMap {
+	for _, targetCell := range cells {
 		wg.Add(1)
-		go func(cell string, srvKeyspace *topodatapb.SrvKeyspace) {
+		srvKeyspace, ok := srvKeyspaceMap[targetCell]
+		if !ok {
+			// just find the first available `srvKeyspace` as this `cell` has none
+			for _, anySrvKeyspace := range srvKeyspaceMap {
+				srvKeyspace = anySrvKeyspace
+				break
+			}
+		}
+		go func(targetCell string, srvKeyspace *topodatapb.SrvKeyspace) {
 			defer wg.Done()
-			log.Infof("updating keyspace serving graph in cell %v for %v", cell, keyspace)
-			if err := ts.UpdateSrvKeyspace(ctx, cell, keyspace, srvKeyspace); err != nil {
+			log.Infof("updating keyspace serving graph in cell %v for %v", targetCell, keyspace)
+			if err := ts.UpdateSrvKeyspace(ctx, targetCell, keyspace, srvKeyspace); err != nil {
 				rec.RecordError(fmt.Errorf("writing serving data failed: %v", err))
 			}
-		}(cell, srvKeyspace)
+		}(targetCell, srvKeyspace)
 	}
 	wg.Wait()
 	return rec.Error()
