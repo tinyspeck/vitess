@@ -28,7 +28,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert into user(id, name) values (:vtg1, :vtg2)",
@@ -153,7 +154,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert into user(id, name) values (:vtg1, :vtg2)",
@@ -299,7 +301,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert ignore into user(id, name) values (:vtg1, :vtg2)",
@@ -332,7 +335,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -458,7 +462,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert ignore into user(id, name, nickname) values (:vtg1, :vtg2, :vtg3)",
@@ -491,7 +496,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -618,7 +624,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert into user(id, name, nickname) values (:vtg1, :vtg2, :vtg3) on duplicate key update nickname = :vtg4",
@@ -652,7 +659,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -780,7 +788,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert into user(id, name, nickname, address) values (:vtg1, :vtg2, :vtg3, :vtg4) on duplicate key update nickname = values(nickname), address = values(address)",
@@ -814,7 +823,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {

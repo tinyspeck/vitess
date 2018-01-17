@@ -211,7 +211,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "insert into user (id, name) values(2, 'bob')",

@@ -21,7 +21,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "delete from user where id = :vtg1",
@@ -136,7 +137,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             },
             {
                 "Original": "select user_id from name_user_map where name = :name",

@@ -58,7 +58,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -109,7 +110,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -162,7 +164,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -215,7 +218,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -265,7 +269,8 @@
                 "ExecTime": 0,
                 "ShardQueries": 1,
                 "Rows": 1,
-                "Errors": 0
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
