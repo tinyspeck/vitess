@@ -28,6 +28,7 @@ import (
 	"github.com/youtube/vitess/go/sqltypes"
 	"github.com/youtube/vitess/go/stats"
 	"github.com/youtube/vitess/go/vt/concurrency"
+	"github.com/youtube/vitess/go/vt/discovery"
 	"github.com/youtube/vitess/go/vt/topo/topoproto"
 	"github.com/youtube/vitess/go/vt/vterrors"
 	"github.com/youtube/vitess/go/vt/vtgate/gateway"
@@ -49,6 +50,7 @@ type ScatterConn struct {
 	tabletCallErrorCount *stats.MultiCounters
 	txConn               *TxConn
 	gateway              gateway.Gateway
+	healthCheck          discovery.HealthCheck
 }
 
 // shardActionFunc defines the contract for a shard action
@@ -69,7 +71,7 @@ type shardActionFunc func(target *querypb.Target) error
 type shardActionTransactionFunc func(target *querypb.Target, shouldBegin bool, transactionID int64) (int64, error)
 
 // NewScatterConn creates a new ScatterConn.
-func NewScatterConn(statsName string, txConn *TxConn, gw gateway.Gateway) *ScatterConn {
+func NewScatterConn(statsName string, txConn *TxConn, gw gateway.Gateway, hc discovery.HealthCheck) *ScatterConn {
 	tabletCallErrorCountStatsName := ""
 	if statsName != "" {
 		tabletCallErrorCountStatsName = statsName + "ErrorCount"
@@ -79,6 +81,7 @@ func NewScatterConn(statsName string, txConn *TxConn, gw gateway.Gateway) *Scatt
 		tabletCallErrorCount: stats.NewMultiCounters(tabletCallErrorCountStatsName, []string{"Operation", "Keyspace", "ShardName", "DbType"}),
 		txConn:               txConn,
 		gateway:              gw,
+		healthCheck:          hc,
 	}
 }
 
@@ -272,6 +275,29 @@ type shardBatchRequest struct {
 	Queries         []*querypb.BoundQuery
 	Keyspace, Shard string
 	ResultIndexes   []int
+}
+
+func boundShardQueriesToScatterBatchRequest(boundQueries []*vtgatepb.BoundShardQuery) (*scatterBatchRequest, error) {
+	requests := &scatterBatchRequest{
+		Length:   len(boundQueries),
+		Requests: make(map[string]*shardBatchRequest),
+	}
+	for i, boundQuery := range boundQueries {
+		for shard := range unique(boundQuery.Shards) {
+			key := boundQuery.Keyspace + ":" + shard
+			request := requests.Requests[key]
+			if request == nil {
+				request = &shardBatchRequest{
+					Keyspace: boundQuery.Keyspace,
+					Shard:    shard,
+				}
+				requests.Requests[key] = request
+			}
+			request.Queries = append(request.Queries, boundQuery.Query)
+			request.ResultIndexes = append(request.ResultIndexes, i)
+		}
+	}
+	return requests, nil
 }
 
 // ExecuteBatch executes a batch of non-streaming queries on the specified shards.

@@ -16,7 +16,13 @@
                         ":vtg2"
                     ],
                     "Table": "user"
-                }
+                },
+                "ExecCount": 1,
+                "ExecTime": 0,
+                "ShardQueries": 1,
+                "Rows": 1,
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -66,7 +72,12 @@
                     "Values": [
                         ":name"
                     ]
-                }
+                },
+                "ExecCount": 1,
+                "ExecTime": 0,
+                "ShardQueries": 1,
+                "Rows": 1,
+                "Errors": 0
             },
             {
                 "Original": "update user set nickname = :vtg1 where name = :vtg2",
@@ -82,7 +93,13 @@
                         ":vtg2"
                     ],
                     "Table": "user"
-                }
+                },
+                "ExecCount": 1,
+                "ExecTime": 0,
+                "ShardQueries": 1,
+                "Rows": 1,
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {
@@ -162,7 +179,13 @@
                         ":vtg2"
                     ],
                     "Table": "user"
-                }
+                },
+                "ExecCount": 1,
+                "ExecTime": 0,
+                "ShardQueries": 1,
+                "Rows": 1,
+                "Errors": 0,
+                "TabletAutocommitAllowed": true
             }
         ],
         "TabletActions": {

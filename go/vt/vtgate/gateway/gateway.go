@@ -26,6 +26,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/youtube/vitess/go/vt/discovery"
+	"github.com/youtube/vitess/go/vt/srvtopo"
 	"github.com/youtube/vitess/go/vt/topo"
 	"github.com/youtube/vitess/go/vt/vttablet/queryservice"
 
@@ -50,12 +51,12 @@ type Gateway interface {
 	// before the end, it should return ctx.Err().
 	WaitForTablets(ctx context.Context, tabletTypesToWait []topodatapb.TabletType) error
 
-	// CacheStatus returns a list of TabletCacheStatus per tablet.
+	// CacheStatus returns a list of TabletCacheStatus per shard / tablet type.
 	CacheStatus() TabletCacheStatusList
 }
 
 // Creator is the factory method which can create the actual gateway object.
-type Creator func(hc discovery.HealthCheck, topoServer *topo.Server, serv topo.SrvTopoServer, cell string, retryCount int) Gateway
+type Creator func(hc discovery.HealthCheck, topoServer *topo.Server, serv srvtopo.Server, cell string, retryCount int) Gateway
 
 var creators = make(map[string]Creator)
 
