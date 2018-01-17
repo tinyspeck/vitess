@@ -1027,7 +1027,7 @@ func TestSelectScatterOrderByVarChar(t *testing.T) {
 		}})
 		conns = append(conns, sbc)
 	}
-	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize, testCacheSize, false)
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize, testCacheSize, false, false)
 
 	query := "select col1, textcol from user order by textcol desc"
 	gotResult, err := executorExec(executor, query, nil)
@@ -1159,7 +1159,7 @@ func TestStreamSelectScatterOrderByVarChar(t *testing.T) {
 		}})
 		conns = append(conns, sbc)
 	}
-	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize, testCacheSize, false)
+	executor := NewExecutor(context.Background(), serv, cell, "", resolver, false, testBufferSize, testCacheSize, false, false)
 
 	query := "select id, textcol from user order by textcol desc"
 	gotResult, err := executorStream(executor, query)
