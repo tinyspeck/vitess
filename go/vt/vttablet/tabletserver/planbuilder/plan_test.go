@@ -77,10 +77,10 @@ func TestPlan(t *testing.T) {
 	testSchema := loadSchema("schema_test.json")
 	for tcase := range iterateExecFile("exec_cases.txt") {
 		if strings.Contains(tcase.options, "disableDMLRewrite") {
-			disableDMLRewrite = true
+			DisableDMLRewrite = true
 		}
 		plan, err := Build(tcase.input, testSchema)
-		disableDMLRewrite = false
+		DisableDMLRewrite = false
 
 		var out string
 		if err != nil {
