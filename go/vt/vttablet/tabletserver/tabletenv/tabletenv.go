@@ -70,6 +70,8 @@ var (
 	Warnings = stats.NewCounters("Warnings", "ResultsExceeded")
 	// Unresolved tracks unresolved items. For now it's just Prepares.
 	Unresolved = stats.NewCounters("Unresolved", "Prepares")
+	// Consolidations tracks how many queries were consolidated
+	Consolidations = stats.NewCounters("Consolidations", "qFetch")
 	// UserTableQueryCount shows number of queries received for each CallerID/table combination.
 	UserTableQueryCount = stats.NewMultiCounters("UserTableQueryCount", []string{"TableName", "CallerID", "Type"})
 	// UserTableQueryTimesNs shows total latency for each CallerID/table combination.
