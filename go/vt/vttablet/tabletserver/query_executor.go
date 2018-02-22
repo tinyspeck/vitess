@@ -784,6 +784,7 @@ func (qre *QueryExecutor) qFetch(logStats *tabletenv.LogStats, parsedQuery *sqlp
 			q.Result, q.Err = qre.execSQL(conn, sql, false)
 		}
 	} else {
+		tabletenv.Consolidations.Add("qFetch", 1)
 		logStats.QuerySources |= tabletenv.QuerySourceConsolidator
 		startTime := time.Now()
 		q.Wait()
