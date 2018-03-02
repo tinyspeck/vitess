@@ -1102,6 +1102,16 @@ var (
 		input: "commit",
 	}, {
 		input: "rollback",
+	}, {
+		input: "select * from keyspace[10-20].t",
+	}, {
+		input: "select * from keyspace[-20].t",
+	}, {
+		input: "select * from keyspace[20-].t",
+	}, {
+		input: "select * from keyspace[-].t",
+	}, {
+		input: "select * from keyspace[-].t, keyspace[-20].t1",
 	}}
 )
 
@@ -1742,6 +1752,22 @@ var (
 	}, {
 		input:        "select /* aa",
 		output:       "syntax error at position 13 near '/* aa'",
+		excludeMulti: true,
+	}, {
+		input:        "select * from t where [ = 123",
+		output:       "syntax error at position 30 near ' = 123'",
+		excludeMulti: true,
+	}, {
+		input:        "select * from keyspace.t[]",
+		output:       "syntax error at position 27",
+		excludeMulti: true,
+	}, {
+		input:        "select * from keyspace.t[notvalid]",
+		output:       "syntax error at position 35 near 'notvalid'",
+		excludeMulti: true,
+	}, {
+		input:        "select * from keyspace.t[a0--00]",
+		output:       "syntax error at position 33 near 'a0--00'",
 		excludeMulti: true,
 	}}
 )

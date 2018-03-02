@@ -94,6 +94,7 @@ func forceEOF(yylex interface{}) {
   columnType    ColumnType
   colKeyOpt     ColumnKeyOption
   optVal        *SQLVal
+  optDestination Destination
   LengthScaleOption LengthScaleOption
   columnDefinition *ColumnDefinition
   indexDefinition *IndexDefinition
@@ -115,7 +116,7 @@ func forceEOF(yylex interface{}) {
 %left <bytes> JOIN STRAIGHT_JOIN LEFT RIGHT INNER OUTER CROSS NATURAL USE FORCE
 %left <bytes> ON USING
 %token <empty> '(' ',' ')'
-%token <bytes> ID HEX STRING INTEGRAL FLOAT HEXNUM VALUE_ARG LIST_ARG COMMENT COMMENT_KEYWORD BIT_LITERAL
+%token <bytes> ID HEX STRING INTEGRAL FLOAT HEXNUM VALUE_ARG LIST_ARG COMMENT COMMENT_KEYWORD BIT_LITERAL KEYSPACE_DESTINATION
 %token <bytes> NULL TRUE FALSE
 
 // Precedence dictated by mysql. But the vitess grammar is simplified.
@@ -254,6 +255,7 @@ func forceEOF(yylex interface{}) {
 %type <columnType> column_type
 %type <columnType> int_type decimal_type numeric_type time_type char_type
 %type <optVal> length_opt column_default_opt column_comment_opt on_update_opt
+%type <optDestination> keyspace_range_opt
 %type <str> charset_opt collate_opt
 %type <boolVal> unsigned_opt zero_fill_opt
 %type <LengthScaleOption> float_length_opt decimal_length_opt
@@ -1555,6 +1557,24 @@ table_name:
 | table_id '.' reserved_table_id
   {
     $$ = TableName{Qualifier: $1, Name: $3}
+  }
+| table_id keyspace_range_opt '.' reserved_table_id
+  {
+    $$ = TableName{Qualifier: $1, Name: $4, Destination: $2}
+  }
+
+keyspace_range_opt:
+  {
+    $$ = nil
+  }
+| KEYSPACE_DESTINATION
+  {
+    if keyRange, err := NewDestinationExactKeyRange(string($1)); err != nil {
+      yylex.Error("expecting valid keyrange")
+      return 1
+    } else {
+      $$ = keyRange
+    }
   }
 
 index_hint_list:

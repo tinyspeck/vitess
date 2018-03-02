@@ -556,6 +556,8 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 			return tkn.scanString(ch, STRING)
 		case '`':
 			return tkn.scanLiteralIdentifier()
+		case '[':
+			return tkn.scanKeyspaceDestination()
 		default:
 			return LEX_ERROR, []byte{byte(ch)}
 		}
@@ -650,6 +652,32 @@ func (tkn *Tokenizer) scanLiteralIdentifier() (int, []byte) {
 		return LEX_ERROR, buffer.Bytes()
 	}
 	return ID, buffer.Bytes()
+}
+
+func (tkn *Tokenizer) scanKeyspaceDestination() (int, []byte) {
+	buffer := &bytes2.Buffer{}
+	for {
+		if tkn.lastChar == ']' {
+			tkn.next()
+			break
+		}
+		switch tkn.lastChar {
+		case '[':
+			// noop
+		case ']':
+			// noop
+		case eofChar:
+			// Premature EOF.
+			return LEX_ERROR, buffer.Bytes()
+		default:
+			buffer.WriteByte(byte(tkn.lastChar))
+		}
+		tkn.next()
+	}
+	if buffer.Len() == 0 {
+		return LEX_ERROR, buffer.Bytes()
+	}
+	return KEYSPACE_DESTINATION, buffer.Bytes()
 }
 
 func (tkn *Tokenizer) scanBindVar() (int, []byte) {

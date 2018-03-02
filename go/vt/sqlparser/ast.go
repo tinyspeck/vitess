@@ -20,15 +20,18 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 
 	log "github.com/golang/glog"
 
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/vterrors"
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 )
 
@@ -1494,6 +1497,16 @@ func (node TableNames) WalkSubtree(visit Visit) error {
 	return nil
 }
 
+// DestinationType defines the type of destination that query could route to.
+type DestinationType int
+
+const (
+	// TODO @rafael: Implement support in parser for destShard and destKid
+	destRange DestinationType = iota
+	destShard
+	destKid
+)
+
 // TableName represents a table  name.
 // Qualifier, if specified, represents a database or keyspace.
 // TableName is a value struct whose fields are case sensitive.
@@ -1501,6 +1514,51 @@ func (node TableNames) WalkSubtree(visit Visit) error {
 // and a TableName can also be used as key in a map.
 type TableName struct {
 	Name, Qualifier TableIdent
+	// Destination is used to route a query to a specific target.
+	// This could be a shard, an exact range or a kid.
+	Destination Destination
+}
+
+type Destination interface {
+	// DestType returns destination type for a given query.
+	DestType() DestinationType
+	SQLNode
+}
+
+type DestinationExactKeyRange struct {
+	KeyRange *topodatapb.KeyRange
+}
+
+// DestType returns the destination type
+func (d DestinationExactKeyRange) DestType() DestinationType {
+	return destRange
+}
+
+// Format formats the node.
+func (node DestinationExactKeyRange) Format(buf *TrackedBuffer) {
+	buf.Myprintf("[%s]", key.KeyRangeString(node.KeyRange))
+}
+
+// WalkSubtree walks the nodes of the subtree.
+func (node DestinationExactKeyRange) WalkSubtree(visit Visit) error {
+	return nil
+}
+
+// NewDestinationExactKeyRange builds a new DestinationExactKeyRange
+func NewDestinationExactKeyRange(rangeStart string) (*DestinationExactKeyRange, error) {
+	if rangeStart == "-" {
+		return &DestinationExactKeyRange{&topodatapb.KeyRange{}}, nil
+
+	}
+	krArray, err := key.ParseShardingSpec(rangeStart)
+	if err != nil {
+		return nil, err
+	}
+	if len(krArray) > 1 {
+		return nil, errors.New("invalid keyrange provided")
+
+	}
+	return &DestinationExactKeyRange{KeyRange: krArray[0]}, nil
 }
 
 // Format formats the node.
@@ -1509,7 +1567,11 @@ func (node TableName) Format(buf *TrackedBuffer) {
 		return
 	}
 	if !node.Qualifier.IsEmpty() {
-		buf.Myprintf("%v.", node.Qualifier)
+		buf.Myprintf("%v", node.Qualifier)
+		if node.Destination != nil {
+			buf.Myprintf("%v", node.Destination)
+		}
+		buf.Myprintf(".")
 	}
 	buf.Myprintf("%v", node.Name)
 }
@@ -1520,6 +1582,7 @@ func (node TableName) WalkSubtree(visit Visit) error {
 		visit,
 		node.Name,
 		node.Qualifier,
+		node.Destination,
 	)
 }
 
