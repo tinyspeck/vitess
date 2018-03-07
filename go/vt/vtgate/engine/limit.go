@@ -23,16 +23,18 @@ import (
 
 	"vitess.io/vitess/go/sqltypes"
 
+	log "github.com/golang/glog"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 )
 
 var _ Primitive = (*Limit)(nil)
 
 // Limit is a primitive that performs the LIMIT operation.
-// For now, it only supports count without offset.
+// Offset is supported in cross shard queries but only upto to MAX_ROWS
 type Limit struct {
-	Count sqltypes.PlanValue
-	Input Primitive
+	Count  sqltypes.PlanValue
+	Offset *sqltypes.PlanValue
+	Input  Primitive
 }
 
 // MarshalJSON serializes the Limit into a JSON representation.
@@ -41,10 +43,12 @@ func (l *Limit) MarshalJSON() ([]byte, error) {
 	marshalLimit := struct {
 		Opcode string
 		Count  sqltypes.PlanValue
+		Offset *sqltypes.PlanValue `json:",omitempty"`
 		Input  Primitive
 	}{
 		Opcode: "Limit",
 		Count:  l.Count,
+		Offset: l.Offset,
 		Input:  l.Input,
 	}
 	return json.Marshal(marshalLimit)
@@ -56,12 +60,33 @@ func (l *Limit) Execute(vcursor VCursor, bindVars map[string]*querypb.BindVariab
 	if err != nil {
 		return nil, err
 	}
+	offset, err := l.fetchOffset(bindVars)
+	if err != nil {
+		return nil, err
+	}
+	log.Warningf("These are the bind variables %v, count: %v, offset: %v", bindVars, count, offset)
+	if offset > 0 {
+		bindVars[l.Count.Key] = sqltypes.Int64BindVariable(int64(count + offset))
+		bindVars[l.Offset.Key] = sqltypes.Int32BindVariable(0)
+	}
 
+	log.Warningf("These are the bind variables after %v", bindVars)
 	result, err := l.Input.Execute(vcursor, bindVars, wantfields)
 	if err != nil {
 		return nil, err
 	}
 
+	if offset > 0 && count < len(result.Rows) {
+		log.Warningf("This is the result %v", result.Rows)
+		if count+offset < len(result.Rows) {
+			result.Rows = result.Rows[offset : count+offset]
+			result.RowsAffected = uint64(count)
+			return result, nil
+		}
+		result.Rows = result.Rows[offset:]
+		result.RowsAffected = uint64(len(result.Rows))
+		return result, nil
+	}
 	if count < len(result.Rows) {
 		result.Rows = result.Rows[:count]
 		result.RowsAffected = uint64(count)
@@ -135,4 +160,23 @@ func (l *Limit) fetchCount(bindVars map[string]*querypb.BindVariable) (int, erro
 		return 0, fmt.Errorf("requested limit is out of range: %v", num)
 	}
 	return count, nil
+}
+
+func (l *Limit) fetchOffset(bindVars map[string]*querypb.BindVariable) (int, error) {
+	if l.Offset == nil {
+		return 0, nil
+	}
+	resolved, err := l.Offset.ResolveValue(bindVars)
+	if err != nil {
+		return 0, err
+	}
+	num, err := sqltypes.ToUint64(resolved)
+	if err != nil {
+		return 0, err
+	}
+	offset := int(num)
+	if offset < 0 {
+		return 0, fmt.Errorf("requested limit is out of range: %v", num)
+	}
+	return offset, nil
 }

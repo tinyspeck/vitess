@@ -78,6 +78,9 @@ func (nz *normalizer) WalkSelect(node SQLNode) (bool, error) {
 	switch node := node.(type) {
 	case *SQLVal:
 		nz.convertSQLValDedup(node)
+	case *Limit:
+		_ = Walk(nz.WalkStatement, node)
+		return false, nil
 	case *ComparisonExpr:
 		nz.convertComparison(node)
 	}
