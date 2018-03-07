@@ -28,7 +28,7 @@ import (
 	log "github.com/golang/glog"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
-	"vitess.io/vitess/go/stats/promstats"
+	"vitess.io/vitess/go/stats/prombackend"
 
 	"vitess.io/vitess/go/acl"
 	"vitess.io/vitess/go/flagutil"
@@ -225,7 +225,7 @@ func Init(ctx context.Context, hc discovery.HealthCheck, topoServer *topo.Server
 	}
 
 	errorCounts = stats.NewMultiCounters("VtgateApiErrorCounts", []string{"Operation", "Keyspace", "DbType", "Code"})
-	promErrorCounts = promstats.NewCounter(
+	promErrorCounts = prombackend.NewCounter(
 		"vtgate_api_error_counts",
 		"Vtgate API error counts per error type",
 		[]string{"Operation", "Keyspace", "DbType", "Code"})
@@ -1072,7 +1072,7 @@ func recordAndAnnotateError(err error, statsKey []string, request map[string]int
 	request = truncateErrorStrings(request)
 
 	errorCounts.Add(fullKey, 1)
-	promstats.Add(promErrorCounts, map[string]string{
+	prombackend.Add(promErrorCounts, map[string]string{
 		"Operation": statsKey[0],
 		"Keyspace":  statsKey[1],
 		"DbType":    statsKey[2],
