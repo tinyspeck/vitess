@@ -26,7 +26,6 @@ import (
 	"time"
 
 	log "github.com/golang/glog"
-	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/acl"
