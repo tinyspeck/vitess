@@ -27,8 +27,8 @@ import (
 
 	log "github.com/golang/glog"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/youtube/vitess/go/stats/promstats"
 	"golang.org/x/net/context"
+	"vitess.io/vitess/go/stats/promstats"
 
 	"vitess.io/vitess/go/acl"
 	"vitess.io/vitess/go/flagutil"

@@ -20,5 +20,5 @@ package main
 // with the Prometheus client library
 
 import (
-	_ "github.com/youtube/vitess/go/stats/promstats"
+	_ "vitess.io/vitess/go/stats/promstats"
 )
