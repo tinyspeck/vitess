@@ -28,7 +28,6 @@ import (
 	log "github.com/golang/glog"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
-	"vitess.io/vitess/go/stats/prombackend"
 
 	"vitess.io/vitess/go/acl"
 	"vitess.io/vitess/go/flagutil"
@@ -98,8 +97,7 @@ var (
 	errorsByCode      *stats.Rates
 
 	// Error counters should be global so they can be set from anywhere
-	errorCounts     *stats.MultiCounters
-	promErrorCounts *prom.CounterVec
+	errorCounts *stats.MultiCounters
 
 	warnings *stats.Counters
 )
@@ -224,11 +222,7 @@ func Init(ctx context.Context, hc discovery.HealthCheck, topoServer *topo.Server
 		logMessageStream:            logutil.NewThrottledLogger("MessageStream", 5*time.Second),
 	}
 
-	errorCounts = stats.NewMultiCounters("VtgateApiErrorCounts", []string{"Operation", "Keyspace", "DbType", "Code"})
-	promErrorCounts = prombackend.NewCounter(
-		"vtgate_api_error_counts",
-		"Vtgate API error counts per error type",
-		[]string{"Operation", "Keyspace", "DbType", "Code"})
+	errorCounts = stats.NewNewMultiCounters("VtgateApiErrorCounts", "Vtgate API error counts per error type", []string{"Operation", "Keyspace", "DbType", "Code"})
 
 	qpsByOperation = stats.NewRates("QPSByOperation", stats.CounterForDimension(rpcVTGate.timings, "Operation"), 15, 1*time.Minute)
 	qpsByKeyspace = stats.NewRates("QPSByKeyspace", stats.CounterForDimension(rpcVTGate.timings, "Keyspace"), 15, 1*time.Minute)
@@ -1071,13 +1065,7 @@ func recordAndAnnotateError(err error, statsKey []string, request map[string]int
 	// Traverse the request structure and truncate any long values
 	request = truncateErrorStrings(request)
 
-	errorCounts.Add(fullKey, 1)
-	prombackend.Add(promErrorCounts, map[string]string{
-		"Operation": statsKey[0],
-		"Keyspace":  statsKey[1],
-		"DbType":    statsKey[2],
-		"Code":      ec.String(),
-	})
+	errorCounts.NewAdd(fullKey, 1)
 
 	// Most errors are not logged by vtgate because they're either too spammy or logged elsewhere.
 	switch ec {

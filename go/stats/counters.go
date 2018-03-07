@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"vitess.io/vitess/go/stats/prombackend"
 )
 
 // Counters is similar to expvar.Map, except that
@@ -158,6 +160,18 @@ func (f CountersFunc) String() string {
 type MultiCounters struct {
 	Counters
 	labels []string
+	name   string
+}
+
+// TODO: :thinking_face: Should this just return a not-expvar specific object that wraps both expvar/prom
+// instead of returning *MultiCounters?
+func NewNewMultiCounters(name string, help string, label_keys []string) *MultiCounters {
+	t := NewMultiCounters(name, label_keys)
+
+	// TODO: ugh, camelcase to stringcase here (maybe)
+	prombackend.NewCounter(name, help, label_keys)
+
+	return t
 }
 
 // NewMultiCounters creates a new MultiCounters instance, and publishes it
@@ -166,6 +180,7 @@ func NewMultiCounters(name string, labels []string) *MultiCounters {
 	t := &MultiCounters{
 		Counters: Counters{counts: make(map[string]*int64)},
 		labels:   labels,
+		name:     name,
 	}
 	if name != "" {
 		publish(name, t)
@@ -176,6 +191,12 @@ func NewMultiCounters(name string, labels []string) *MultiCounters {
 // Labels returns the list of labels.
 func (mc *MultiCounters) Labels() []string {
 	return mc.labels
+}
+
+func (mc *MultiCounters) NewAdd(names []string, value int64) {
+	mc.Add(names, value)
+
+	prombackend.Add(mc.name, names, value)
 }
 
 // Add adds a value to a named counter. len(names) must be equal to
