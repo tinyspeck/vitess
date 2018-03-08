@@ -31,10 +31,10 @@ import (
 
 var _ Primitive = (*Route)(nil)
 
-// Route represents the instructions to route a query to
-// one or many vttablets. The meaning and values for the
-// the fields are described in the RouteOpcode values comments.
+// Route represents the instructions to route a read query to
+// one or many vttablets.
 type Route struct {
+	// the fields are described in the RouteOpcode values comments.
 	// Opcode is the execution opcode.
 	Opcode RouteOpcode
 
@@ -47,13 +47,10 @@ type Route struct {
 	// FieldQuery specifies the query to be executed for a GetFieldInfo request.
 	FieldQuery string
 
-	// Vindex and Values specify how routing must be computed
+	// Vindex specifies the vindex to be used.
 	Vindex vindexes.Vindex
+	// Values specifies the vindex values to use for routing.
 	Values []sqltypes.PlanValue
-
-	// JoinVars contains the list of joinvar keys that will be used
-	// to extract join variables.
-	JoinVars map[string]struct{}
 
 	// OrderBy specifies the key order for merge sorting. This will be
 	// set only for scatter queries that need the results to be
@@ -73,15 +70,6 @@ type OrderbyParams struct {
 	Desc bool
 }
 
-// NewRoute creates a new Route.
-func NewRoute(opcode RouteOpcode, keyspace *vindexes.Keyspace) *Route {
-	return &Route{
-		Opcode:   opcode,
-		Keyspace: keyspace,
-		JoinVars: make(map[string]struct{}),
-	}
-}
-
 // MarshalJSON serializes the Route into a JSON representation.
 // It's used for testing and diagnostics.
 func (route *Route) MarshalJSON() ([]byte, error) {
@@ -96,7 +84,6 @@ func (route *Route) MarshalJSON() ([]byte, error) {
 		FieldQuery          string               `json:",omitempty"`
 		Vindex              string               `json:",omitempty"`
 		Values              []sqltypes.PlanValue `json:",omitempty"`
-		JoinVars            map[string]struct{}  `json:",omitempty"`
 		OrderBy             []OrderbyParams      `json:",omitempty"`
 		TruncateColumnCount int                  `json:",omitempty"`
 	}{
@@ -106,7 +93,6 @@ func (route *Route) MarshalJSON() ([]byte, error) {
 		FieldQuery:          route.FieldQuery,
 		Vindex:              vindexName,
 		Values:              route.Values,
-		JoinVars:            route.JoinVars,
 		OrderBy:             route.OrderBy,
 		TruncateColumnCount: route.TruncateColumnCount,
 	}
@@ -117,17 +103,7 @@ func (route *Route) MarshalJSON() ([]byte, error) {
 // for the Route primitve.
 type RouteOpcode int
 
-// This is the list of RouteOpcode values. The opcode
-// dictates which fields must be set in the Route.
-// All routes require the Query and a Keyspace
-// to be correctly set.
-// For any Select opcode, the FieldQuery is set
-// to a statement with an impossible where clause.
-// This gets used to build the field info in situations
-// where joins end up returning no rows.
-// In the case of a join, joinVars will also be set.
-// These are variables that will be supplied by the
-// Join primitive when it invokes a Route.
+// This is the list of RouteOpcode values.
 const (
 	// SelectUnsharded is the opcode for routing a
 	// select statement to an unsharded database.
@@ -149,8 +125,8 @@ const (
 	SelectScatter
 	// SelectNext is for fetching from a sequence.
 	SelectNext
-	// ExecDBA is for executing a DBA statement.
-	ExecDBA
+	// SelectDBA is for executing a DBA statement.
+	SelectDBA
 )
 
 var routeName = map[RouteOpcode]string{
@@ -160,7 +136,7 @@ var routeName = map[RouteOpcode]string{
 	SelectIN:          "SelectIN",
 	SelectScatter:     "SelectScatter",
 	SelectNext:        "SelectNext",
-	ExecDBA:           "ExecDBA",
+	SelectDBA:         "SelectDBA",
 }
 
 // MarshalJSON serializes the RouteOpcode as a JSON string.
@@ -169,48 +145,31 @@ func (code RouteOpcode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(routeName[code])
 }
 
-type scatterParams struct {
-	ks        string
-	shardVars map[string]map[string]*querypb.BindVariable
-}
-
-func newScatterParams(ks string, bv map[string]*querypb.BindVariable, shards []string) *scatterParams {
-	shardVars := make(map[string]map[string]*querypb.BindVariable, len(shards))
-	for _, shard := range shards {
-		shardVars[shard] = bv
-	}
-	return &scatterParams{
-		ks:        ks,
-		shardVars: shardVars,
-	}
-}
-
 // Execute performs a non-streaming exec.
-func (route *Route) Execute(vcursor VCursor, bindVars, joinVars map[string]*querypb.BindVariable, wantfields bool) (*sqltypes.Result, error) {
-	qr, err := route.execute(vcursor, bindVars, joinVars, wantfields)
+func (route *Route) Execute(vcursor VCursor, bindVars map[string]*querypb.BindVariable, wantfields bool) (*sqltypes.Result, error) {
+	qr, err := route.execute(vcursor, bindVars, wantfields)
 	if err != nil {
 		return nil, err
 	}
 	return qr.Truncate(route.TruncateColumnCount), nil
 }
 
-func (route *Route) execute(vcursor VCursor, bindVars, joinVars map[string]*querypb.BindVariable, wantfields bool) (*sqltypes.Result, error) {
-	bindVars = combineVars(bindVars, joinVars)
-
+func (route *Route) execute(vcursor VCursor, bindVars map[string]*querypb.BindVariable, wantfields bool) (*sqltypes.Result, error) {
 	switch route.Opcode {
-	case SelectNext, ExecDBA:
+	case SelectNext, SelectDBA:
 		return execAnyShard(vcursor, route.Query, bindVars, route.Keyspace)
 	}
 
+	var ks string
+	var shardVars map[string]map[string]*querypb.BindVariable
 	var err error
-	var params *scatterParams
 	switch route.Opcode {
 	case SelectUnsharded, SelectScatter:
-		params, err = route.paramsAllShards(vcursor, bindVars)
+		ks, shardVars, err = route.paramsAllShards(vcursor, bindVars)
 	case SelectEqual, SelectEqualUnique:
-		params, err = route.paramsSelectEqual(vcursor, bindVars)
+		ks, shardVars, err = route.paramsSelectEqual(vcursor, bindVars)
 	case SelectIN:
-		params, err = route.paramsSelectIN(vcursor, bindVars)
+		ks, shardVars, err = route.paramsSelectIN(vcursor, bindVars)
 	default:
 		// Unreachable.
 		return nil, fmt.Errorf("unsupported query route: %v", route)
@@ -219,14 +178,16 @@ func (route *Route) execute(vcursor VCursor, bindVars, joinVars map[string]*quer
 		return nil, err
 	}
 
-	// If there is no route for a select and we still 'wantfields',
-	// we have to do a GetFields.
-	if len(params.shardVars) == 0 && wantfields {
-		return route.GetFields(vcursor, bindVars, joinVars)
+	// No route.
+	if len(shardVars) == 0 {
+		if wantfields {
+			return route.GetFields(vcursor, bindVars)
+		}
+		return &sqltypes.Result{}, nil
 	}
 
-	shardQueries := getShardQueries(route.Query, params)
-	result, err := vcursor.ExecuteMultiShard(params.ks, shardQueries, false /* isDML */, false /* canAutocommit */)
+	shardQueries := getShardQueries(route.Query, shardVars)
+	result, err := vcursor.ExecuteMultiShard(ks, shardQueries, false /* isDML */, false /* canAutocommit */)
 	if err != nil {
 		return nil, err
 	}
@@ -238,44 +199,49 @@ func (route *Route) execute(vcursor VCursor, bindVars, joinVars map[string]*quer
 }
 
 // StreamExecute performs a streaming exec.
-func (route *Route) StreamExecute(vcursor VCursor, bindVars, joinVars map[string]*querypb.BindVariable, wantfields bool, callback func(*sqltypes.Result) error) error {
-	bindVars = combineVars(bindVars, joinVars)
-
+func (route *Route) StreamExecute(vcursor VCursor, bindVars map[string]*querypb.BindVariable, wantfields bool, callback func(*sqltypes.Result) error) error {
+	var ks string
+	var shardVars map[string]map[string]*querypb.BindVariable
 	var err error
-	var params *scatterParams
 	switch route.Opcode {
 	case SelectUnsharded, SelectScatter:
-		params, err = route.paramsAllShards(vcursor, bindVars)
+		ks, shardVars, err = route.paramsAllShards(vcursor, bindVars)
 	case SelectEqual, SelectEqualUnique:
-		params, err = route.paramsSelectEqual(vcursor, bindVars)
+		ks, shardVars, err = route.paramsSelectEqual(vcursor, bindVars)
 	case SelectIN:
-		params, err = route.paramsSelectIN(vcursor, bindVars)
+		ks, shardVars, err = route.paramsSelectIN(vcursor, bindVars)
 	default:
 		return fmt.Errorf("query %q cannot be used for streaming", route.Query)
 	}
 	if err != nil {
 		return err
 	}
-	if len(route.OrderBy) == 0 {
-		return vcursor.StreamExecuteMulti(
-			route.Query,
-			params.ks,
-			params.shardVars,
-			func(qr *sqltypes.Result) error {
-				return callback(qr.Truncate(route.TruncateColumnCount))
-			},
-		)
+
+	// No route.
+	if len(shardVars) == 0 {
+		if wantfields {
+			r, err := route.GetFields(vcursor, bindVars)
+			if err != nil {
+				return err
+			}
+			return callback(r)
+		}
+		return nil
 	}
 
-	return mergeSort(vcursor, route.Query, route.OrderBy, params, func(qr *sqltypes.Result) error {
+	if len(route.OrderBy) == 0 {
+		return vcursor.StreamExecuteMulti(route.Query, ks, shardVars, func(qr *sqltypes.Result) error {
+			return callback(qr.Truncate(route.TruncateColumnCount))
+		})
+	}
+
+	return mergeSort(vcursor, route.Query, route.OrderBy, ks, shardVars, func(qr *sqltypes.Result) error {
 		return callback(qr.Truncate(route.TruncateColumnCount))
 	})
 }
 
 // GetFields fetches the field info.
-func (route *Route) GetFields(vcursor VCursor, bindVars, joinVars map[string]*querypb.BindVariable) (*sqltypes.Result, error) {
-	bindVars = combineVars(bindVars, joinVars)
-
+func (route *Route) GetFields(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (*sqltypes.Result, error) {
 	ks, shard, err := anyShard(vcursor, route.Keyspace)
 	if err != nil {
 		return nil, err
@@ -288,56 +254,44 @@ func (route *Route) GetFields(vcursor VCursor, bindVars, joinVars map[string]*qu
 	return qr.Truncate(route.TruncateColumnCount), nil
 }
 
-func combineVars(bv1, bv2 map[string]*querypb.BindVariable) map[string]*querypb.BindVariable {
-	out := make(map[string]*querypb.BindVariable)
-	for k, v := range bv1 {
-		out[k] = v
-	}
-	for k, v := range bv2 {
-		out[k] = v
-	}
-	return out
-}
-
-func (route *Route) paramsAllShards(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (*scatterParams, error) {
+func (route *Route) paramsAllShards(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (ks string, shardVars map[string]map[string]*querypb.BindVariable, err error) {
 	ks, allShards, err := vcursor.GetKeyspaceShards(route.Keyspace)
 	if err != nil {
-		return nil, vterrors.Wrap(err, "paramsAllShards")
+		return "", nil, vterrors.Wrap(err, "paramsAllShards")
 	}
-	var shards []string
+	shardVars = make(map[string]map[string]*querypb.BindVariable, len(allShards))
 	for _, shard := range allShards {
-		shards = append(shards, shard.Name)
+		shardVars[shard.Name] = bindVars
 	}
-	return newScatterParams(ks, bindVars, shards), nil
+	return ks, shardVars, nil
 }
 
-func (route *Route) paramsSelectEqual(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (*scatterParams, error) {
+func (route *Route) paramsSelectEqual(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (ks string, shardVars map[string]map[string]*querypb.BindVariable, err error) {
 	key, err := route.Values[0].ResolveValue(bindVars)
 	if err != nil {
-		return nil, vterrors.Wrap(err, "paramsSelectEqual")
+		return "", nil, vterrors.Wrap(err, "paramsSelectEqual")
 	}
 	ks, routing, err := route.resolveShards(vcursor, bindVars, []sqltypes.Value{key})
 	if err != nil {
-		return nil, vterrors.Wrap(err, "paramsSelectEqual")
+		return "", nil, vterrors.Wrap(err, "paramsSelectEqual")
 	}
-	return newScatterParams(ks, bindVars, routing.Shards()), nil
+	shardVars = make(map[string]map[string]*querypb.BindVariable)
+	for _, shard := range routing.Shards() {
+		shardVars[shard] = bindVars
+	}
+	return ks, shardVars, nil
 }
 
-func (route *Route) paramsSelectIN(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (*scatterParams, error) {
-	// TODO: This will need to change when Map functions change to support multiple
-	// keys
+func (route *Route) paramsSelectIN(vcursor VCursor, bindVars map[string]*querypb.BindVariable) (ks string, shardVars map[string]map[string]*querypb.BindVariable, err error) {
 	keys, err := route.Values[0].ResolveList(bindVars)
 	if err != nil {
-		return nil, vterrors.Wrap(err, "paramsSelectIN")
+		return "", nil, vterrors.Wrap(err, "paramsSelectIN")
 	}
 	ks, routing, err := route.resolveShards(vcursor, bindVars, keys)
 	if err != nil {
-		return nil, vterrors.Wrap(err, "paramsSelectEqual")
+		return "", nil, vterrors.Wrap(err, "paramsSelectEqual")
 	}
-	return &scatterParams{
-		ks:        ks,
-		shardVars: routing.ShardVars(bindVars),
-	}, nil
+	return ks, routing.ShardVars(bindVars), nil
 }
 
 func (route *Route) resolveShards(vcursor VCursor, bindVars map[string]*querypb.BindVariable, vindexKeys []sqltypes.Value) (newKeyspace string, routing routingMap, err error) {
@@ -482,12 +436,16 @@ func anyShard(vcursor VCursor, keyspace *vindexes.Keyspace) (string, string, err
 	if err != nil {
 		return "", "", err
 	}
+	if len(allShards) == 0 {
+		// This code is unreachable. It's just a sanity check.
+		return "", "", fmt.Errorf("No shards for keyspace: %s", ks)
+	}
 	return ks, allShards[0].Name, nil
 }
 
-func getShardQueries(query string, params *scatterParams) map[string]*querypb.BoundQuery {
-	shardQueries := make(map[string]*querypb.BoundQuery, len(params.shardVars))
-	for shard, shardVars := range params.shardVars {
+func getShardQueries(query string, shardVars map[string]map[string]*querypb.BindVariable) map[string]*querypb.BoundQuery {
+	shardQueries := make(map[string]*querypb.BoundQuery, len(shardVars))
+	for shard, shardVars := range shardVars {
 		shardQueries[shard] = &querypb.BoundQuery{
 			Sql:           query,
 			BindVariables: shardVars,

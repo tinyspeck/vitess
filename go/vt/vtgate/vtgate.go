@@ -34,6 +34,7 @@ import (
 	"vitess.io/vitess/go/stats"
 	"vitess.io/vitess/go/tb"
 	"vitess.io/vitess/go/vt/discovery"
+	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/servenv"
 	"vitess.io/vitess/go/vt/sqlannotation"
@@ -197,13 +198,16 @@ func Init(ctx context.Context, hc discovery.HealthCheck, topoServer *topo.Server
 	resolver := NewResolver(srvResolver, serv, cell, sc)
 
 	rpcVTGate = &VTGate{
-		executor:     NewExecutor(ctx, serv, cell, "VTGateExecutor", resolver, *normalizeQueries, *streamBufferSize, *queryPlanCacheSize, *legacyAutocommit),
-		resolver:     resolver,
-		txConn:       tc,
-		gw:           gw,
-		l2vtgate:     l2vtgate,
-		timings:      stats.NewMultiTimings("VtgateApi", []string{"Operation", "Keyspace", "DbType"}),
-		rowsReturned: stats.NewMultiCounters("VtgateApiRowsReturned", []string{"Operation", "Keyspace", "DbType"}),
+		executor: NewExecutor(ctx, serv, cell, "VTGateExecutor", resolver, *normalizeQueries, *streamBufferSize, *queryPlanCacheSize, *legacyAutocommit),
+		resolver: resolver,
+		txConn:   tc,
+		gw:       gw,
+		l2vtgate: l2vtgate,
+		timings:  stats.NewMultiTimings("VtgateApi", []string{"Operation", "Keyspace", "DbType"}),
+		rowsReturned: stats.NewMultiCounters(
+			"VtgateApiRowsReturned",
+			"Rows returned through the VTgate API",
+			[]string{"Operation", "Keyspace", "DbType"}),
 
 		logExecute:                  logutil.NewThrottledLogger("Execute", 5*time.Second),
 		logStreamExecute:            logutil.NewThrottledLogger("StreamExecute", 5*time.Second),
@@ -220,7 +224,7 @@ func Init(ctx context.Context, hc discovery.HealthCheck, topoServer *topo.Server
 		logMessageStream:            logutil.NewThrottledLogger("MessageStream", 5*time.Second),
 	}
 
-	errorCounts = stats.NewMultiCounters("VtgateApiErrorCounts", []string{"Operation", "Keyspace", "DbType", "Code"})
+	errorCounts = stats.NewMultiCounters("VtgateApiErrorCounts", "Vtgate API error counts per error type", []string{"Operation", "Keyspace", "DbType", "Code"})
 
 	qpsByOperation = stats.NewRates("QPSByOperation", stats.CounterForDimension(rpcVTGate.timings, "Operation"), 15, 1*time.Minute)
 	qpsByKeyspace = stats.NewRates("QPSByKeyspace", stats.CounterForDimension(rpcVTGate.timings, "Keyspace"), 15, 1*time.Minute)
@@ -351,7 +355,7 @@ func (vtg *VTGate) StreamExecute(ctx context.Context, session *vtgatepb.Session,
 			target.Keyspace,
 			target.TabletType,
 			func(keyspace string) ([]*srvtopo.ResolvedShard, error) {
-				return vtg.resolver.resolver.ResolveShards(ctx, keyspace, []string{target.Shard}, target.TabletType)
+				return vtg.resolver.resolver.ResolveDestination(ctx, keyspace, target.TabletType, key.DestinationShard(target.Shard))
 			},
 			session.Options,
 			func(reply *sqltypes.Result) error {
@@ -406,11 +410,10 @@ func (vtg *VTGate) ExecuteShards(ctx context.Context, sql string, bindVariables 
 		ctx,
 		sql,
 		bindVariables,
-		keyspace,
 		tabletType,
 		session,
 		func() ([]*srvtopo.ResolvedShard, error) {
-			return vtg.resolver.resolver.ResolveShards(ctx, keyspace, shards, tabletType)
+			return vtg.resolver.resolver.ResolveDestination(ctx, keyspace, tabletType, key.DestinationShards(shards))
 		},
 		notInTransaction,
 		options,
@@ -764,7 +767,7 @@ func (vtg *VTGate) StreamExecuteShards(ctx context.Context, sql string, bindVari
 		keyspace,
 		tabletType,
 		func(keyspace string) ([]*srvtopo.ResolvedShard, error) {
-			return vtg.resolver.resolver.ResolveShards(ctx, keyspace, shards, tabletType)
+			return vtg.resolver.resolver.ResolveDestination(ctx, keyspace, tabletType, key.DestinationShards(shards))
 		},
 		options,
 		func(reply *sqltypes.Result) error {
@@ -1065,6 +1068,7 @@ func recordAndAnnotateError(err error, statsKey []string, request map[string]int
 	request = truncateErrorStrings(request)
 
 	errorCounts.Add(fullKey, 1)
+
 	// Most errors are not logged by vtgate because they're either too spammy or logged elsewhere.
 	switch ec {
 	case vtrpcpb.Code_UNKNOWN, vtrpcpb.Code_INTERNAL, vtrpcpb.Code_DATA_LOSS:

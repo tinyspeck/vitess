@@ -59,9 +59,12 @@ func initL2VTGate(gw gateway.Gateway) *L2VTGate {
 	}
 
 	l2VTGate = &L2VTGate{
-		timings:     stats.NewMultiTimings("QueryServiceCall", []string{"Operation", "Keyspace", "ShardName", "DbType"}),
-		errorCounts: stats.NewMultiCounters("QueryServiceCallErrorCount", []string{"Operation", "Keyspace", "ShardName", "DbType"}),
-		gateway:     gw,
+		timings: stats.NewMultiTimings("QueryServiceCall", []string{"Operation", "Keyspace", "ShardName", "DbType"}),
+		errorCounts: stats.NewMultiCounters(
+			"QueryServiceCallErrorCount",
+			"Error count from calls to the query service",
+			[]string{"Operation", "Keyspace", "ShardName", "DbType"}),
+		gateway: gw,
 	}
 	l2VTGate.QueryService = queryservice.Wrap(
 		gw,
