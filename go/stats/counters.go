@@ -165,8 +165,8 @@ type MultiCounters struct {
 
 // TODO: :thinking_face: Should this just return a not-expvar specific object that wraps both expvar/prom
 // instead of returning *MultiCounters?
-func NewNewMultiCounters(name string, help string, label_keys []string) *MultiCounters {
-	t := NewMultiCounters(name, label_keys)
+func NewMultiCounters(name string, help string, label_keys []string) *MultiCounters {
+	t := NewMultiCountersExpvar(name, label_keys)
 
 	// TODO: ugh, camelcase to stringcase here (maybe)
 	prombackend.NewCounter(name, help, label_keys)
@@ -176,7 +176,7 @@ func NewNewMultiCounters(name string, help string, label_keys []string) *MultiCo
 
 // NewMultiCounters creates a new MultiCounters instance, and publishes it
 // if name is set.
-func NewMultiCounters(name string, labels []string) *MultiCounters {
+func NewMultiCountersExpvar(name string, labels []string) *MultiCounters {
 	t := &MultiCounters{
 		Counters: Counters{counts: make(map[string]*int64)},
 		labels:   labels,
@@ -193,15 +193,15 @@ func (mc *MultiCounters) Labels() []string {
 	return mc.labels
 }
 
-func (mc *MultiCounters) NewAdd(names []string, value int64) {
-	mc.Add(names, value)
+func (mc *MultiCounters) Add(names []string, value int64) {
+	mc.addExpvar(names, value)
 
 	prombackend.Add(mc.name, names, value)
 }
 
 // Add adds a value to a named counter. len(names) must be equal to
 // len(Labels)
-func (mc *MultiCounters) Add(names []string, value int64) {
+func (mc *MultiCounters) addExpvar(names []string, value int64) {
 	if len(names) != len(mc.labels) {
 		panic("MultiCounters: wrong number of values in Add")
 	}
@@ -211,6 +211,7 @@ func (mc *MultiCounters) Add(names []string, value int64) {
 // Set sets the value of a named counter. len(names) must be equal to
 // len(Labels)
 func (mc *MultiCounters) Set(names []string, value int64) {
+	// TODO: Probably not needed for Prom when we set to 0, but what do we do for sets to not-0?
 	if len(names) != len(mc.labels) {
 		panic("MultiCounters: wrong number of values in Set")
 	}

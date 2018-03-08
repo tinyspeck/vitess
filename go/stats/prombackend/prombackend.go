@@ -36,5 +36,6 @@ func NewCounter(name string, help string, labels []string) *prom.CounterVec {
 
 func Add(name string, label_values []string, value int64) {
 	// TODO: figure out how to support int64 (expvar) => float64 conversion here
+	// Only if you need to ever add more than 1 at a time...
 	promCounters[name].WithLabelValues(label_values...).Add(1)
 }

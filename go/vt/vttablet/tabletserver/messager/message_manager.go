@@ -37,7 +37,10 @@ import (
 )
 
 // MessageStats tracks stats for messages.
-var MessageStats = stats.NewMultiCounters("Messages", []string{"TableName", "Metric"})
+var MessageStats = stats.NewMultiCounters(
+	"Messages",
+	"Stats for messages",
+	[]string{"TableName", "Metric"})
 
 // MessageDelayTimings records total latency from queueing to sent to clients.
 var MessageDelayTimings = stats.NewMultiTimings("MessageDelay", []string{"TableName"})
