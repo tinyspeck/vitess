@@ -139,23 +139,25 @@ func (l *limit) SetLimit(limit *sqlparser.Limit) error {
 			if err != nil {
 				return err
 			}
+
+			offsetValue, err := sqltypes.NewValue(sqltypes.Uint64, offset.Val)
 			log.Warningf("HERE 1 %v, %v, %v ---", limit, oPv, offset.Type)
-			offsetValue, err := sqltypes.ToUint64(oPv.Value)
+			offsetInt, err := sqltypes.ToUint64(offsetValue)
 			if err != nil {
 				return err
 			}
 			log.Warningf("HERE 2 ---")
-			rowCountSql, err := sqltypes.NewIntegral(string(rowCount.Val))
+			rowCountSQL, err := sqltypes.NewValue(sqltypes.Uint64, rowCount.Val)
 			if err != nil {
 				return err
 			}
-			rowCountValue, err := sqltypes.ToUint64(rowCountSql)
+			rowCountValue, err := sqltypes.ToUint64(rowCountSQL)
 			if err != nil {
 				return err
 			}
 			l.elimit.Offset = &oPv
 			log.Warningf("HERE 3 ---")
-			rowCount = sqlparser.NewIntVal([]byte(fmt.Sprintf("%d", rowCountValue+offsetValue)))
+			rowCount = sqlparser.NewIntVal([]byte(fmt.Sprintf("%d", rowCountValue+offsetInt)))
 		}
 	}
 	log.Warningf("HERE final002v ---")
