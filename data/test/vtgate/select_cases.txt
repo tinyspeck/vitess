@@ -460,21 +460,22 @@
     "FieldQuery": "select * from user where 1 != 1"
   }
 }
-# sharded limit offset
-"select user_id from music order by user_id limit 10, 20"
+
+# sharded limit offset (in this case the gate send limit + offset as the limit as a scatter query and then calculates the offset in memory
+"select user_id from music order by user_id limit 10 offset 20"
 {
-  "Original": "select user_id from music order by user_id limit 10, 20",
+  "Original": "select user_id from music order by user_id limit 10 offset 20",
   "Instructions": {
     "Opcode": "Limit",
-    "Count": 20,
-    "Offset": 10,
+    "Count": 10,
+    "Offset": 20,
     "Input": {
       "Opcode": "SelectScatter",
       "Keyspace": {
         "Name": "user",
         "Sharded": true
       },
-      "Query": "select user_id from music order by user_id asc limit 20",
+      "Query": "select user_id from music order by user_id asc limit 30",
       "FieldQuery": "select user_id from music where 1 != 1",
       "OrderBy": [
         {

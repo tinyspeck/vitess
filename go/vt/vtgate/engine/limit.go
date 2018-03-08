@@ -60,17 +60,11 @@ func (l *Limit) Execute(vcursor VCursor, bindVars map[string]*querypb.BindVariab
 	if err != nil {
 		return nil, err
 	}
-	offset, err := l.fetchOffset(bindVars)
+	offset, err := l.fetchOffset()
 	if err != nil {
 		return nil, err
 	}
-	log.Warningf("These are the bind variables %v, count: %v, offset: %v", bindVars, count, offset)
-	if offset > 0 {
-		bindVars[l.Count.Key] = sqltypes.Int64BindVariable(int64(count + offset))
-		bindVars[l.Offset.Key] = sqltypes.Int32BindVariable(0)
-	}
-
-	log.Warningf("These are the bind variables after %v", bindVars)
+	log.Warningf("These are the bind  count: %v, offset: %v", l.Count, l.Offset)
 	result, err := l.Input.Execute(vcursor, bindVars, wantfields)
 	if err != nil {
 		return nil, err
@@ -162,21 +156,17 @@ func (l *Limit) fetchCount(bindVars map[string]*querypb.BindVariable) (int, erro
 	return count, nil
 }
 
-func (l *Limit) fetchOffset(bindVars map[string]*querypb.BindVariable) (int, error) {
+func (l *Limit) fetchOffset() (int, error) {
 	if l.Offset == nil {
 		return 0, nil
 	}
-	resolved, err := l.Offset.ResolveValue(bindVars)
-	if err != nil {
-		return 0, err
-	}
-	num, err := sqltypes.ToUint64(resolved)
+	num, err := sqltypes.ToUint64(l.Offset.Value)
 	if err != nil {
 		return 0, err
 	}
 	offset := int(num)
 	if offset < 0 {
-		return 0, fmt.Errorf("requested limit is out of range: %v", num)
+		return 0, fmt.Errorf("requested offset is out of range: %v", num)
 	}
 	return offset, nil
 }

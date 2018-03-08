@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 
+	log "github.com/golang/glog"
 	"vitess.io/vitess/go/vt/sqlparser"
 )
 
@@ -131,6 +132,7 @@ func pushOrderBy(orderBy sqlparser.OrderBy, bldr builder) error {
 }
 
 func pushLimit(limit *sqlparser.Limit, orderBy sqlparser.OrderBy, bldr builder) (builder, error) {
+	log.Warning("pushLimit")
 	if limit == nil {
 		return bldr, nil
 	}
@@ -143,6 +145,7 @@ func pushLimit(limit *sqlparser.Limit, orderBy sqlparser.OrderBy, bldr builder) 
 	if limit != nil && limit.Offset != nil && len(orderBy) == 0 {
 		return nil, errors.New("unsupported: offset limit for cross-shard queries")
 	}
+	log.Warning("SetLimit from postprocessing")
 	if err := lb.SetLimit(limit); err != nil {
 		return nil, err
 	}

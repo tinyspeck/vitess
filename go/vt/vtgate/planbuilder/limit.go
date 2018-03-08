@@ -19,8 +19,11 @@ package planbuilder
 import (
 	"fmt"
 
+	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vtgate/engine"
+
+	log "github.com/golang/glog"
 )
 
 // limit is the builder for engine.Limit.
@@ -113,25 +116,51 @@ func (l *limit) PushOrderByRand() {
 // the underlying primitive that it doesn't need to return more rows than
 // specified.
 func (l *limit) SetLimit(limit *sqlparser.Limit) error {
-	count, ok := limit.Rowcount.(*sqlparser.SQLVal)
+	rowCount, ok := limit.Rowcount.(*sqlparser.SQLVal)
 	if !ok {
 		return fmt.Errorf("unexpected expression in LIMIT: %v", sqlparser.String(limit))
 	}
-	pv, err := sqlparser.NewPlanValue(count)
+
+	log.Warningf("HERE 000 %v, %v ---", limit, rowCount.Type)
+	lPv, err := sqlparser.NewPlanValue(rowCount)
 	if err != nil {
 		return err
 	}
-	l.elimit.Count = pv
-	l.input.SetUpperLimit(count)
+	l.elimit.Count = lPv
 
-	offset, ok := limit.Offset.(*sqlparser.SQLVal)
-	if ok {
-		pv, err = sqlparser.NewPlanValue(offset)
-		if err != nil {
-			return err
+	if limit.Offset != nil {
+		log.Warningf("HERE 001 %v", limit.Offset)
+		offset, ok := limit.Offset.(*sqlparser.SQLVal)
+		if !ok {
+			return fmt.Errorf("unexpected expression in LIMIT: %v", sqlparser.String(limit))
 		}
-		l.elimit.Offset = &pv
+		if offset.Type == sqlparser.IntVal {
+			oPv, err := sqlparser.NewPlanValue(offset)
+			if err != nil {
+				return err
+			}
+			log.Warningf("HERE 1 %v, %v, %v ---", limit, oPv, offset.Type)
+			offsetValue, err := sqltypes.ToUint64(oPv.Value)
+			if err != nil {
+				return err
+			}
+			log.Warningf("HERE 2 ---")
+			rowCountSql, err := sqltypes.NewIntegral(string(rowCount.Val))
+			if err != nil {
+				return err
+			}
+			rowCountValue, err := sqltypes.ToUint64(rowCountSql)
+			if err != nil {
+				return err
+			}
+			l.elimit.Offset = &oPv
+			log.Warningf("HERE 3 ---")
+			rowCount = sqlparser.NewIntVal([]byte(fmt.Sprintf("%d", rowCountValue+offsetValue)))
+		}
 	}
+	log.Warningf("HERE final002v ---")
+
+	l.input.SetUpperLimit(rowCount)
 	return nil
 }
 

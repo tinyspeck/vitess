@@ -26,6 +26,7 @@ import (
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
 
+	log "github.com/golang/glog"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 )
 
@@ -187,6 +188,7 @@ func (route *Route) execute(vcursor VCursor, bindVars map[string]*querypb.BindVa
 	}
 
 	shardQueries := getShardQueries(route.Query, shardVars)
+	log.Warningf("This is the query %v, %v", route.Query, bindVars)
 	result, err := vcursor.ExecuteMultiShard(ks, shardQueries, false /* isDML */, false /* canAutocommit */)
 	if err != nil {
 		return nil, err
