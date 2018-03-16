@@ -652,8 +652,8 @@ func (tsv *TabletServer) isMySQLReachable() bool {
 		// Prevent transition out of this state by
 		// reserving a request.
 		tsv.requests.Add(1)
-		atomic.AddUint64(&tsv.inFlight, 1)
-		defer atomic.AddUint64(&tsv.inFlight, -1)
+		atomic.AddInt64(&tsv.inFlight, 1)
+		defer atomic.AddInt64(&tsv.inFlight, -1)
 		defer tsv.requests.Done()
 	case StateNotServing:
 		// Prevent transition out of this state by
@@ -894,7 +894,7 @@ func (tsv *TabletServer) ReadTransaction(ctx context.Context, target *querypb.Ta
 // Execute executes the query and returns the result as response.
 func (tsv *TabletServer) Execute(ctx context.Context, target *querypb.Target, sql string, bindVariables map[string]*querypb.BindVariable, transactionID int64, options *querypb.ExecuteOptions) (result *sqltypes.Result, err error) {
 	allowOnShutdown := (transactionID != 0)
-	inFlight := atomic.LoadUint64(&tsv.inFlight)
+	inFlight := atomic.LoadInt64(&tsv.inFlight)
 	if inFlight > 10 {
 		return nil, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "admission control limit exceeded")
 	}
@@ -1847,7 +1847,7 @@ verifyTarget:
 
 ok:
 	tsv.requests.Add(1)
-	atomic.AddUint64(&tsv.inFlight, 1)
+	atomic.AddInt64(&tsv.inFlight, 1)
 	// If it's a begin, we should make the shutdown code
 	// wait for the call to end before it waits for tx empty.
 	if isTx {
@@ -1859,7 +1859,7 @@ ok:
 // endRequest unregisters the current request (a waitgroup) as done.
 func (tsv *TabletServer) endRequest(isTx bool) {
 	tsv.requests.Done()
-	atomic.AddUint64(&tsv.inFlight, -1)
+	atomic.AddInt64(&tsv.inFlight, -1)
 	if isTx {
 		tsv.txRequests.Done()
 	}
