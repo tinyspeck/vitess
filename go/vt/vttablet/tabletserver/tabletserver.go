@@ -152,7 +152,7 @@ type TabletServer struct {
 	alsoAllow  []topodatapb.TabletType
 	requests   sync.WaitGroup
 	txRequests sync.WaitGroup
-	inFlight   uint64
+	inFlight   int64
 
 	// The following variables should be initialized only once
 	// before starting the tabletserver.
