@@ -145,14 +145,15 @@ type TabletServer struct {
 	// for health checks. This does not affect how queries are served.
 	// target specifies the primary target type, and also allow specifies
 	// secondary types that should be additionally allowed.
-	mu         sync.Mutex
-	state      int64
-	lameduck   sync2.AtomicInt32
-	target     querypb.Target
-	alsoAllow  []topodatapb.TabletType
-	requests   sync.WaitGroup
-	txRequests sync.WaitGroup
-	inFlight   int64
+	mu          sync.Mutex
+	state       int64
+	lameduck    sync2.AtomicInt32
+	target      querypb.Target
+	alsoAllow   []topodatapb.TabletType
+	requests    sync.WaitGroup
+	txRequests  sync.WaitGroup
+	inFlight    int64
+	maxInFlight int
 
 	// The following variables should be initialized only once
 	// before starting the tabletserver.
@@ -236,6 +237,7 @@ func NewTabletServer(config tabletenv.TabletConfig, topoServer *topo.Server, ali
 	tsv.messager = messager.NewEngine(tsv, tsv.se, config)
 	tsv.watcher = NewReplicationWatcher(tsv.se, config)
 	tsv.updateStreamList = &binlog.StreamList{}
+	tsv.maxInFlight = config.MaxInflightQueries
 	// FIXME(alainjobart) could we move this to the Register method below?
 	// So that vtcombo doesn't even call it once, on the first tablet.
 	// And we can remove the tsOnce variable.
@@ -894,10 +896,6 @@ func (tsv *TabletServer) ReadTransaction(ctx context.Context, target *querypb.Ta
 // Execute executes the query and returns the result as response.
 func (tsv *TabletServer) Execute(ctx context.Context, target *querypb.Target, sql string, bindVariables map[string]*querypb.BindVariable, transactionID int64, options *querypb.ExecuteOptions) (result *sqltypes.Result, err error) {
 	allowOnShutdown := (transactionID != 0)
-	inFlight := atomic.LoadInt64(&tsv.inFlight)
-	if inFlight > 10 {
-		return nil, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "admission control limit exceeded")
-	}
 
 	err = tsv.execRequest(
 		ctx, tsv.QueryTimeout.Get(),
@@ -1846,8 +1844,15 @@ verifyTarget:
 	}
 
 ok:
+	// Check to see how many requests are currently in flight, and
+	// reject if over the threshold.
+	currentInFlight := atomic.AddInt64(&tsv.inFlight, 1)
+	if currentInFlight > int64(tsv.maxInFlight) {
+		atomic.AddInt64(&tsv.inFlight, -1)
+		return vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "admission control limit exceeded")
+	}
 	tsv.requests.Add(1)
-	atomic.AddInt64(&tsv.inFlight, 1)
+
 	// If it's a begin, we should make the shutdown code
 	// wait for the call to end before it waits for tx empty.
 	if isTx {

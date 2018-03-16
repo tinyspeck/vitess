@@ -67,6 +67,7 @@ func init() {
 	flag.Float64Var(&Config.IdleTimeout, "queryserver-config-idle-timeout", DefaultQsConfig.IdleTimeout, "query server idle timeout (in seconds), vttablet manages various mysql connection pools. This config means if a connection has not been used in given idle timeout, this connection will be removed from pool. This effectively manages number of connection objects and optimize the pool performance.")
 	flag.IntVar(&Config.QueryPoolWaiterCap, "queryserver-config-query-pool-waiter-cap", DefaultQsConfig.QueryPoolWaiterCap, "query server query pool waiter limit, this is the maximum number of queries that can be queued waiting to get a connection")
 	flag.IntVar(&Config.TxPoolWaiterCap, "queryserver-config-txpool-waiter-cap", DefaultQsConfig.TxPoolWaiterCap, "query server transaction pool waiter limit, this is the maximum number of transactions that can be queued waiting to get a connection")
+	flag.IntVar(&Config.MaxInflightQueries, "names-config-max-inflight-queries", DefaultQsConfig.MaxInflightQueries, "queryserver maximum number of in-flight queries. Above this count queries will be admission controlled into the queryserver")
 	// tableacl related configurations.
 	flag.BoolVar(&Config.StrictTableACL, "queryserver-config-strict-table-acl", DefaultQsConfig.StrictTableACL, "only allow queries that pass table acl checks")
 	flag.BoolVar(&Config.EnableTableACLDryRun, "queryserver-config-enable-table-acl-dry-run", DefaultQsConfig.EnableTableACLDryRun, "If this flag is enabled, tabletserver will emit monitoring metrics and let the request pass regardless of table acl check results")
@@ -143,6 +144,7 @@ type TabletConfig struct {
 	IdleTimeout             float64
 	QueryPoolWaiterCap      int
 	TxPoolWaiterCap         int
+	MaxInflightQueries      int
 	StrictTableACL          bool
 	TerseErrors             bool
 	EnableAutoCommit        bool
@@ -212,6 +214,7 @@ var DefaultQsConfig = TabletConfig{
 	IdleTimeout:             30 * 60,
 	QueryPoolWaiterCap:      50000,
 	TxPoolWaiterCap:         50000,
+	MaxInflightQueries:      50000,
 	StreamBufferSize:        32 * 1024,
 	StrictTableACL:          false,
 	TerseErrors:             false,
