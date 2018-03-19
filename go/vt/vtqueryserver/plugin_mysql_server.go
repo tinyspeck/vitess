@@ -79,7 +79,6 @@ func (mh *proxyHandler) ConnectionClosed(c *mysql.Conn) {
 func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {
 	// FIXME(alainjobart): Add some kind of timeout to the context.
 	ctx := context.Background()
-	context.WithDeadline(ctx)
 
 	// Fill in the ImmediateCallerID with the UserData returned by
 	// the AuthServer plugin for that user. If nothing was
@@ -109,6 +108,7 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 	if c.SchemaName != "" {
 		session.TargetString = c.SchemaName
 	}
+	ctx, _ = context.WithDeadline(ctx, session.StartTime)
 	session, result, err := mh.mp.Execute(ctx, session, query, make(map[string]*querypb.BindVariable))
 	c.ClientData = session
 	err = mysql.NewSQLErrorFromError(err)
