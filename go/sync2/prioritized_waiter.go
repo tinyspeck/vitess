@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/aerospike/aerospike-client-go/types/atomic"
 )
 
 type waiter struct {
@@ -67,19 +65,19 @@ type PrioritizedWaiter struct {
 	timeout  time.Duration
 	waiters  PriorityQueue
 	mu       sync.Mutex
-	capacity int
-	inUse    atomic.AtomicInt
+	capacity AtomicInt64
+	inUse    AtomicInt64
 }
 
 // NewSemaphore creates a Semaphore. The count parameter must be a positive
 // number. A timeout of zero means that there is no timeout.
 func NewPrioritizedWaiter(count int, timeout time.Duration) *PrioritizedWaiter {
 	pw := &PrioritizedWaiter{
-		timeout:  timeout,
-		capacity: count,
-		waiters:  make(PriorityQueue, 0),
+		timeout: timeout,
+		waiters: make(PriorityQueue, 0),
 	}
 	pw.inUse.Set(0)
+	pw.capacity.Set(int64(count))
 	heap.Init(&pw.waiters)
 
 	return pw
@@ -94,7 +92,7 @@ func (pw *PrioritizedWaiter) Acquire(priority int) bool {
 		priority: priority,
 	}
 
-	if pw.inUse.Get() < pw.capacity {
+	if pw.inUse.Get() < pw.capacity.Get() {
 		w.wake <- true
 	} else {
 		heap.Push(&pw.waiters, &w)
@@ -103,14 +101,14 @@ func (pw *PrioritizedWaiter) Acquire(priority int) bool {
 
 	if pw.timeout == 0 {
 		<-w.wake
-		pw.inUse.IncrementAndGet()
+		pw.inUse.Add(1)
 		return true
 	}
 	tm := time.NewTimer(pw.timeout)
 	defer tm.Stop()
 	select {
 	case <-w.wake:
-		pw.inUse.IncrementAndGet()
+		pw.inUse.Add(1)
 		return true
 	case <-tm.C:
 		return false
@@ -122,7 +120,7 @@ func (pw *PrioritizedWaiter) Acquire(priority int) bool {
 func (pw *PrioritizedWaiter) TryAcquire() bool {
 	pw.mu.Lock()
 	defer pw.mu.Unlock()
-	return pw.inUse.Get() <= pw.capacity
+	return pw.inUse.Get() <= pw.capacity.Get()
 }
 
 // Release releases the acquired semaphore. You must
@@ -131,7 +129,7 @@ func (pw *PrioritizedWaiter) TryAcquire() bool {
 func (pw *PrioritizedWaiter) Release() {
 	pw.mu.Lock()
 	defer pw.mu.Unlock()
-	pw.inUse.DecrementAndGet()
+	pw.inUse.Add(-1)
 
 	if pw.waiters.Len() > 0 {
 		next := heap.Pop(&pw.waiters).(*waiter)
