@@ -19,8 +19,10 @@ limitations under the License.
 package pools
 
 import (
+	"container/heap"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -46,13 +48,49 @@ type Resource interface {
 	Close()
 }
 
+type waiter struct {
+	wake     chan bool
+	priority int
+}
+
+func (w waiter) String() string {
+	return fmt.Sprintf("%v", w.priority)
+}
+
+type PriorityQueue []*waiter
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	return pq[i].priority < pq[j].priority
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+}
+
+func (pq *PriorityQueue) Push(x interface{}) {
+	item := x.(*waiter)
+	*pq = append(*pq, item)
+}
+
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	*pq = old[0 : n-1]
+	return item
+}
+
 // ResourcePool allows you to use a pool of resources.
 type ResourcePool struct {
 	resources   chan resourceWrapper
+	waiters     PriorityQueue
 	factory     Factory
 	capacity    sync2.AtomicInt64
 	idleTimeout sync2.AtomicDuration
 	idleTimer   *timer.Timer
+	mu          sync.Mutex
 
 	// stats
 	available  sync2.AtomicInt64
@@ -86,7 +124,10 @@ func NewResourcePool(factory Factory, capacity, maxCap int, idleTimeout time.Dur
 		available:   sync2.NewAtomicInt64(int64(capacity)),
 		capacity:    sync2.NewAtomicInt64(int64(capacity)),
 		idleTimeout: sync2.NewAtomicDuration(idleTimeout),
+		waiters:     make(PriorityQueue, 0),
 	}
+	heap.Init(&rp.waiters)
+
 	for i := 0; i < capacity; i++ {
 		rp.resources <- resourceWrapper{}
 	}
@@ -148,33 +189,43 @@ func (rp *ResourcePool) Get(ctx context.Context) (resource Resource, err error) 
 }
 
 func (rp *ResourcePool) get(ctx context.Context, wait bool) (resource Resource, err error) {
-	// If ctx has already expired, avoid racing with rp's resource channel.
 	select {
 	case <-ctx.Done():
 		return nil, ErrTimeout
 	default:
 	}
 
-	// Fetch
-	var wrapper resourceWrapper
-	var ok bool
+	rp.mu.Lock()
+	priority := 0
+	deadline, ok := ctx.Deadline()
+	if ok {
+		priority = int(deadline.Unix())
+	}
+	w := waiter{
+		wake:     make(chan bool, 1),
+		priority: priority,
+	}
+
+	willWait := false
+	if rp.inUse.Get() < rp.capacity.Get() {
+		w.wake <- true
+	} else {
+		willWait = true
+		heap.Push(&rp.waiters, &w)
+	}
+	rp.mu.Unlock()
+
+	startTime := time.Now()
 	select {
-	case wrapper, ok = <-rp.resources:
-	default:
-		if !wait {
-			return nil, nil
-		}
-		startTime := time.Now()
-		select {
-		case wrapper, ok = <-rp.resources:
-		case <-ctx.Done():
-			return nil, ErrTimeout
-		}
+	case <-w.wake:
+	case <-ctx.Done():
+		return nil, ErrTimeout
+	}
+	if willWait {
 		rp.recordWait(startTime)
 	}
-	if !ok {
-		return nil, ErrClosed
-	}
+
+	wrapper, ok := <-rp.resources
 
 	// Unwrap
 	if wrapper.resource == nil {
@@ -195,6 +246,14 @@ func (rp *ResourcePool) get(ctx context.Context, wait bool) (resource Resource, 
 // you will need to call Put(nil) instead of returning the closed resource.
 // The will eventually cause a new resource to be created in its place.
 func (rp *ResourcePool) Put(resource Resource) {
+	rp.mu.Lock()
+	defer rp.mu.Unlock()
+
+	if rp.waiters.Len() > 0 {
+		next := heap.Pop(&rp.waiters).(*waiter)
+		next.wake <- true
+	}
+
 	var wrapper resourceWrapper
 	if resource != nil {
 		wrapper = resourceWrapper{resource, time.Now()}

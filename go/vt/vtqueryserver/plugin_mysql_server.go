@@ -22,6 +22,7 @@ import (
 	"net"
 	"os"
 	"syscall"
+	"time"
 
 	log "github.com/golang/glog"
 	"golang.org/x/net/context"
@@ -78,6 +79,7 @@ func (mh *proxyHandler) ConnectionClosed(c *mysql.Conn) {
 func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sqltypes.Result) error) error {
 	// FIXME(alainjobart): Add some kind of timeout to the context.
 	ctx := context.Background()
+	context.WithDeadline(ctx)
 
 	// Fill in the ImmediateCallerID with the UserData returned by
 	// the AuthServer plugin for that user. If nothing was
@@ -98,6 +100,7 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 				IncludedFields: querypb.ExecuteOptions_ALL,
 			},
 			Autocommit: true,
+			StartTime:  time.Now().Add(10 * time.Second),
 		}
 		if c.Capabilities&mysql.CapabilityClientFoundRows != 0 {
 			session.Options.ClientFoundRows = true

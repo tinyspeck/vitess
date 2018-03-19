@@ -22,6 +22,7 @@ package mysqlproxy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	log "github.com/golang/glog"
 
@@ -38,6 +39,7 @@ type ProxySession struct {
 	TargetString  string
 	Options       *querypb.ExecuteOptions
 	Autocommit    bool
+	StartTime     time.Time
 }
 
 // Proxy wraps the standalone query service
