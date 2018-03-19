@@ -99,7 +99,7 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 				IncludedFields: querypb.ExecuteOptions_ALL,
 			},
 			Autocommit: true,
-			StartTime:  time.Now().Add(10 * time.Second),
+			StartTime:  time.Now(),
 		}
 		if c.Capabilities&mysql.CapabilityClientFoundRows != 0 {
 			session.Options.ClientFoundRows = true
@@ -108,7 +108,7 @@ func (mh *proxyHandler) ComQuery(c *mysql.Conn, query string, callback func(*sql
 	if c.SchemaName != "" {
 		session.TargetString = c.SchemaName
 	}
-	ctx, _ = context.WithDeadline(ctx, session.StartTime)
+	ctx, _ = context.WithDeadline(ctx, session.StartTime.Add(30*time.Second))
 	session, result, err := mh.mp.Execute(ctx, session, query, make(map[string]*querypb.BindVariable))
 	c.ClientData = session
 	err = mysql.NewSQLErrorFromError(err)
