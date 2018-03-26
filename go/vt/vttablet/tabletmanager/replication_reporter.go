@@ -69,6 +69,7 @@ func (r *replicationReporter) Report(isSlaveType, shouldQueryServiceBeRunning bo
 				if err := repairReplication(ctx, r.agent); err != nil {
 					log.Infof("Failed to reconnect to master: %v", err)
 				}
+				log.Infof("Succesfully repaired replication.")
 				cancel()
 				// Check status again.
 				status, statusErr = r.agent.MysqlDaemon.SlaveStatus()
