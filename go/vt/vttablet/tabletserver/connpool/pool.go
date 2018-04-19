@@ -30,6 +30,7 @@ import (
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/tabletenv"
 
+	log "github.com/golang/glog"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 )
 
@@ -110,6 +111,22 @@ func (cp *Pool) Open(appParams, dbaParams, appDebugParams *mysql.ConnParams) {
 		return NewDBConn(cp, appParams)
 	}
 	cp.connections = pools.NewResourcePool(f, cp.capacity, cp.capacity, cp.idleTimeout)
+
+	go func(cp *Pool) {
+		ctx := context.Background()
+		time.Sleep(10 * time.Second)
+		for i := 0; i < cp.capacity; i++ {
+			log.Info("Attempt to get a connection")
+			conn, err := cp.Get(ctx)
+			if err == nil {
+				log.Info("Got connection")
+				cp.Put(conn)
+			} else {
+				log.Info("Error warming up connection")
+			}
+
+		}
+	}(cp)
 	cp.appDebugParams = appDebugParams
 
 	cp.dbaPool.Open(dbaParams, tabletenv.MySQLStats)
