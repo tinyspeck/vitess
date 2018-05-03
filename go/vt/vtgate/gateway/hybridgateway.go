@@ -142,6 +142,29 @@ func (h *HybridGateway) route(ctx context.Context, target *querypb.Target, conn 
 	return NewShardError(topo.ErrNoNode, target, nil, inTransaction)
 }
 
+// GetQueryService is part of the srvtopo.TargetStats interface, included
+// in the gateway.Gateway interface.
+func (h *HybridGateway) GetQueryService(target *querypb.Target) (queryservice.QueryService, error) {
+	// Start with the local Gateway part.
+	if h.gw != nil {
+		return h.gw.GetQueryService(target)
+	}
+
+	// The local gateway doesn't know about this target,
+	// try the remote ones.
+	for _, l := range h.l2vtgates {
+		_, err := l.GetAggregateStats(target)
+		if err != topo.ErrNoNode {
+			// This remote gateway either worked, or returned an
+			// error. But it knows about this target.
+			return l, nil
+		}
+	}
+
+	// We couldn't find a way to resolve this.
+	return nil, topo.ErrNoNode
+}
+
 // GetAggregateStats is part of the srvtopo.TargetStats interface, included
 // in the gateway.Gateway interface.
 func (h *HybridGateway) GetAggregateStats(target *querypb.Target) (*querypb.AggregateStats, queryservice.QueryService, error) {

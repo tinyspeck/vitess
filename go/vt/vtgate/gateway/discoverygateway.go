@@ -149,6 +149,14 @@ func (dg *discoveryGateway) WaitForTablets(ctx context.Context, tabletTypesToWai
 	return dg.tsc.WaitForAllServingTablets(ctx, targets)
 }
 
+// GetQueryService is part of the srvtopo.TargetStats interface.
+func (dg *discoveryGateway) GetQueryService(target *querypb.Target) (queryservice.QueryService, error) {
+	if err := dg.tsc.LookupTarget(target); err != nil {
+		return nil, err
+	}
+	return dg, nil
+}
+
 // GetAggregateStats is part of the srvtopo.TargetStats interface.
 func (dg *discoveryGateway) GetAggregateStats(target *querypb.Target) (*querypb.AggregateStats, queryservice.QueryService, error) {
 	stats, err := dg.tsc.GetAggregateStats(target)

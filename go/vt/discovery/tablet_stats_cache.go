@@ -480,6 +480,15 @@ func (tc *TabletStatsCache) Unsubscribe(i int) error {
 	return tc.tsm.Unsubscribe(i)
 }
 
+// LookupTarget returns nil if the target is known to the cache or topo.ErrNoNode if not
+func (tc *TabletStatsCache) LookupTarget(target *querypb.Target) error {
+	e := tc.getEntry(target.Keyspace, target.Shard, target.TabletType)
+	if e != nil {
+		return nil
+	}
+	return topo.ErrNoNode
+}
+
 // GetAggregateStats is part of the TargetStatsListener interface.
 func (tc *TabletStatsCache) GetAggregateStats(target *querypb.Target) (*querypb.AggregateStats, error) {
 	e := tc.getEntry(target.Keyspace, target.Shard, target.TabletType)

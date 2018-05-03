@@ -36,6 +36,10 @@ import (
 // fakeStats implements TargetStats.
 type fakeStats struct{}
 
+func (s *fakeStats) GetQueryService(target *querypb.Target) (queryservice.QueryService, error) {
+	return nil, nil
+}
+
 func (s *fakeStats) GetAggregateStats(target *querypb.Target) (*querypb.AggregateStats, queryservice.QueryService, error) {
 	return &querypb.AggregateStats{}, nil, nil
 }

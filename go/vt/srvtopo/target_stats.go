@@ -31,6 +31,9 @@ import (
 //   it will establish a StreamHealth connection, and store the returned
 //   health stats.
 type TargetStats interface {
+	// GetQueryService returns the QueryService to reach the given Target.
+	GetQueryService(target *querypb.Target) (queryservice.QueryService, error)
+
 	// GetAggregateStats returns the aggregate stats for the given Target.
 	// The srvtopo module will use that information to route queries
 	// to the right cell. Also returns the QueryService to use to

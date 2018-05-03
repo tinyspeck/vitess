@@ -130,7 +130,11 @@ func (r *Resolver) GetAllShards(ctx context.Context, keyspace string, tabletType
 			TabletType: tabletType,
 			Cell:       r.localCell,
 		}
-		_, qs, err := r.stats.GetAggregateStats(target)
+
+		/*
+			_, qs, err := r.stats.GetAggregateStats(target)
+		*/
+		qs, err := r.stats.GetQueryService(target)
 		if err != nil {
 			return nil, nil, resolverError(err, target)
 		}
@@ -193,7 +197,11 @@ func (r *Resolver) ResolveDestinations(ctx context.Context, keyspace string, tab
 					TabletType: tabletType,
 					Cell:       r.localCell,
 				}
-				_, qs, err := r.stats.GetAggregateStats(target)
+
+				/*
+					_, qs, err := r.stats.GetAggregateStats(target)
+				*/
+				qs, err := r.stats.GetQueryService(target)
 				if err != nil {
 					return resolverError(err, target)
 				}
