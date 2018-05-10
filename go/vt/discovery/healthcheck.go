@@ -372,7 +372,9 @@ func (hc *HealthCheckImpl) servingConnStats() map[string]int64 {
 // notification about the tablet to downstream. To be called only on exit from
 // checkConn().
 func (hc *HealthCheckImpl) finalizeConn(hcc *healthCheckConn) {
+	log.Infof("2 Waiting for lock")
 	hcc.mu.Lock()
+	log.Infof("2 Lock acquired")
 	if hcc.conn != nil {
 		hcc.conn.Close(hcc.ctx)
 		hcc.conn = nil
@@ -452,7 +454,10 @@ func (hcc *healthCheckConn) stream(ctx context.Context, hc *HealthCheckImpl, cal
 	}
 
 	if err := conn.StreamHealth(ctx, callback); err != nil {
+		log.Infof("1 Waiting for lock")
 		hcc.mu.Lock()
+		log.Infof("1 Lock acquired")
+		log.Infof("StreamHealth failed from %v %v/%v (%v): %v", hcc.tabletStats.Tablet.GetAlias(), hcc.tabletStats.Tablet.GetKeyspace(), hcc.tabletStats.Tablet.GetShard(), hcc.tabletStats.Tablet.GetHostname(), err)
 		hcc.conn.Close(ctx)
 		hcc.conn = nil
 		hcc.tabletStats.Serving = false
