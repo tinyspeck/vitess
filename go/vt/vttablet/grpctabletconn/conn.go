@@ -674,15 +674,16 @@ func (conn *gRPCQueryClient) HandlePanic(err *error) {
 
 // Close closes underlying gRPC channel.
 func (conn *gRPCQueryClient) Close(ctx context.Context) error {
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
-	if conn.cc == nil {
-		return nil
-	}
+	panic("TEST RAFAEL")
+	// conn.mu.Lock()
+	// defer conn.mu.Unlock()
+	// if conn.cc == nil {
+	// 	return nil
+	// }
 
-	cc := conn.cc
-	conn.cc = nil
-	return cc.Close()
+	// cc := conn.cc
+	// conn.cc = nil
+	// return cc.Close()
 }
 
 // Tablet returns the rpc end point.
