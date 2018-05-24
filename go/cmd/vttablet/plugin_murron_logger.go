@@ -17,32 +17,22 @@ limitations under the License.
 package main
 
 import (
-	"flag"
-	"fmt"
-
+	"vitess.io/vitess/go/slack"
 	"vitess.io/vitess/go/streamlog"
-	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/servenv"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/tabletenv"
 )
 
-var (
-	murronServerName = flag.String("murron_server", "", "Enable query logging to the specified murron server")
-)
-
 func init() {
 	servenv.OnRun(func() {
-		if *murronServerName != "" {
-			initMurron(*murronServerName)
+		if slack.EnableMurronLogging() {
+			initMurronLogger()
 		}
 	})
 }
 
-func initMurron(server string) {
-	log.Infof("enabling query logging to murron server %s", server)
-
-	// TODO: initialize murron connection here
-
+func initMurronLogger() {
+	logger := slack.InitMurronLogger()
 	logChan := tabletenv.StatsLogger.Subscribe("Murron")
 	formatParams := map[string][]string{"full": {}}
 	formatter := streamlog.GetFormatter(tabletenv.StatsLogger)
@@ -51,9 +41,7 @@ func initMurron(server string) {
 		for {
 			record := <-logChan
 			message := formatter(formatParams, record)
-
-			// TODO: actually send logs to murron here
-			fmt.Printf("SENDING TO MURRON: %s\n", message)
+			logger.SendMessage(message)
 		}
 	}()
 }
