@@ -115,6 +115,7 @@ func repairReplication(ctx context.Context, agent *ActionAgent) error {
 
 	ts := agent.TopoServer
 	tablet := agent.Tablet()
+
 	si, err := ts.GetShard(ctx, tablet.Keyspace, tablet.Shard)
 	if err != nil {
 		return err
