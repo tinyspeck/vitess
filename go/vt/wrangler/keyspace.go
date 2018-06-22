@@ -90,6 +90,9 @@ func (wr *Wrangler) SetKeyspaceShardingInfo(ctx context.Context, keyspace, shard
 // MigrateServedTypes is used during horizontal splits to migrate a
 // served type from a list of shards to another.
 func (wr *Wrangler) MigrateServedTypes(ctx context.Context, keyspace, shard string, cells []string, servedType topodatapb.TabletType, reverse, skipReFreshState bool, filteredReplicationWaitTime time.Duration) (err error) {
+	if err := checkDone(ctx); err != nil {
+		return err
+	}
 	// check input parameters
 	if servedType == topodatapb.TabletType_MASTER {
 		// we cannot migrate a master back, since when master migration
@@ -924,4 +927,14 @@ func (wr *Wrangler) RemoveKeyspaceCell(ctx context.Context, keyspace, cell strin
 	// Now remove the SrvKeyspace object.
 	wr.Logger().Infof("Removing cell %v keyspace %v SrvKeyspace object", cell, keyspace)
 	return wr.ts.DeleteSrvKeyspace(ctx, cell, keyspace)
+}
+
+// checkDone returns ctx.Err() ff ctx.Done().
+func checkDone(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	return nil
 }
