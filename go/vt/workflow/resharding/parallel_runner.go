@@ -129,8 +129,10 @@ func (p *ParallelRunner) Run() error {
 
 		sem <- true
 		if p.enableApprovals && !isTaskRunning(task) {
+			log.Infof("I'm waiting for aproval %v", task)
 			p.waitForApproval(i)
 		}
+		log.Infof("DONE waiting for aproval")
 		wg.Add(1)
 		go func(t *workflowpb.Task) {
 			defer wg.Done()

@@ -387,17 +387,21 @@ func (hw *HorizontalReshardingWorkflow) runWorkflow() error {
 		return err
 	}
 
+	log.Infof("Migrating rdonly")
 	migrateRdonlyTasks := hw.GetTasks(phaseMigrateRdonly)
 	migrateRdonlyRunner := NewParallelRunner(hw.ctx, hw.rootUINode, hw.checkpointWriter, migrateRdonlyTasks, hw.runMigrate, Sequential, hw.enableApprovals)
 	if err := migrateRdonlyRunner.Run(); err != nil {
 		return err
 	}
 
+	log.Infof("Migrating replica")
 	migrateReplicaTasks := hw.GetTasks(phaseMigrateReplica)
 	migrateReplicaRunner := NewParallelRunner(hw.ctx, hw.rootUINode, hw.checkpointWriter, migrateReplicaTasks, hw.runMigrate, Sequential, hw.enableApprovals)
 	if err := migrateReplicaRunner.Run(); err != nil {
 		return err
 	}
+
+	log.Infof("Migrating masters")
 
 	migrateMasterTasks := hw.GetTasks(phaseMigrateMaster)
 	migrateMasterRunner := NewParallelRunner(hw.ctx, hw.rootUINode, hw.checkpointWriter, migrateMasterTasks, hw.runMigrate, Sequential, hw.enableApprovals)
