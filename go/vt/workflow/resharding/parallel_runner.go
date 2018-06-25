@@ -133,13 +133,18 @@ func (p *ParallelRunner) Run() error {
 			p.waitForApproval(i)
 		}
 		log.Infof("DONE waiting for aproval")
-		wg.Add(1)
-		go func(t *workflowpb.Task) {
-			defer wg.Done()
-			p.setUIMessage(fmt.Sprintf("Launch task: %v.", t.Id))
-			defer func() { <-sem }()
-			p.executeTask(t)
-		}(task)
+		select {
+		case <-p.ctx.Done():
+			log.Info("Workflow is cancelled, do not continue running tasks")
+		default:
+			wg.Add(1)
+			go func(t *workflowpb.Task) {
+				defer wg.Done()
+				p.setUIMessage(fmt.Sprintf("Launch task: %v.", t.Id))
+				defer func() { <-sem }()
+				p.executeTask(t)
+			}(task)
+		}
 	}
 	wg.Wait()
 
@@ -355,6 +360,7 @@ func (p *ParallelRunner) waitForApproval(taskIndex int) {
 			defer p.mu.Unlock()
 			p.updateApprovalActionLocked(0, actionNameApproveFirstTaskDone, workflow.ActionStateDisabled, workflow.ActionStyleTriggered)
 		case <-p.ctx.Done():
+			log.Info("Wait is done because context is done")
 			return
 		}
 	} else if taskIndex == 1 {
