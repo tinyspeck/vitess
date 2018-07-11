@@ -33,6 +33,9 @@ var (
 	}, {
 		input: "select 1 from t",
 	}, {
+		input:  "select * from information_schema.columns",
+		output: "select * from information_schema.`columns`",
+	}, {
 		input: "select .1 from t",
 	}, {
 		input: "select 1.2e1 from t",
@@ -1130,6 +1133,8 @@ var (
 		input: "show full tables where 1 = 0",
 	}, {
 		input: "show full columns from a like '%'",
+	}, {
+		input: "show full columns from messages from test_keyspace like '%'",
 	}, {
 		input:  "show triggers",
 		output: "show triggers",
