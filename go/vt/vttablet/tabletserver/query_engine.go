@@ -471,7 +471,7 @@ func (qe *QueryEngine) AddStats(planName, tableName string, queryCount int64, du
 		rowCount:   rowCount,
 		errorCount: errorCount}
 
-	if stats := qe.Stats(planName, tableName); stats != nil {
+	if stats, ok := qe.qs[planName+"."+tableName]; ok {
 		p = &QueryStats{
 			queryCount: stats.queryCount + queryCount,
 			time:       stats.time + duration,
