@@ -164,6 +164,18 @@ func (wr *Wrangler) initShardMasterLocked(ctx context.Context, ev *events.Repare
 		return err
 	}
 
+	_, masterTabletMap := topotools.SortedTabletMap(tabletMap)
+
+	// Sanity check that the keyspace / shard info in the topo matches what we passed in to InitShardMaster
+	for _, tablet := range tabletMap {
+		if tablet.GetShard() != shard {
+			fmt.Errorf("shard range %v does not match the tabletMap info %v", shard, tablet.GetShard())
+		}
+		if tablet.GetKeyspace() != keyspace {
+			fmt.Errorf("keyspace %v does not match the tabletMap info %v", keyspace, tablet.GetKeyspace())
+		}
+	}
+
 	// Check the master elect is in tabletMap.
 	masterElectTabletAliasStr := topoproto.TabletAliasString(masterElectTabletAlias)
 	masterElectTabletInfo, ok := tabletMap[masterElectTabletAliasStr]
@@ -183,7 +195,6 @@ func (wr *Wrangler) initShardMasterLocked(ctx context.Context, ev *events.Repare
 		}
 
 		// Check that the master-elect tablet is the master in the tabletMap.
-		_, masterTabletMap := topotools.SortedTabletMap(tabletMap)
 		if _, ok := masterTabletMap[masterElectTabletAliasStr]; !ok {
 			if !force {
 				return fmt.Errorf("master-elect tablet %v is not a master in the shard, use -force to proceed anyway", topoproto.TabletAliasString(masterElectTabletAlias))
