@@ -5,7 +5,7 @@ The vtexplain tool provides information about how Vitess will execute a statemen
 ## Run it from a vtgate (easier and faster)
 ssh to a vtgate and run your query with slack-vtexplain like `slack-vtexplain -sql "Select count(*) from push_log_partitioned"`
 
-## Prerequisites for running it locally
+## Want to run it locally?  Ok! Prerequisites:
 
 You'll need to build the `vtexplain` binary in your environment.
 To find instructions on how to build this binary please refer to this [guide](http://vitess.io/getting-started/local-instance.html#manual-build). 
