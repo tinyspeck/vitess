@@ -168,24 +168,31 @@ func (wr *Wrangler) initShardMasterLocked(ctx context.Context, ev *events.Repare
 	masterElectTabletAliasStr := topoproto.TabletAliasString(masterElectTabletAlias)
 	masterElectTabletInfo, ok := tabletMap[masterElectTabletAliasStr]
 	if !ok {
-		return fmt.Errorf("master-elect tablet %v is not in the shard", topoproto.TabletAliasString(masterElectTabletAlias))
+		fmt.Errorf("master-elect tablet %v is not in the shard", topoproto.TabletAliasString(masterElectTabletAlias))
 	}
 	ev.NewMaster = *masterElectTabletInfo.Tablet
 
+	// If the master alias is nil in the topo for this shard, skip the check for if we're electing the existing master
+	if shardInfo.GetMasterAlias() != nil {
+		// Check that the master-elect tablet is the master in the topo
+		if !topoproto.TabletAliasEqual(shardInfo.MasterAlias, masterElectTabletAlias) {
+			if !force {
+				return fmt.Errorf("master-elect tablet %v is not the shard master, use -force to proceed anyway", topoproto.TabletAliasString(masterElectTabletAlias))
+			}
+			wr.logger.Warningf("master-elect tablet %v is not the shard master, proceeding anyway as -force was used", topoproto.TabletAliasString(masterElectTabletAlias))
+		}
+
+		// Check that the master-elect tablet is the master in the tabletMap.
+		_, masterTabletMap := topotools.SortedTabletMap(tabletMap)
+		if _, ok := masterTabletMap[masterElectTabletAliasStr]; !ok {
+			if !force {
+				return fmt.Errorf("master-elect tablet %v is not a master in the shard, use -force to proceed anyway", topoproto.TabletAliasString(masterElectTabletAlias))
+			}
+			wr.logger.Warningf("master-elect tablet %v is not a master in the shard, proceeding anyway as -force was used", topoproto.TabletAliasString(masterElectTabletAlias))
+		}
+	}
+
 	// Check the master is the only master is the shard, or -force was used.
-	_, masterTabletMap := topotools.SortedTabletMap(tabletMap)
-	if !topoproto.TabletAliasEqual(shardInfo.MasterAlias, masterElectTabletAlias) {
-		if !force {
-			return fmt.Errorf("master-elect tablet %v is not the shard master, use -force to proceed anyway", topoproto.TabletAliasString(masterElectTabletAlias))
-		}
-		wr.logger.Warningf("master-elect tablet %v is not the shard master, proceeding anyway as -force was used", topoproto.TabletAliasString(masterElectTabletAlias))
-	}
-	if _, ok := masterTabletMap[masterElectTabletAliasStr]; !ok {
-		if !force {
-			return fmt.Errorf("master-elect tablet %v is not a master in the shard, use -force to proceed anyway", topoproto.TabletAliasString(masterElectTabletAlias))
-		}
-		wr.logger.Warningf("master-elect tablet %v is not a master in the shard, proceeding anyway as -force was used", topoproto.TabletAliasString(masterElectTabletAlias))
-	}
 	haveOtherMaster := false
 	for alias := range masterTabletMap {
 		if masterElectTabletAliasStr != alias {
