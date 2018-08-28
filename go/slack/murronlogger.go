@@ -17,40 +17,95 @@ limitations under the License.
 package slack
 
 import (
+	"bytes"
 	"flag"
-	"fmt"
+	"os"
+	"time"
 
+	"vitess.io/vitess/go/stats"
+	"vitess.io/vitess/go/streamlog"
 	"vitess.io/vitess/go/vt/log"
+	"vitess.io/vitess/go/vt/servenv"
+
+	murronlib "slack-github.com/slack/murron/pkg/lib"
+	murronoutputs "slack-github.com/slack/murron/pkg/outputs"
+	murronpb "slack-github.com/slack/murron/proto"
 )
 
 var (
-	// TODO: add actual murron config here
-	murronServerName = flag.String("murron_server", "", "Enable query logging to the specified murron server")
+	murronConfigFile = flag.String("murron_config_file", "", "If specified, enables murron logging using the agent configuration in the given file.")
+
+	murronLogs   = stats.NewCounter("MurronLogs", "count of logs dispatched to the murron queue")
+	murronErrors = stats.NewCountersWithSingleLabel("MurronErrors", "count of errors sending to murron by error type", "Type")
+
+	hostname, _ = os.Hostname()
 )
 
-// EnableMurronLogging returns true if murron logging should be enabled
-func EnableMurronLogging() bool {
-	return *murronServerName != ""
+// MurronLoggerEnabled returns true if murron logging should be enabled
+func MurronLoggerEnabled() bool {
+	return *murronConfigFile != ""
 }
 
 // MurronLogger is a logger abstraction to send to murron
 type MurronLogger struct {
-	server string
+	logType string
+	queue   chan *murronpb.MurronMessage
+	client  murronoutputs.OutputService
 }
 
 // InitMurronLogger creates a new logger to send to murron
-func InitMurronLogger() *MurronLogger {
-	log.Infof("enabling query logging to murron server %s", *murronServerName)
+// Should only be called with a valid config file
+func InitMurronLogger(logType string) (*MurronLogger, error) {
+	log.Infof("enabling %s query logging to murron", logType)
 
-	// TODO: actually initialize murron connection here
-	return &MurronLogger{
-		server: *murronServerName,
+	/* Load murron configuration */
+	config, err := murronlib.ReadConfig(*murronConfigFile)
+	if err != nil {
+		return nil, err
 	}
+
+	ml := &MurronLogger{
+		logType: logType,
+		queue:   make(chan *murronpb.MurronMessage, config.QueueSize),
+	}
+
+	servenv.OnClose(func() {
+		log.Infof("closing murron client")
+		ml.client.Close()
+		log.Infof("closed murron client")
+	})
+
+	ml.client = murronoutputs.NewMurronBatchClient(config.ServerAddress, config.OutboundConnections, config.ClientBatchCount, config.ClientBatchSize, config.ClientBatchTimeout, ml.queue)
+
+	return ml, nil
 }
 
 // SendMessage sends the given message to murron
-func (*MurronLogger) SendMessage(message string) {
-	// TODO: actually send logs to murron here
-	fmt.Printf("SENDING TO MURRON: %s\n", message)
+func (ml *MurronLogger) SendMessage(formatter streamlog.LogFormatter, message interface{}) {
 
+	// TODO: this would be a great use case for a sync.Pool to avoid
+	// thrashing the GC with these allocations / deallocations
+	// but there's no indication from the murron client when it's done
+	// processing a given message.
+
+	var buf bytes.Buffer
+	formatParams := map[string][]string{"full": {}}
+	if err := formatter(&buf, formatParams, message); err != nil {
+		murronErrors.Add("Format", 1)
+		return
+	}
+
+	msg := &murronpb.MurronMessage{
+		OriginHost: hostname,
+		Timestamp:  time.Now().UnixNano(),
+		Host:       hostname,
+		Type:       ml.logType,
+		Message:    buf.Bytes(),
+	}
+	select {
+	case ml.queue <- msg:
+		murronLogs.Add(1)
+	default:
+		murronErrors.Add("QueueFull", 1)
+	}
 }

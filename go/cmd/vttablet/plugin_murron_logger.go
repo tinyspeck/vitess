@@ -19,29 +19,33 @@ package main
 import (
 	"vitess.io/vitess/go/slack"
 	"vitess.io/vitess/go/streamlog"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/servenv"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/tabletenv"
 )
 
 func init() {
 	servenv.OnRun(func() {
-		if slack.EnableMurronLogging() {
+		if slack.MurronLoggerEnabled() {
 			initMurronLogger()
 		}
 	})
 }
 
 func initMurronLogger() {
-	logger := slack.InitMurronLogger()
+	logger, err := slack.InitMurronLogger("vtgate_querylog")
+	if err != nil {
+		log.Errorf("error initializing murron logger: %v", err)
+		return
+	}
+
 	logChan := tabletenv.StatsLogger.Subscribe("Murron")
-	formatParams := map[string][]string{"full": {}}
 	formatter := streamlog.GetFormatter(tabletenv.StatsLogger)
 
 	go func() {
 		for {
-			record := <-logChan
-			message := formatter(formatParams, record)
-			logger.SendMessage(message)
+			log := <-logChan
+			logger.SendMessage(formatter, log)
 		}
 	}()
 }
