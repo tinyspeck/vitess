@@ -33,6 +33,12 @@
 			"revisionTime": "2016-12-16T21:27:53Z"
 		},
 		{
+			"checksumSHA1": "gzdeZh1Pnc0wnEu1em+MhOT+kvM=",
+			"path": "github.com/Shopify/sarama",
+			"revision": "647feef69a1a7e0e23cccceeb786176bc4fcf5ea",
+			"revisionTime": "2018-08-20T17:20:58Z"
+		},
+		{
 			"checksumSHA1": "t5pzf8AGtuCmECrPlJM9oAky+dk=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "f07b33eb84960583bbb72889ae0f98d300e107fe",
@@ -365,6 +371,24 @@
 			"revisionTime": "2015-11-05T21:09:06Z"
 		},
 		{
+			"checksumSHA1": "y2Kh4iPlgCPXSGTCcFpzePYdzzg=",
+			"path": "github.com/eapache/go-resiliency/breaker",
+			"revision": "ea41b0fad31007accc7f806884dcdf3da98b79ce",
+			"revisionTime": "2018-03-26T13:24:23Z"
+		},
+		{
+			"checksumSHA1": "w5itvm+eKlJJg3hGILnceM3sono=",
+			"path": "github.com/eapache/go-xerial-snappy",
+			"revision": "776d5712da21bc4762676d614db1d8a64f4238b0",
+			"revisionTime": "2018-08-14T17:44:37Z"
+		},
+		{
+			"checksumSHA1": "SJhV59StVXLFvLU0l9s0d00nV10=",
+			"path": "github.com/eapache/queue",
+			"revision": "093482f3f8ce946c05bcba64badd2c82369e084d",
+			"revisionTime": "2018-02-27T14:14:24Z"
+		},
+		{
 			"checksumSHA1": "muGVyM8mY3/gcap6kr4Ib3F5Xn4=",
 			"path": "github.com/ghodss/yaml",
 			"revision": "04f313413ffd65ce25f2541bfd2b2ceec5c0908c",
@@ -375,6 +399,12 @@
 			"path": "github.com/go-ini/ini",
 			"revision": "72ba3e6b9e6b87e0c74c9a7a4dc86e8dd8ba4355",
 			"revisionTime": "2016-06-01T19:11:21Z"
+		},
+		{
+			"checksumSHA1": "2nEUYzHhmnw2o4tFPGDb3/Giz44=",
+			"path": "github.com/gogo/protobuf/proto",
+			"revision": "98f6aa8b3bcf03e45b1a8b48257c754766d5c3c8",
+			"revisionTime": "2018-08-21T10:22:07Z"
 		},
 		{
 			"checksumSHA1": "HmbftipkadrLlCfzzVQ+iFHbl6g=",
@@ -575,6 +605,24 @@
 			"revisionTime": "2019-01-18T09:38:23Z"
 		},
 		{
+			"checksumSHA1": "Rf3QgJeAX2809t/DZvMjZbGHe9U=",
+			"path": "github.com/grpc-ecosystem/go-grpc-middleware/tags",
+			"revision": "15ea7401d63d2d8c2f17472d22359564615a9f7a",
+			"revisionTime": "2018-08-24T10:49:23Z"
+		},
+		{
+			"checksumSHA1": "40Idbv0LvYI4eMdoV3UCFH0zvjA=",
+			"path": "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing",
+			"revision": "15ea7401d63d2d8c2f17472d22359564615a9f7a",
+			"revisionTime": "2018-08-24T10:49:23Z"
+		},
+		{
+			"checksumSHA1": "L5z1C445GhhQmDKSisTFv754LdU=",
+			"path": "github.com/grpc-ecosystem/go-grpc-middleware/util/metautils",
+			"revision": "15ea7401d63d2d8c2f17472d22359564615a9f7a",
+			"revisionTime": "2018-08-24T10:49:23Z"
+		},
+		{
 			"checksumSHA1": "9dP53doJ/haDqTJyD0iuv8g0XFs=",
 			"path": "github.com/grpc-ecosystem/go-grpc-prometheus",
 			"revision": "39de4380c2e0353a115b80b1c730719c79bfb771",
@@ -745,10 +793,40 @@
 			"revisionTime": "2016-01-15T11:10:02Z"
 		},
 		{
+			"checksumSHA1": "wIcN7tZiF441h08RHAm4NV8cYO4=",
+			"path": "github.com/opentracing/opentracing-go",
+			"revision": "bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d",
+			"revisionTime": "2018-06-06T20:41:48Z"
+		},
+		{
+			"checksumSHA1": "uhDxBvLEqRAMZKgpTZ8MFuLIIM8=",
+			"path": "github.com/opentracing/opentracing-go/ext",
+			"revision": "bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d",
+			"revisionTime": "2018-06-06T20:41:48Z"
+		},
+		{
+			"checksumSHA1": "tnkdNJbJxNKuPZMWapP1xhKIIGw=",
+			"path": "github.com/opentracing/opentracing-go/log",
+			"revision": "bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d",
+			"revisionTime": "2018-06-06T20:41:48Z"
+		},
+		{
 			"checksumSHA1": "mhvIMH8oAtOiEyg37zWKmgb+6v4=",
 			"path": "github.com/pborman/uuid",
 			"revision": "b984ec7fa9ff9e428bd0cf0abf429384dfbe3e37",
 			"revisionTime": "2016-08-24T21:06:00Z"
+		},
+		{
+			"checksumSHA1": "dyKMDNL6H34LGyuRvZhLEx0a/Z4=",
+			"path": "github.com/pierrec/lz4",
+			"revision": "dbe9298ce0992bc74bd23afef466c795d0d8afa0",
+			"revisionTime": "2018-08-26T16:56:52Z"
+		},
+		{
+			"checksumSHA1": "YzBjaYp2pbrwPhT6XHY0CBSh71A=",
+			"path": "github.com/pierrec/lz4/internal/xxh32",
+			"revision": "dbe9298ce0992bc74bd23afef466c795d0d8afa0",
+			"revisionTime": "2018-08-26T16:56:52Z"
 		},
 		{
 			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
@@ -797,6 +875,12 @@
 			"path": "github.com/prometheus/procfs",
 			"revision": "abf152e5f3e97f2fafac028d2cc06c1feb87ffa5",
 			"revisionTime": "2016-04-11T19:08:41Z"
+		},
+		{
+			"checksumSHA1": "an5RM8wjgPPloolUUYkvEncbHu4=",
+			"path": "github.com/rcrowley/go-metrics",
+			"revision": "e2704e165165ec55d062f5919b4b29494e9fa790",
+			"revisionTime": "2018-05-03T17:46:38Z"
 		},
 		{
 			"checksumSHA1": "dF3fORwN1HTgrlrdmll9K2cOjOg=",
@@ -1457,6 +1541,36 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "a5b47d31c556af34a302ce5d659e6fea44d90de0",
 			"revisionTime": "2016-09-28T15:37:09Z"
+		},
+		{
+			"checksumSHA1": "rE4z8/fpbG6pYFal6rdEz09Fw3I=",
+			"path": "slack-github.com/slack/murron/pkg/lib",
+			"revision": "14f1d3f7a7a3d5914b4ae7975720e6661484e2ba",
+			"revisionTime": "2018-08-22T21:54:10Z"
+		},
+		{
+			"checksumSHA1": "DghGol8loNN4nq1p8j5d4bvNMSA=",
+			"path": "slack-github.com/slack/murron/pkg/log",
+			"revision": "14f1d3f7a7a3d5914b4ae7975720e6661484e2ba",
+			"revisionTime": "2018-08-22T21:54:10Z"
+		},
+		{
+			"checksumSHA1": "yDr26+cKvGtatERB6wgzigbCueQ=",
+			"path": "slack-github.com/slack/murron/pkg/outputs",
+			"revision": "14f1d3f7a7a3d5914b4ae7975720e6661484e2ba",
+			"revisionTime": "2018-08-22T21:54:10Z"
+		},
+		{
+			"checksumSHA1": "ITTEcZ9tX4I85CjJ589kMUQR/Bc=",
+			"path": "slack-github.com/slack/murron/pkg/routes",
+			"revision": "14f1d3f7a7a3d5914b4ae7975720e6661484e2ba",
+			"revisionTime": "2018-08-22T21:54:10Z"
+		},
+		{
+			"checksumSHA1": "O22RLMWp6l6zujEHIq91SrdS5eg=",
+			"path": "slack-github.com/slack/murron/proto",
+			"revision": "14f1d3f7a7a3d5914b4ae7975720e6661484e2ba",
+			"revisionTime": "2018-08-22T21:54:10Z"
 		}
 	],
 	"rootPath": "vitess.io/vitess"
