@@ -715,29 +715,23 @@ var (
 	}, {
 		input: "set /* mixed list */ a = 3, names 'utf8', charset 'ascii', b = 4",
 	}, {
-		input:  "set session transaction isolation level repeatable read",
-		output: "set session tx_isolation = 'repeatable read'",
+		input: "set session transaction isolation level repeatable read",
 	}, {
-		input:  "set global transaction isolation level repeatable read",
-		output: "set global tx_isolation = 'repeatable read'",
+		input: "set transaction isolation level repeatable read",
 	}, {
-		input:  "set transaction isolation level repeatable read",
-		output: "set tx_isolation = 'repeatable read'",
+		input: "set global transaction isolation level repeatable read",
 	}, {
-		input:  "set transaction isolation level read committed",
-		output: "set tx_isolation = 'read committed'",
+		input: "set transaction isolation level repeatable read",
 	}, {
-		input:  "set transaction isolation level read uncommitted",
-		output: "set tx_isolation = 'read uncommitted'",
+		input: "set transaction isolation level read committed",
 	}, {
-		input:  "set transaction isolation level serializable",
-		output: "set tx_isolation = 'serializable'",
+		input: "set transaction isolation level read uncommitted",
 	}, {
-		input:  "set transaction read write",
-		output: "set tx_read_only = 0",
+		input: "set transaction isolation level serializable",
 	}, {
-		input:  "set transaction read only",
-		output: "set tx_read_only = 1",
+		input: "set transaction read write",
+	}, {
+		input: "set transaction read only",
 	}, {
 		input: "set tx_read_only = 1",
 	}, {
@@ -1639,6 +1633,9 @@ func TestConvert(t *testing.T) {
 	}, {
 		input:  "/* a comment */",
 		output: "empty statement",
+	}, {
+		input:  "set transaction isolation level 12345",
+		output: "syntax error at position 38 near '12345'",
 	}}
 
 	for _, tcase := range invalidSQL {
@@ -1853,7 +1850,14 @@ func TestCreateTable(t *testing.T) {
 			"	Z int,\n" +
 			"	primary key (id, username),\n" +
 			"	key by_email (email(10), username),\n" +
-			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b)\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b),\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on delete restrict,\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on delete no action,\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on delete cascade on update set default,\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on delete set default on update set null,\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on delete set null on update restrict,\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on update no action,\n" +
+			"	constraint second_ibfk_1 foreign key (k, j) references simple (a, b) on update cascade\n" +
 			")",
 
 		// table options
