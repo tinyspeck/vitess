@@ -39,6 +39,7 @@ import (
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/vt/concurrency"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/mysqlctl/backupstorage"
 )
 
@@ -110,6 +111,7 @@ func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize
 	if *sse != "" {
 		sseOption = sse
 	}
+	log.Infof("STARTING UPLOPAD")
 	_, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket:               bucket,
 		Key:                  object,
@@ -121,6 +123,7 @@ func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize
 	}
 	//	}()
 
+	log.Infof("FINISH UPLOAD")
 	return nil
 }
 
