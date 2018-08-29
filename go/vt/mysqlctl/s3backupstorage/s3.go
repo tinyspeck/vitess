@@ -97,10 +97,9 @@ func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize
 		}
 	}
 
-	//bh.waitGroup.Add(1)
-
+	bh.waitGroup.Add(1)
 	//go func() {
-	//		defer bh.waitGroup.Done()
+	defer bh.waitGroup.Done()
 	uploader := s3manager.NewUploaderWithClient(bh.client, func(u *s3manager.Uploader) {
 		u.PartSize = partSizeMB
 		u.Concurrency = 100
