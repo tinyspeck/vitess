@@ -18,6 +18,7 @@ package mysqlctl
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -396,17 +397,6 @@ func backupFiles(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, logger log
 		return rec.Error()
 	}
 
-	// open the MANIFEST
-	wc, err := bh.AddFile(ctx, backupManifest, 0)
-	if err != nil {
-		return fmt.Errorf("cannot add %v to backup: %v", backupManifest, err)
-	}
-	defer func() {
-		if closeErr := wc.Close(); err == nil {
-			err = closeErr
-		}
-	}()
-
 	// JSON-encode and write the MANIFEST
 	bm := &BackupManifest{
 		FileEntries:   fes,
@@ -418,10 +408,11 @@ func backupFiles(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, logger log
 	if err != nil {
 		return fmt.Errorf("cannot JSON encode %v: %v", backupManifest, err)
 	}
-	if _, err := wc.Write([]byte(data)); err != nil {
-		return fmt.Errorf("cannot write %v: %v", backupManifest, err)
+	// open the MANIFEST
+	err = bh.AddFile(ctx, backupManifest, 0, bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("cannot add %v to backup: %v", backupManifest, err)
 	}
-
 	return nil
 }
 
@@ -441,81 +432,13 @@ func backupFile(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, logger logu
 	}
 
 	// Open the destination file for writing, and a buffer.
-	wc, err := bh.AddFile(ctx, name, fi.Size())
+	err = bh.AddFile(ctx, name, fi.Size(), source)
 	if err != nil {
 		return fmt.Errorf("cannot add file: %v", err)
 	}
-	defer func() {
-		if rerr := wc.Close(); rerr != nil {
-			if err != nil {
-				// We already have an error, just log this one.
-				logger.Errorf("failed to close file %v: %v", name, rerr)
-			} else {
-				err = rerr
-			}
-		}
-	}()
-	dst := bufio.NewWriterSize(wc, 2*1024*1024)
 
 	// Create the hasher and the tee on top.
 	hasher := newHasher()
-	writer := io.MultiWriter(dst, hasher)
-
-	// Create the external write pipe, if any.
-	var pipe io.WriteCloser
-	var wait hook.WaitFunc
-	if *backupStorageHook != "" {
-		h := hook.NewHook(*backupStorageHook, []string{"-operation", "write"})
-		h.ExtraEnv = hookExtraEnv
-		pipe, wait, _, err = h.ExecuteAsWritePipe(writer)
-		if err != nil {
-			return fmt.Errorf("'%v' hook returned error: %v", *backupStorageHook, err)
-		}
-		writer = pipe
-	}
-
-	// Create the gzip compression pipe, if necessary.
-	var gzip *cgzip.Writer
-	if *backupStorageCompress {
-		gzip, err = cgzip.NewWriterLevel(writer, cgzip.Z_BEST_SPEED)
-		if err != nil {
-			return fmt.Errorf("cannot create gziper: %v", err)
-		}
-		writer = gzip
-	}
-
-	// Copy from the source file to writer (optional gzip,
-	// optional pipe, tee, output file and hasher).
-	_, err = io.Copy(writer, source)
-	if err != nil {
-		return fmt.Errorf("cannot copy data: %v", err)
-	}
-
-	// Close gzip to flush it, after that all data is sent to writer.
-	if gzip != nil {
-		if err = gzip.Close(); err != nil {
-			return fmt.Errorf("cannot close gzip: %v", err)
-		}
-	}
-
-	// Close the hook pipe if necessary.
-	if pipe != nil {
-		if err := pipe.Close(); err != nil {
-			return fmt.Errorf("cannot close hook pipe: %v", err)
-		}
-		stderr, err := wait()
-		if stderr != "" {
-			logger.Infof("'%v' hook returned stderr: %v", *backupStorageHook, stderr)
-		}
-		if err != nil {
-			return fmt.Errorf("'%v' returned error: %v", *backupStorageHook, err)
-		}
-	}
-
-	// Flush the buffer to finish writing on destination.
-	if err = dst.Flush(); err != nil {
-		return fmt.Errorf("cannot flush dst: %v", err)
-	}
 
 	// Save the hash.
 	fe.Hash = hasher.HashString()

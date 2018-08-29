@@ -81,9 +81,9 @@ func (bh *S3BackupHandle) Name() string {
 }
 
 // AddFile is part of the backupstorage.BackupHandle interface.
-func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize int64) (io.WriteCloser, error) {
+func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize int64, reader io.Reader) error {
 	if bh.readOnly {
-		return nil, fmt.Errorf("AddFile cannot be called on read-only backup")
+		return fmt.Errorf("AddFile cannot be called on read-only backup")
 	}
 
 	// Calculate s3 upload part size using the source filesize
@@ -91,19 +91,19 @@ func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize
 	if filesize > 0 {
 		minimumPartSize := float64(filesize) / float64(s3manager.MaxUploadParts)
 		// Convert partsize to mb and round up to ensure large enough partsize
-		calculatedPartSizeMB := int64(math.Ceil(minimumPartSize / 1024 * 1024))
+		calculatedPartSizeMB := int64(math.Ceil(minimumPartSize))
 		if calculatedPartSizeMB > partSizeMB {
 			partSizeMB = calculatedPartSizeMB
 		}
 	}
 
-	reader, writer := io.Pipe()
 	bh.waitGroup.Add(1)
 
 	go func() {
 		defer bh.waitGroup.Done()
 		uploader := s3manager.NewUploaderWithClient(bh.client, func(u *s3manager.Uploader) {
 			u.PartSize = partSizeMB
+			u.Concurrency = 100
 		})
 		object := objName(bh.dir, bh.name, filename)
 
@@ -118,12 +118,11 @@ func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize
 			ServerSideEncryption: sseOption,
 		})
 		if err != nil {
-			reader.CloseWithError(err)
 			bh.errors.RecordError(err)
 		}
 	}()
 
-	return writer, nil
+	return nil
 }
 
 // EndBackup is part of the backupstorage.BackupHandle interface.
