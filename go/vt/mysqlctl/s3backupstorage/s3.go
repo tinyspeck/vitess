@@ -97,30 +97,30 @@ func (bh *S3BackupHandle) AddFile(ctx context.Context, filename string, filesize
 		}
 	}
 
-	bh.waitGroup.Add(1)
+	//bh.waitGroup.Add(1)
 
-	go func() {
-		defer bh.waitGroup.Done()
-		uploader := s3manager.NewUploaderWithClient(bh.client, func(u *s3manager.Uploader) {
-			u.PartSize = partSizeMB
-			u.Concurrency = 100
-		})
-		object := objName(bh.dir, bh.name, filename)
+	//go func() {
+	//		defer bh.waitGroup.Done()
+	uploader := s3manager.NewUploaderWithClient(bh.client, func(u *s3manager.Uploader) {
+		u.PartSize = partSizeMB
+		u.Concurrency = 100
+	})
+	object := objName(bh.dir, bh.name, filename)
 
-		var sseOption *string
-		if *sse != "" {
-			sseOption = sse
-		}
-		_, err := uploader.Upload(&s3manager.UploadInput{
-			Bucket:               bucket,
-			Key:                  object,
-			Body:                 reader,
-			ServerSideEncryption: sseOption,
-		})
-		if err != nil {
-			bh.errors.RecordError(err)
-		}
-	}()
+	var sseOption *string
+	if *sse != "" {
+		sseOption = sse
+	}
+	_, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket:               bucket,
+		Key:                  object,
+		Body:                 reader,
+		ServerSideEncryption: sseOption,
+	})
+	if err != nil {
+		bh.errors.RecordError(err)
+	}
+	//	}()
 
 	return nil
 }
