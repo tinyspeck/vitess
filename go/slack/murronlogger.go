@@ -19,6 +19,7 @@ package slack
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 
 var (
 	murronConfigFile = flag.String("murron_config_file", "", "If specified, enables murron logging using the agent configuration in the given file.")
+	murronLogType    = flag.String("murron_querylog_type", "", "Type string for query logs sent to murron. Must be set if murron logging is enabled.")
 
 	murronLogs   = stats.NewCounter("MurronLogs", "count of logs dispatched to the murron queue")
 	murronErrors = stats.NewCountersWithSingleLabel("MurronErrors", "count of errors sending to murron by error type", "Type")
@@ -48,15 +50,19 @@ func MurronLoggerEnabled() bool {
 
 // MurronLogger is a logger abstraction to send to murron
 type MurronLogger struct {
-	logType string
-	queue   chan *murronpb.MurronMessage
-	client  murronoutputs.OutputService
+	queue  chan *murronpb.MurronMessage
+	client murronoutputs.OutputService
 }
 
 // InitMurronLogger creates a new logger to send to murron
-// Should only be called with a valid config file
-func InitMurronLogger(logType string) (*MurronLogger, error) {
-	log.Infof("enabling %s query logging to murron", logType)
+// Should only be called with a valid config file and if log type is set
+func InitMurronLogger() (*MurronLogger, error) {
+
+	if *murronConfigFile == "" || *murronLogType == "" {
+		return nil, fmt.Errorf("murron logging requires -murron_config_file and -murron_querylog_type to be set")
+	}
+
+	log.Infof("enabling %s query logging to murron", *murronLogType)
 
 	/* Load murron configuration */
 	config, err := murronlib.ReadConfig(*murronConfigFile)
@@ -65,8 +71,7 @@ func InitMurronLogger(logType string) (*MurronLogger, error) {
 	}
 
 	ml := &MurronLogger{
-		logType: logType,
-		queue:   make(chan *murronpb.MurronMessage, config.QueueSize),
+		queue: make(chan *murronpb.MurronMessage, config.QueueSize),
 	}
 
 	servenv.OnClose(func() {
@@ -99,7 +104,7 @@ func (ml *MurronLogger) SendMessage(formatter streamlog.LogFormatter, message in
 		OriginHost: hostname,
 		Timestamp:  time.Now().UnixNano(),
 		Host:       hostname,
-		Type:       ml.logType,
+		Type:       *murronLogType,
 		Message:    buf.Bytes(),
 	}
 	select {

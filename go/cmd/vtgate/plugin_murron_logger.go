@@ -33,7 +33,7 @@ func init() {
 }
 
 func initMurronLogger() {
-	logger, err := slack.InitMurronLogger("vtgate_querylog")
+	logger, err := slack.InitMurronLogger()
 	if err != nil {
 		log.Errorf("error initializing murron logger: %v", err)
 		return
