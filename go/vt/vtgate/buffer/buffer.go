@@ -263,6 +263,8 @@ func causedByFailover(err error) bool {
 	// Google internal flavor.
 	case strings.Contains(err.Error(), "failover in progress (errno 1227) (sqlstate 42000)"):
 		return true
+	case strings.Contains(err.Error(), "no connection for key"):
+		return true
 	}
 	return false
 }
