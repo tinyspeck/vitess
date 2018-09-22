@@ -128,7 +128,7 @@ function install_grpc() {
   # https://github.com/pypa/setuptools/issues/945
   # (and setuptools is used by grpc install).
   grpc_virtualenv="$dist/usr/local"
-  $VIRTUALENV -v "$grpc_virtualenv"
+  $VIRTUALENV --python=$PYTHON -v "$grpc_virtualenv"
   PIP=$grpc_virtualenv/bin/pip
   $PIP install --upgrade pip
   $PIP install --upgrade --ignore-installed virtualenv
@@ -233,7 +233,7 @@ function install_selenium() {
   local version="$1"
   local dist="$2"
 
-  $VIRTUALENV "$dist"
+  $VIRTUALENV --python=$PYTHON "$dist"
   PIP="$dist/bin/pip"
   # PYTHONPATH is removed for `pip install` because otherwise it can pick up go/dist/grpc/usr/local/lib/python2.7/site-packages
   # instead of go/dist/selenium/lib/python3.5/site-packages and then can't find module 'pip._vendor.requests'
