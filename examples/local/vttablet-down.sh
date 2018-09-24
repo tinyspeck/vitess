@@ -25,7 +25,7 @@ source $script_root/env.sh
 
 # Stop 3 vttablets by default.
 # Pass a list of UID indices on the command line to override.
-uids=${@:-'0 1 2 3 4'}
+uids=${TABLETS_UIDS:-'0 1 2 3 4'}
 
 wait_pids=''
 
