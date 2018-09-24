@@ -195,6 +195,7 @@ type RetryDoneFunc context.CancelFunc
 func (b *Buffer) WaitForFailoverEnd(ctx context.Context, keyspace, shard string, err error) (RetryDoneFunc, error) {
 	// If an err is given, it must be related to a failover.
 	// We never buffer requests with other errors.
+	log.Infof("YES THIS IS WORKING")
 	if err != nil && !causedByFailover(err) {
 		return nil, nil
 	}

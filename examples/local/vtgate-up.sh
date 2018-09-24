@@ -66,6 +66,8 @@ fi
 $VTROOT/bin/vtgate \
   $TOPOLOGY_FLAGS \
   -log_dir $VTDATAROOT/tmp \
+  -enable_buffer \
+  -buffer_size 100 \
   -port $web_port \
   -grpc_port $grpc_port \
   -mysql_server_port $mysql_server_port \

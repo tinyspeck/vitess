@@ -260,8 +260,10 @@ func (dg *discoveryGateway) withRetry(ctx context.Context, target *querypb.Targe
 		// Note: We only buffer once and only "!inTransaction" queries i.e.
 		// a) no transaction is necessary (e.g. critical reads) or
 		// b) no transaction was created yet.
+		log.Info("MAKING REQUEST")
 		if !bufferedOnce && !inTransaction && target.TabletType == topodatapb.TabletType_MASTER {
 			// The next call blocks if we should buffer during a failover.
+			log.Info("IT SHOULD BUFFER")
 			retryDone, bufferErr := dg.buffer.WaitForFailoverEnd(ctx, target.Keyspace, target.Shard, err)
 			if bufferErr != nil {
 				// Buffering failed e.g. buffer is already full. Do not retry.
