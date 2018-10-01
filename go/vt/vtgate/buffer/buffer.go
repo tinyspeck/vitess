@@ -195,22 +195,23 @@ type RetryDoneFunc context.CancelFunc
 func (b *Buffer) WaitForFailoverEnd(ctx context.Context, keyspace, shard string, err error) (RetryDoneFunc, error) {
 	// If an err is given, it must be related to a failover.
 	// We never buffer requests with other errors.
-	log.Infof("YES THIS IS WORKING")
+	log.Infof("CHECKPOINT 1")
 	if err != nil && !causedByFailover(err) {
 		return nil, nil
 	}
-
+	log.Infof("CHECKPOINT 2")
 	sb := b.getOrCreateBuffer(keyspace, shard)
 	if sb == nil {
 		// Buffer is shut down. Ignore all calls.
 		requestsSkipped.Add([]string{keyspace, shard, skippedShutdown}, 1)
 		return nil, nil
 	}
+	log.Infof("CHECKPOINT 3")
 	if sb.disabled() {
 		requestsSkipped.Add([]string{keyspace, shard, skippedDisabled}, 1)
 		return nil, nil
 	}
-
+	log.Infof("CHECKPOINT 4")
 	return sb.waitForFailoverEnd(ctx, keyspace, shard, err)
 }
 
@@ -244,7 +245,8 @@ func causedByFailover(err error) bool {
 	log.V(2).Infof("Checking error (type: %T) if it is caused by a failover. err: %v", err, err)
 
 	// TODO(sougou): Remove the INTERNAL check after rollout.
-	if code := vterrors.Code(err); code != vtrpcpb.Code_FAILED_PRECONDITION && code != vtrpcpb.Code_INTERNAL {
+	if code := vterrors.Code(err); code != vtrpcpb.Code_FAILED_PRECONDITION && code != vtrpcpb.Code_INTERNAL && code != vtrpcpb.Code_UNAVAILABLE {
+		log.Infof("Aborted because of code %v", code)
 		return false
 	}
 	switch {

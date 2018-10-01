@@ -55,7 +55,7 @@ mkdir -p $VTDATAROOT/backups
 
 # Start 5 vttablets by default.
 # Pass TABLETS_UIDS indices as env variable to change
-uids=${TABLETS_UIDS:-'0 1 2 3 4'}
+uids='0'
 
 optional_auth_args=''
 if [ "$1" = "--enable-grpc-static-auth" ];

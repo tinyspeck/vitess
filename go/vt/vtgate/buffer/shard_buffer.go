@@ -156,17 +156,21 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 	}
 	sb.mu.RUnlock()
 
+	log.Infof("YES THIS IS WORKING")
 	// Buffering required. Acquire write lock.
 	sb.mu.Lock()
 	// Re-check state because it could have changed in the meantime.
 	if !sb.shouldBufferLocked(failoverDetected) {
 		// Buffering no longer required. Return early.
 		sb.mu.Unlock()
+		log.Infof("YES THIS IS WORKING 2")
 		return nil, nil
 	}
 
+	log.Infof("YES THIS IS WORKING 3")
 	// Start buffering if failover is not detected yet.
 	if sb.state == stateIdle {
+		log.Infof("YES THIS IS WORKING 4")
 		// Do not buffer if last failover is too recent. This is the case if:
 		// a) buffering was stopped recently
 		// OR
@@ -178,6 +182,7 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 		// (read-only mode is not cleared yet on the new master).
 		lastBufferingStopped := now.Sub(sb.lastEnd)
 		if !sb.lastEnd.IsZero() && lastBufferingStopped < *minTimeBetweenFailovers {
+			log.Infof("YES THIS IS WORKING 5")
 			sb.mu.Unlock()
 			msg := "NOT starting buffering"
 			if sb.mode == bufferDryRun {
@@ -193,6 +198,7 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 			return nil, nil
 		}
 
+		log.Infof("YES THIS IS WORKING 6")
 		// b) The MASTER was reparented recently (but we did not buffer it.)
 		// This can happen when we see the end of the reparent *before* the first
 		// request failure caused by the reparent. This is possible if the QPS is
@@ -200,6 +206,7 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 		// not stop because we already observed the promotion of the new master.
 		lastReparentAgo := now.Sub(sb.lastReparent)
 		if !sb.lastReparent.IsZero() && lastReparentAgo < *minTimeBetweenFailovers {
+			log.Infof("YES THIS IS WORKING 7")
 			sb.mu.Unlock()
 			msg := "NOT starting buffering"
 			if sb.mode == bufferDryRun {
@@ -215,10 +222,13 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 			return nil, nil
 		}
 
+		log.Infof("YES THIS IS WORKING 8")
 		sb.startBufferingLocked(err)
 	}
 
+	log.Infof("YES THIS IS WORKING 9")
 	if sb.mode == bufferDryRun {
+		log.Infof("YES THIS IS WORKING 10")
 		sb.mu.Unlock()
 		// Dry-run. Do not actually buffer the request and return early.
 		lastRequestsDryRunMax.Add(sb.statsKey, 1)
@@ -227,6 +237,7 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 	}
 
 	// Buffer request.
+	log.Infof("YES THIS IS WORKING 11")
 	entry, err := sb.bufferRequestLocked(ctx)
 	sb.mu.Unlock()
 	if err != nil {
@@ -238,6 +249,7 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 // shouldBufferLocked returns true if the current request should be buffered
 // (based on the current state and whether the request detected a failover).
 func (sb *shardBuffer) shouldBufferLocked(failoverDetected bool) bool {
+	log.Infof("ShouldBufferLocked: %v, %v", failoverDetected, sb.state)
 	switch s := sb.state; {
 	case s == stateIdle && !failoverDetected:
 		// No failover in progress.
