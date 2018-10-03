@@ -526,6 +526,7 @@ func (tsv *TabletServer) serveNewType() (err error) {
 		tsv.messager.Open()
 		tsv.hr.Close()
 		tsv.hw.Open()
+		tsv.transition(StateServing)
 	} else {
 		tsv.messager.Close()
 		tsv.hr.Open()
@@ -542,8 +543,8 @@ func (tsv *TabletServer) serveNewType() (err error) {
 
 		// Reset the sequences.
 		tsv.se.MakeNonMaster()
+		tsv.transition(StateNotServing)
 	}
-	tsv.transition(StateServing)
 	return nil
 }
 
