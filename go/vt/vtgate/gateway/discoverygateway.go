@@ -261,7 +261,6 @@ func (dg *discoveryGateway) withRetry(ctx context.Context, target *querypb.Targe
 		// a) no transaction is necessary (e.g. critical reads) or
 		// b) no transaction was created yet.
 		shouldBuffer := !bufferedOnce && !inTransaction && target.TabletType == topodatapb.TabletType_MASTER
-		log.Infof("MAKING REQUEST retry is: %v, shouldBuffer is %v", i, shouldBuffer)
 		if shouldBuffer {
 			// The next call blocks if we should buffer during a failover.
 			retryDone, bufferErr := dg.buffer.WaitForFailoverEnd(ctx, target.Keyspace, target.Shard, err)
@@ -312,7 +311,10 @@ func (dg *discoveryGateway) withRetry(ctx context.Context, target *querypb.Targe
 		conn := dg.hc.GetConnection(ts.Key)
 		if conn == nil {
 			err = vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "no connection for key %v tablet %+v", ts.Key, ts.Tablet)
-			invalidTablets[ts.Key] = true
+			if target.TabletType != topodatapb.TabletType_MASTER {
+				invalidTablets[ts.Key] = true
+			}
+
 			continue
 		}
 
@@ -321,7 +323,9 @@ func (dg *discoveryGateway) withRetry(ctx context.Context, target *querypb.Targe
 		err, canRetry = inner(ctx, ts.Target, conn)
 		dg.updateStats(target, startTime, err)
 		if canRetry {
-			invalidTablets[ts.Key] = true
+			if target.TabletType != topodatapb.TabletType_MASTER {
+				invalidTablets[ts.Key] = true
+			}
 			continue
 		}
 		break

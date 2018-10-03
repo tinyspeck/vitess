@@ -195,23 +195,19 @@ type RetryDoneFunc context.CancelFunc
 func (b *Buffer) WaitForFailoverEnd(ctx context.Context, keyspace, shard string, err error) (RetryDoneFunc, error) {
 	// If an err is given, it must be related to a failover.
 	// We never buffer requests with other errors.
-	log.Infof("CHECKPOINT 1")
 	if err != nil && !causedByFailover(err) {
 		return nil, nil
 	}
-	log.Infof("CHECKPOINT 2")
 	sb := b.getOrCreateBuffer(keyspace, shard)
 	if sb == nil {
 		// Buffer is shut down. Ignore all calls.
 		requestsSkipped.Add([]string{keyspace, shard, skippedShutdown}, 1)
 		return nil, nil
 	}
-	log.Infof("CHECKPOINT 3")
 	if sb.disabled() {
 		requestsSkipped.Add([]string{keyspace, shard, skippedDisabled}, 1)
 		return nil, nil
 	}
-	log.Infof("CHECKPOINT 4")
 	return sb.waitForFailoverEnd(ctx, keyspace, shard, err)
 }
 
