@@ -176,23 +176,22 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 		// a) Buffering was stopped recently.
 		// This can happen when we stop buffering while MySQL is not ready yet
 		// (read-only mode is not cleared yet on the new master).
-		//		lastBufferingStopped := now.Sub(sb.lastEnd)
-		// if !sb.lastEnd.IsZero() && lastBufferingStopped < *minTimeBetweenFailovers {
-		// 	log.Infof("YES THIS IS WORKING 5")
-		// 	sb.mu.Unlock()
-		// 	msg := "NOT starting buffering"
-		// 	if sb.mode == bufferDryRun {
-		// 		msg = "Dry-run: Would NOT have started buffering"
-		// 	}
+		lastBufferingStopped := now.Sub(sb.lastEnd)
+		if !sb.lastEnd.IsZero() && lastBufferingStopped < *minTimeBetweenFailovers {
+			sb.mu.Unlock()
+			msg := "NOT starting buffering"
+			if sb.mode == bufferDryRun {
+				msg = "Dry-run: Would NOT have started buffering"
+			}
 
-		// 	sb.logTooRecent.Infof("%v for shard: %s because the last failover which triggered buffering is too recent (%v < %v)."+
-		// 		" (A failover was detected by this seen error: %v.)",
-		// 		msg, topoproto.KeyspaceShardString(keyspace, shard), lastBufferingStopped, *minTimeBetweenFailovers, err)
+			sb.logTooRecent.Infof("%v for shard: %s because the last failover which triggered buffering is too recent (%v < %v)."+
+				" (A failover was detected by this seen error: %v.)",
+				msg, topoproto.KeyspaceShardString(keyspace, shard), lastBufferingStopped, *minTimeBetweenFailovers, err)
 
-		// 	statsKeyWithReason := append(sb.statsKey, string(skippedLastFailoverTooRecent))
-		// 	requestsSkipped.Add(statsKeyWithReason, 1)
-		// 	return nil, nil
-		// }
+			statsKeyWithReason := append(sb.statsKey, string(skippedLastFailoverTooRecent))
+			requestsSkipped.Add(statsKeyWithReason, 1)
+			return nil, nil
+		}
 
 		// b) The MASTER was reparented recently (but we did not buffer it.)
 		// This can happen when we see the end of the reparent *before* the first
