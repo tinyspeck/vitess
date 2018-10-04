@@ -471,7 +471,7 @@ func (sb *shardBuffer) remove(toRemove *entry) {
 func (sb *shardBuffer) recordExternallyReparentedTimestamp(timestamp int64, alias *topodatapb.TabletAlias) {
 	// Fast path (read lock): Check if new timestamp is higher.
 	sb.mu.RLock()
-	if timestamp <= sb.externallyReparented {
+	if timestamp < sb.externallyReparented {
 		// Do nothing. Equal values are reported if the MASTER has not changed.
 		// Smaller values can be reported during the failover by the old master
 		// after the new master already took over.
