@@ -242,7 +242,6 @@ func causedByFailover(err error) bool {
 
 	// TODO(sougou): Remove the INTERNAL check after rollout.
 	if code := vterrors.Code(err); code != vtrpcpb.Code_FAILED_PRECONDITION && code != vtrpcpb.Code_INTERNAL && code != vtrpcpb.Code_UNAVAILABLE {
-		log.Infof("Aborted because of code %v", code)
 		return false
 	}
 	switch {

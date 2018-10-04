@@ -228,7 +228,6 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 	}
 
 	// Buffer request.
-	log.Infof("YES THIS IS WORKING 11")
 	entry, err := sb.bufferRequestLocked(ctx)
 	sb.mu.Unlock()
 	if err != nil {
@@ -240,7 +239,6 @@ func (sb *shardBuffer) waitForFailoverEnd(ctx context.Context, keyspace, shard s
 // shouldBufferLocked returns true if the current request should be buffered
 // (based on the current state and whether the request detected a failover).
 func (sb *shardBuffer) shouldBufferLocked(failoverDetected bool) bool {
-	log.Infof("ShouldBufferLocked: %v, %v", failoverDetected, sb.state)
 	switch s := sb.state; {
 	case s == stateIdle && !failoverDetected:
 		// No failover in progress.
