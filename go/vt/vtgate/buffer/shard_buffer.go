@@ -485,7 +485,7 @@ func (sb *shardBuffer) recordExternallyReparentedTimestamp(timestamp int64, alia
 	defer sb.mu.Unlock()
 
 	// Re-check value after acquiring write lock.
-	if timestamp <= sb.externallyReparented {
+	if timestamp < sb.externallyReparented {
 		return
 	}
 

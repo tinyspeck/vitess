@@ -263,6 +263,8 @@ func causedByFailover(err error) bool {
 		return true
 	case strings.Contains(err.Error(), "no connection for key"):
 		return true
+	case strings.Contains(err.Error(), "all SubConns are in TransientFailure"):
+		return true
 	}
 	return false
 }
