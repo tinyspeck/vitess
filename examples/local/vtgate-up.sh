@@ -78,6 +78,9 @@ $VTROOT/bin/vtgate \
   -cells_to_watch $cell \
   -tablet_types_to_wait MASTER,REPLICA \
   -gateway_implementation discoverygateway \
+  -healthcheck_timeout 2s \
+  -grpc_keepalive_time 2s \
+	-grpc_keepalive_timeout 2s \
   -service_map 'grpc-vtgateservice' \
   -pid_file $VTDATAROOT/tmp/vtgate.pid \
   $optional_auth_args \
