@@ -121,7 +121,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> SELECT STREAM INSERT UPDATE DELETE FROM WHERE GROUP HAVING ORDER BY LIMIT OFFSET FOR
 %token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK UNLOCK KEYS
 %token <bytes> VALUES LAST_INSERT_ID
-%token <bytes> NEXT VALUE SHARE MODE
+%token <bytes> NEXT VALUE SHARE MODE SHARD_PARTIAL
 %token <bytes> SQL_NO_CACHE SQL_CACHE
 %left <bytes> JOIN STRAIGHT_JOIN LEFT RIGHT INNER OUTER CROSS NATURAL USE FORCE
 %left <bytes> ON USING
@@ -361,6 +361,10 @@ select_statement:
 | SELECT comment_opt cache_opt NEXT num_val for_from table_name
   {
     $$ = &Select{Comments: Comments($2), Cache: $3, SelectExprs: SelectExprs{Nextval{Expr: $5}}, From: TableExprs{&AliasedTableExpr{Expr: $7}}}
+  }
+| SELECT comment_opt cache_opt SHARD_PARTIAL distinct_opt straight_join_opt select_expression_list from_opt where_expression_opt group_by_opt having_opt order_by_opt limit_opt
+  {
+    $$ = &Select{Comments: Comments($2), Cache: $3, ShardPartial: true, Distinct: $5, Hints: $6, SelectExprs: $7, From: $8, Where: NewWhere(WhereStr, $9), GroupBy: GroupBy($10), Having: NewWhere(HavingStr, $11), OrderBy: $12, Limit: $13}
   }
 
 stream_statement:
@@ -3152,6 +3156,7 @@ reserved_keyword:
 | OR
 | ORDER
 | OUTER
+| SHARD_PARTIAL // shard_partial should be doable as non-reserved, but is not due to the special `select shard_partial` query that vitess supports
 | REGEXP
 | RENAME
 | REPLACE

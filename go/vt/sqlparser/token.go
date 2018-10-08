@@ -284,6 +284,7 @@ var keywords = map[string]int{
 	"out":                 UNUSED,
 	"outer":               OUTER,
 	"outfile":             UNUSED,
+	"shard_partial":       SHARD_PARTIAL,
 	"partition":           PARTITION,
 	"point":               POINT,
 	"polygon":             POLYGON,

@@ -307,18 +307,19 @@ func (*ParenSelect) iSelectStatement() {}
 
 // Select represents a SELECT statement.
 type Select struct {
-	Cache       string
-	Comments    Comments
-	Distinct    string
-	Hints       string
-	SelectExprs SelectExprs
-	From        TableExprs
-	Where       *Where
-	GroupBy     GroupBy
-	Having      *Where
-	OrderBy     OrderBy
-	Limit       *Limit
-	Lock        string
+	Cache        string
+	Comments     Comments
+	ShardPartial bool
+	Distinct     string
+	Hints        string
+	SelectExprs  SelectExprs
+	From         TableExprs
+	Where        *Where
+	GroupBy      GroupBy
+	Having       *Where
+	OrderBy      OrderBy
+	Limit        *Limit
+	Lock         string
 }
 
 // Select.Distinct
