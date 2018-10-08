@@ -72,6 +72,9 @@ type Route struct {
 
 	// QueryTimeout contains the optional timeout (in milliseconds) to apply to this query
 	QueryTimeout int
+
+	// ShardPartial is true if results should be returned even if some shards have an error
+	ShardPartial bool
 }
 
 // OrderbyParams specifies the parameters for ordering.
@@ -98,6 +101,7 @@ func (route *Route) MarshalJSON() ([]byte, error) {
 		OrderBy             []OrderbyParams      `json:",omitempty"`
 		TruncateColumnCount int                  `json:",omitempty"`
 		QueryTimeout        int                  `json:",omitempty"`
+		ShardPartial        bool                 `json:",omitempty"`
 	}{
 		Opcode:              route.Opcode,
 		Keyspace:            route.Keyspace,
@@ -108,6 +112,7 @@ func (route *Route) MarshalJSON() ([]byte, error) {
 		OrderBy:             route.OrderBy,
 		TruncateColumnCount: route.TruncateColumnCount,
 		QueryTimeout:        route.QueryTimeout,
+		ShardPartial:        route.ShardPartial,
 	}
 	return jsonutil.MarshalNoEscape(marshalRoute)
 }

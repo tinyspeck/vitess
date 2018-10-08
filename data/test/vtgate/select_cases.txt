@@ -105,6 +105,83 @@
   }
 }
 
+# select with partial scatter directive
+"select SHARD_PARTIAL * from user"
+{
+  "Original": "select SHARD_PARTIAL * from user",
+  "Instructions": {
+    "Opcode": "SelectScatter",
+    "Keyspace": {
+      "Name": "user",
+      "Sharded": true
+    },
+    "Query": "select * from user",
+    "FieldQuery": "select * from user where 1 != 1",
+    "ShardPartial": true
+  }
+}
+
+# select aggregation with partial scatter directive
+"select SHARD_PARTIAL count(*) from user"
+{
+  "Original": "select SHARD_PARTIAL count(*) from user",
+  "Instructions": {
+    "Aggregates": [
+      {
+        "Opcode": "count",
+        "Col": 0
+      }
+    ],
+    "Keys": null,
+    "Input": {
+      "Opcode": "SelectScatter",
+      "Keyspace": {
+        "Name": "user",
+        "Sharded": true
+      },
+      "Query": "select count(*) from user",
+      "FieldQuery": "select count(*) from user where 1 != 1",
+      "ShardPartial": true
+    }
+  }
+}
+
+# select limit with partial scatter directive
+"select SHARD_PARTIAL * from user limit 10"
+{
+  "Original": "select SHARD_PARTIAL * from user limit 10",
+  "Instructions": {
+    "Opcode": "Limit",
+    "Count": 10,
+    "Offset": null,
+    "Input": {
+      "Opcode": "SelectScatter",
+      "Keyspace": {
+        "Name": "user",
+        "Sharded": true
+      },
+      "Query": "select * from user limit :__upper_limit",
+      "FieldQuery": "select * from user where 1 != 1",
+      "ShardPartial": true
+    }
+  }
+}
+
+# select with partial scatter column 
+"select `SHARD_PARTIAL`, id, val from user"
+{
+  "Original": "select `SHARD_PARTIAL`, id, val from user",
+  "Instructions": {
+    "Opcode": "SelectScatter",
+    "Keyspace": {
+      "Name": "user",
+      "Sharded": true
+    },
+    "Query": "select `SHARD_PARTIAL`, id, val from user",
+    "FieldQuery": "select `SHARD_PARTIAL`, id, val from user where 1 != 1"
+  }
+}
+
 # qualified '*' expression for simple route
 "select user.* from user"
 {
@@ -841,3 +918,4 @@
     "FieldQuery": "(select id from unsharded where 1 != 1) union (select id from unsharded where 1 != 1)"
   }
 }
+
