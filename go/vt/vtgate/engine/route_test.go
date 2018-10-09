@@ -108,6 +108,36 @@ func TestSelectScatter(t *testing.T) {
 	expectResult(t, "sel.StreamExecute", result, defaultSelectResult)
 }
 
+func TestSelectScatterPartial(t *testing.T) {
+	sel := &Route{
+		Opcode: SelectScatter,
+		Keyspace: &vindexes.Keyspace{
+			Name:    "ks",
+			Sharded: true,
+		},
+		Query:        "dummy_select",
+		FieldQuery:   "dummy_select_field",
+		ShardPartial: true,
+	}
+
+	vc := &loggingVCursor{
+		shards:  []string{"-20", "20-"},
+		results: []*sqltypes.Result{defaultSelectResult},
+	}
+	result, err := sel.Execute(vc, map[string]*querypb.BindVariable{}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vc.ExpectLog(t, []string{
+		`ResolveDestinations ks [] Destinations:DestinationAllShards()`,
+		`ExecuteMultiShard ks.-20: dummy_select {} ks.20-: dummy_select {} false false`,
+	})
+	expectResult(t, "sel.Execute", result, defaultSelectResult)
+
+	vc.Rewind()
+
+}
+
 func TestSelectEqualUnique(t *testing.T) {
 	vindex, _ := vindexes.NewHash("", nil)
 	sel := &Route{

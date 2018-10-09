@@ -86,7 +86,7 @@ type loggingVCursor struct {
 
 	results   []*sqltypes.Result
 	curResult int
-	resultErr error
+	//	resultErr error
 
 	log []string
 }

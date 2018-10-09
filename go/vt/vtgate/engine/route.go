@@ -161,6 +161,8 @@ var routeName = map[RouteOpcode]string{
 var (
 	routeMetrics *stats.CountersWithSingleLabel
 	scatterWidth = stats.NewCounter("RouteTotalScatterWidth", "Total width (shards routed to by a statement) of all statements routed")
+
+	partialSuccessScatterQueries = stats.NewCounter("PartialSuccessScatterQueries", "Count of partially successful scatter queries")
 )
 
 func init() {
@@ -228,8 +230,26 @@ func (route *Route) execute(vcursor VCursor, bindVars map[string]*querypb.BindVa
 
 	queries := getQueries(route.Query, bvs)
 	result, errs := vcursor.ExecuteMultiShard(rss, queries, false /* isDML */, false /* autocommit */)
+
 	if errs != nil {
-		return nil, vterrors.Aggregate(errs)
+		if route.ShardPartial {
+			// If all the shards failed, treat the operation as failed.
+			// Otherwise fall through and process whatever was returned.
+			partialSuccess := false
+			for _, err := range errs {
+				if err == nil {
+					partialSuccess = true
+					break
+				}
+			}
+			if partialSuccess {
+				partialSuccessScatterQueries.Add(1)
+			} else {
+				return nil, vterrors.Aggregate(errs)
+			}
+		} else {
+			return nil, vterrors.Aggregate(errs)
+		}
 	}
 	if len(route.OrderBy) == 0 {
 		return result, nil
