@@ -66,7 +66,14 @@ func (agent *ActionAgent) Backup(ctx context.Context, concurrency int, logger lo
 	name := fmt.Sprintf("%v.%v", time.Now().UTC().Format("2006-01-02.150405"), topoproto.TabletAliasString(tablet.Alias))
 	returnErr := mysqlctl.Backup(ctx, agent.Cnf, agent.MysqlDaemon, l, dir, name, concurrency, agent.hookExtraEnv())
 
-	// change our type back to the original value
+	// Change the ServingType to NOT_SERVING. We will allow the healthcheck conn to change the serving type to SERVING.
+	changed, err := agent.QueryServiceControl.SetServingType(topodatapb.TabletType_RESTORE, false, nil)
+
+	if !changed || err != nil {
+		println(fmt.Sprintf("SetServingType to NOT_SERVING failed: %v", err))
+	}
+
+	// change our tablet type back to the original value
 	_, err = topotools.ChangeType(ctx, agent.TopoServer, tablet.Alias, originalType)
 	if err != nil {
 		// failure in changing the topology type is probably worse,
