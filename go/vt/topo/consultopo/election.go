@@ -31,8 +31,9 @@ func (s *Server) NewMasterParticipation(name, id string) (topo.MasterParticipati
 	// Create the lock here.
 	electionPath := path.Join(s.root, electionsPath, name)
 	l, err := s.client.LockOpts(&api.LockOptions{
-		Key:   electionPath,
-		Value: []byte(id),
+		Key:            electionPath,
+		Value:          []byte(id),
+		MonitorRetries: 3,
 	})
 	if err != nil {
 		return nil, err
@@ -97,8 +98,9 @@ func (mp *consulMasterParticipation) WaitForMastership() (context.Context, error
 	lockCtx, lockCancel := context.WithCancel(context.Background())
 	go func() {
 		select {
-		case <-lost:
+		case m := <-lost:
 			// We lost the lock, nothing to do but lockCancel().
+			log.Infof("LOST THE LCOK for some reason %v", m)
 			lockCancel()
 		case <-mp.stop:
 			// Stop was called. We stop the context first,
