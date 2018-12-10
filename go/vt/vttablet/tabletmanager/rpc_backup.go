@@ -79,7 +79,7 @@ func (agent *ActionAgent) Backup(ctx context.Context, concurrency int, logger lo
 	changed, err := agent.QueryServiceControl.SetServingType(topodatapb.TabletType_RESTORE, false, nil)
 
 	if !changed || err != nil {
-		l.Errorf("SetServingType to NOT_SERVING failed: %v", err))
+		l.Errorf("SetServingType to NOT_SERVING failed: %v", err)
 	}
 
 	// change our tablet type back to the original value
