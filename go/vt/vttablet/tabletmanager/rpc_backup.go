@@ -66,7 +66,23 @@ func (agent *ActionAgent) Backup(ctx context.Context, concurrency int, logger lo
 	name := fmt.Sprintf("%v.%v", time.Now().UTC().Format("2006-01-02.150405"), topoproto.TabletAliasString(tablet.Alias))
 	returnErr := mysqlctl.Backup(ctx, agent.Cnf, agent.MysqlDaemon, l, dir, name, concurrency, agent.hookExtraEnv())
 
-	// change our type back to the original value
+	// TODO(setassociative): what is the difference between serving type and
+	//   tablet topo type?
+	// Theory: tablet topo type is its own view, e.g., I can serve traffic
+	//   serving type is the query routing layer's view, e.g., that tablet is
+	//   doing a restore
+	// This would allow healthcheck to fix it in the view of the query router
+	// with minimal disruption
+
+	// Change the ServingType to NOT_SERVING. We will allow the healthcheck
+	// conn to change the serving type to SERVING.
+	changed, err := agent.QueryServiceControl.SetServingType(topodatapb.TabletType_RESTORE, false, nil)
+
+	if !changed || err != nil {
+		l.Errorf("SetServingType to NOT_SERVING failed: %v", err))
+	}
+
+	// change our tablet type back to the original value
 	_, err = topotools.ChangeType(ctx, agent.TopoServer, tablet.Alias, originalType)
 	if err != nil {
 		// failure in changing the topology type is probably worse,
