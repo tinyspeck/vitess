@@ -70,18 +70,11 @@ func (agent *ActionAgent) TabletExternallyReparented(ctx context.Context, extern
 
 	tablet := agent.Tablet()
 
-	// Check the global shard record.
-	si, err := agent.TopoServer.GetShard(ctx, tablet.Keyspace, tablet.Shard)
-	if err != nil {
-		log.Warningf("fastTabletExternallyReparented: failed to read global shard record for %v/%v: %v", tablet.Keyspace, tablet.Shard, err)
-		return err
-	}
-
 	// The external failover tool told us that we are still the MASTER. Update the
 	// timestamp to the current time.
 	agent.setExternallyReparentedTime(startTime)
 
-	if topoproto.TabletAliasEqual(si.MasterAlias, tablet.Alias) {
+	if tablet.Type == topodatapb.TabletType_MASTER {
 		// We may get called on the current master even when nothing has changed.
 		// If the global shard record is already updated, it means we successfully
 		// finished a previous reparent to this tablet.
@@ -90,19 +83,17 @@ func (agent *ActionAgent) TabletExternallyReparented(ctx context.Context, extern
 
 	// Create a reusable Reparent event with available info.
 	ev := &events.Reparent{
-		ShardInfo: *si,
+		// This seems like it could be constructed from tablet record
+		//ShardInfo: *si,
 		NewMaster: *tablet,
-		OldMaster: topodatapb.Tablet{
-			Alias: si.MasterAlias,
-			Type:  topodatapb.TabletType_MASTER,
-		},
+		// Do we need this?
+		// OldMaster: topodatapb.Tablet{
+		// 	Alias: si.MasterAlias,
+		// 	Type:  topodatapb.TabletType_MASTER,
+		// },
 		ExternalID: externalID,
 	}
-	defer func() {
-		if err != nil {
-			event.DispatchUpdate(ev, "failed: "+err.Error())
-		}
-	}()
+
 	event.DispatchUpdate(ev, "starting external from tablet (fast)")
 
 	// Execute state change to master by force-updating only the local copy of the
@@ -120,7 +111,21 @@ func (agent *ActionAgent) TabletExternallyReparented(ctx context.Context, extern
 	bgCtx = trace.CopySpan(bgCtx, ctx)
 	agent.finalizeReparentCtx = bgCtx
 	go func() {
-		err := agent.finalizeTabletExternallyReparented(bgCtx, si, ev)
+		// TODO: Retry this until it eventually succeeds. Of course, error handling here is tricky. What to do if this process dies and this never happens?
+		// Check the global shard record.
+		si, err := agent.TopoServer.GetShard(ctx, tablet.Keyspace, tablet.Shard)
+		if err != nil {
+			log.Warningf("fastTabletExternallyReparented: failed to read global shard record for %v/%v: %v", tablet.Keyspace, tablet.Shard, err)
+			return
+		}
+		if topoproto.TabletAliasEqual(si.MasterAlias, tablet.Alias) {
+			// We may get called on the current master even when nothing has changed.
+			// If the global shard record is already updated, it means we successfully
+			// finished a previous reparent to this tablet.
+			return
+		}
+
+		err = agent.finalizeTabletExternallyReparented(bgCtx, si, ev)
 		cancel()
 
 		if err != nil {
