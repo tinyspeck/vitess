@@ -183,6 +183,8 @@ type TabletStats struct {
 	// LastError is the error we last saw when trying to get the
 	// tablet's healthcheck.
 	LastError error
+	// InHealthyCache XXX
+	InHealthCache bool
 }
 
 // String is defined because we want to print a []*TabletStats array nicely.
@@ -279,6 +281,8 @@ type HealthCheck interface {
 	// Note that the default implementation requires to set the
 	// listener before any tablets are added to the healthcheck.
 	SetListener(listener HealthCheckStatsListener, sendDownEvents bool)
+	// SetCache XXX
+	SetCache(cache *TabletStatsCache)
 	// WaitForInitialStatsUpdates waits until all tablets added via
 	// AddTablet() call were propagated to the listener via corresponding
 	// StatsUpdate() calls. Note that code path from AddTablet() to
@@ -320,6 +324,8 @@ type HealthCheckImpl struct {
 
 	// Wait group that's used to wait until all initial StatsUpdate() calls are made after the AddTablet() calls.
 	initialUpdatesWG sync.WaitGroup
+
+	cache *TabletStatsCache
 }
 
 // healthCheckConn is a structure that lives within the scope of
@@ -716,6 +722,10 @@ func (hc *HealthCheckImpl) SetListener(listener HealthCheckStatsListener, sendDo
 	hc.sendDownEvents = sendDownEvents
 }
 
+func (hc *HealthCheckImpl) SetCache(cache *TabletStatsCache) {
+	hc.cache = cache
+}
+
 // AddTablet adds the tablet, and starts health check.
 // It does not block on making connection.
 // name is an optional tag for the tablet, e.g. an alternative address.
@@ -842,11 +852,12 @@ func (tcs *TabletsCacheStatus) StatusAsHTML() template.HTML {
 		} else {
 			extra = fmt.Sprintf(" (RepLag: %v)", ts.Stats.SecondsBehindMaster)
 		}
+		extra = extra + ""
 		name := ts.Name
 		if name == "" {
 			name = ts.GetTabletHostPort()
 		}
-		tLinks = append(tLinks, fmt.Sprintf(`<a href="%s" style="color:%v">%v</a>%v`, ts.getTabletDebugURL(), color, name, extra))
+		tLinks = append(tLinks, fmt.Sprintf(`<a href="%s" style="color:%v">%v</a>%v (InHealthCache: %v)`, ts.getTabletDebugURL(), color, name, extra, ts.InHealthCache))
 	}
 	return template.HTML(strings.Join(tLinks, "<br>"))
 }
@@ -897,6 +908,16 @@ func (hc *HealthCheckImpl) cacheStatusMap() map[string]*TabletsCacheStatus {
 			tcsMap[key] = tcs
 		}
 		stats := th.latestTabletStats
+		if hc.cache != nil {
+			healthyTablets := hc.cache.GetHealthyTabletStats(th.latestTabletStats.Target.Keyspace, th.latestTabletStats.Target.Shard, th.latestTabletStats.Target.TabletType)
+
+			for _, healthy := range healthyTablets {
+				if healthy.Key == th.latestTabletStats.Key {
+					stats.InHealthCache = true
+				}
+			}
+
+		}
 		tcs.TabletsStats = append(tcs.TabletsStats, &stats)
 	}
 	return tcsMap

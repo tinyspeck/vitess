@@ -54,7 +54,7 @@ type TabletStatsCache struct {
 	mu sync.RWMutex
 	// entries maps from keyspace/shard/tabletType to our cache.
 	entries map[string]map[string]map[topodatapb.TabletType]*tabletStatsCacheEntry
-	// tsm is a helper to broadcast aggregate stats.
+	// tsm is a helper to broadcast aggregate .
 	tsm srvtopo.TargetStatsMultiplexer
 }
 

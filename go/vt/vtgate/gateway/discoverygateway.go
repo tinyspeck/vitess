@@ -103,6 +103,7 @@ func createDiscoveryGateway(hc discovery.HealthCheck, serv srvtopo.Server, cell 
 	// Set listener which will update TabletStatsCache and MasterBuffer.
 	// We set sendDownEvents=true because it's required by TabletStatsCache.
 	hc.SetListener(dg, true /* sendDownEvents */)
+	hc.SetCache(dg.tsc)
 
 	log.Infof("loading tablets for cells: %v", *cellsToWatch)
 	for _, c := range strings.Split(*cellsToWatch, ",") {
