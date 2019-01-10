@@ -60,10 +60,12 @@ func init() {
 }
 
 var (
-	wi *worker.Instance
+	wi      *worker.Instance
+	saBuild = 1
 )
 
 func main() {
+	logger.Infof("sa-build %v", saBuild)
 	defer exit.Recover()
 
 	flag.Parse()
