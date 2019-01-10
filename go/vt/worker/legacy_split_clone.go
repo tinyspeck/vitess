@@ -416,6 +416,9 @@ func (scw *LegacySplitCloneWorker) findTargets(ctx context.Context) error {
 	return nil
 }
 
+// TODO(setassociative): added to debug failed shard split behavior
+const saDebug = true
+
 // copy phase:
 //	- copy the data from source tablets to destination masters (with replication on)
 // Assumes that the schema has already been created on each destination tablet
@@ -536,6 +539,12 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+
+			if saDebug {
+				scw.wr.Logger().Infof("Forcing single chunk for debugging purposes; was %v", chunks)
+				chunks = singleCompleteChunk
+			}
+
 			scw.tableStatusList.setThreadCount(tableIndex, len(chunks)-1)
 
 			for _, c := range chunks {
