@@ -540,11 +540,6 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 				return err
 			}
 
-			if saDebug {
-				scw.wr.Logger().Infof("Forcing single chunk for debugging purposes; was %v", chunks)
-				chunks = singleCompleteChunk
-			}
-
 			scw.tableStatusList.setThreadCount(tableIndex, len(chunks)-1)
 
 			for _, c := range chunks {

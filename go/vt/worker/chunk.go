@@ -151,6 +151,11 @@ func generateChunks(ctx context.Context, wr *wrangler.Wrangler, tablet *topodata
 		return singleCompleteChunk, nil
 	}
 
+	if saDebug {
+		wr.Logger().Infof("Forcing single chunk for debugging purposes on %v; was %v", td.Name, chunkCount)
+		return singleCompleteChunk, nil
+	}
+
 	// Create chunks.
 	start := min
 	for i := 0; i < chunkCount; i++ {
