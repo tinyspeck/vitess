@@ -26,6 +26,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -65,7 +66,7 @@ var (
 )
 
 func main() {
-	logger.Infof("sa-build %v", saBuild)
+	fmt.Printf("sa-build %v\n", saBuild)
 	defer exit.Recover()
 
 	flag.Parse()
