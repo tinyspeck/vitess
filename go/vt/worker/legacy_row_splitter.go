@@ -26,6 +26,8 @@ import (
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+
+	"vitess.io/vitess/go/vt/logutil"
 )
 
 // RowSplitter is a helper class to split rows into multiple
@@ -33,6 +35,7 @@ import (
 type RowSplitter struct {
 	KeyResolver keyspaceIDResolver
 	KeyRanges   []*topodatapb.KeyRange
+	logger      logutil.Logger
 }
 
 // NewRowSplitter returns a new row splitter for the given shard distribution.
@@ -71,11 +74,25 @@ func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Valu
 
 // Send will send the rows to the list of channels. Returns true if aborted.
 func (rs *RowSplitter) Send(fields []*querypb.Field, result [][][]sqltypes.Value, baseCmds []string, insertChannels []chan string, abort <-chan struct{}) bool {
+	mlog := func(strfmt string, args ...interface{}) {
+		if rs.logger != nil {
+			rs.logger.Infof("[setassociative] [RowSplitter:Send]"+strfmt, args...)
+		}
+	}
+
 	for i, c := range insertChannels {
 		// one of the chunks might be empty, so no need
 		// to send data in that case
 		if len(result[i]) > 0 {
 			cmd := baseCmds[i] + makeValueString(fields, result[i])
+			if sd, _ := rs.KeyResolver.shouldDebug(); sd {
+				cols := rs.KeyResolver.primaryColumns()
+				idxs := rs.KeyResolver.primaryIndexes()
+
+				for j, rowVals := range result[i] {
+					mlog("queueing to channel %v/%p - %v / %v - %v", c, c, cols, idxs, rowVals[j])
+				}
+			}
 			// also check on abort, so we don't wait forever
 			select {
 			case c <- cmd:

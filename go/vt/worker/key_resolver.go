@@ -41,6 +41,10 @@ type keyspaceIDResolver interface {
 	// keyspaceID takes a table row, and returns the keyspace id as bytes.
 	// It will return an error if no sharding key can be found.
 	keyspaceID(row []sqltypes.Value) ([]byte, error)
+
+	shouldDebug() (bool, error)
+	primaryColumns() []string
+	primaryIndexes() []int
 }
 
 // v2Resolver is the keyspace id resolver that is used by VTGate V2 deployments.
@@ -49,6 +53,20 @@ type keyspaceIDResolver interface {
 type v2Resolver struct {
 	keyspaceInfo        *topo.KeyspaceInfo
 	shardingColumnIndex int
+}
+
+var errV2unsupported = errors.New("Should debug unsupported for v2")
+
+func (*v2Resolver) shouldDebug() (bool, error) {
+	return false, errV2unsupported
+}
+
+func (*v2Resolver) primaryColumns() []string {
+	panic(errV2unsupported.Error())
+}
+
+func (*v2Resolver) primaryIndexes() []int {
+	panic(errV2unsupported.Error())
 }
 
 // newV2Resolver returns a keyspaceIDResolver for a v2 table.
@@ -96,6 +114,30 @@ func (r *v2Resolver) keyspaceID(row []sqltypes.Value) ([]byte, error) {
 type v3Resolver struct {
 	shardingColumnIndex int
 	vindex              vindexes.Vindex
+	td                  *tabletmanagerdatapb.TableDefinition
+}
+
+func (r *v3Resolver) shouldDebug() (bool, error) {
+	return r.td.Name == "app_actions", nil
+}
+
+func (r *v3Resolver) primaryColumns() []string {
+	return r.td.PrimaryKeyColumns
+}
+
+func (r *v3Resolver) primaryIndexes() []int {
+	primaryIndexNames := r.td.PrimaryKeyColumns
+	primaryIndexIndexes := []int{}
+	for _, name := range primaryIndexNames {
+		for i := range primaryIndexNames {
+			if primaryIndexNames[i] == name {
+				primaryIndexIndexes = append(primaryIndexIndexes, i)
+				break
+			}
+		}
+	}
+
+	return primaryIndexIndexes
 }
 
 // newV3ResolverFromTableDefinition returns a keyspaceIDResolver for a v3 table.
@@ -122,6 +164,7 @@ func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, t
 	return &v3Resolver{
 		shardingColumnIndex: columnIndex,
 		vindex:              colVindex.Vindex,
+		td:                  td,
 	}, nil
 }
 

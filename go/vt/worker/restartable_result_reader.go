@@ -64,6 +64,13 @@ type RestartableResultReader struct {
 	// lastRow is used during a restart to determine after which row the restart
 	// should start.
 	lastRow []sqltypes.Value
+
+	// TODO(setassociative): remove
+	debug bool
+}
+
+func (rrr *RestartableResultReader) shouldDebug() bool {
+	return rrr.td.Name == "app_actions"
 }
 
 // NewRestartableResultReader creates a new RestartableResultReader for
@@ -72,7 +79,14 @@ type RestartableResultReader struct {
 // the chunk.
 // NOTE: We assume that the Columns field in "td" was ordered by a preceding
 // call to reorderColumnsPrimaryKeyFirst().
-func NewRestartableResultReader(ctx context.Context, logger logutil.Logger, tp tabletProvider, td *tabletmanagerdatapb.TableDefinition, chunk chunk, allowMultipleRetries bool) (*RestartableResultReader, error) {
+func NewRestartableResultReader(
+	ctx context.Context,
+	logger logutil.Logger,
+	tp tabletProvider,
+	td *tabletmanagerdatapb.TableDefinition,
+	chunk chunk,
+	allowMultipleRetries bool,
+) (*RestartableResultReader, error) {
 	r := &RestartableResultReader{
 		ctx:                  ctx,
 		logger:               logger,
@@ -80,6 +94,10 @@ func NewRestartableResultReader(ctx context.Context, logger logutil.Logger, tp t
 		td:                   td,
 		chunk:                chunk,
 		allowMultipleRetries: allowMultipleRetries,
+	}
+
+	if r.shouldDebug() {
+		logger.Infof("[setassociative] [NewRestartableResultReader] rrr: %p created for chunk %#v", chunk)
 	}
 
 	// If the initial connection fails we retry once.

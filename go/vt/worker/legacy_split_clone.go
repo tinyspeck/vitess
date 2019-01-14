@@ -433,7 +433,8 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	// in each source shard for each table to be about the same
 	// (rowCount is used to estimate an ETA)
 	shortCtx, cancel := context.WithTimeout(ctx, *remoteActionsTimeout)
-	sourceSchemaDefinition, err := scw.wr.GetSchema(shortCtx, scw.sourceAliases[0], nil, scw.excludeTables, false /* includeViews */)
+	sourceSchemaDefinition, err := scw.wr.GetSchema(
+		shortCtx, scw.sourceAliases[0], nil, scw.excludeTables, false /* includeViews */)
 	cancel()
 	if err != nil {
 		return vterrors.Wrapf(err, "cannot get schema from source %v", topoproto.TabletAliasString(scw.sourceAliases[0]))
@@ -476,6 +477,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		// destinationWriterCount go routines reading from it.
 		insertChannels[shardIndex] = make(chan string, scw.destinationWriterCount*2)
 
+		// TODO(setassociative): why is this a goroutine?
 		go func(keyspace, shard string, insertChannel chan string) {
 			for j := 0; j < scw.destinationWriterCount; j++ {
 				destinationWaitGroup.Add(1)
@@ -486,9 +488,13 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 					throttler := scw.destinationThrottlers[keyspaceAndShard]
 					defer throttler.ThreadFinished(threadID)
 
-					executor := newExecutor(scw.wr, scw.tsc, throttler, keyspace, shard, threadID)
+					executor := newExecutor(
+						scw.wr, scw.tsc, throttler, keyspace, shard, threadID)
+					scw.wr.Logger().Infof(
+						"constructed executor %p for %v/%s tid: %v",
+						executor, keyspace, shard, threadID)
 					if err := executor.fetchLoop(ctx, insertChannel); err != nil {
-						processError("executer.FetchLoop failed: %v", err)
+						processError("(tid: %v) executer.FetchLoop failed: %v", threadID, err)
 					}
 				}(j)
 			}
@@ -518,21 +524,42 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	for shardIndex := range scw.sourceShards {
 		sema := sync2.NewSemaphore(scw.sourceReaderCount, 0)
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
+			saShouldDebug := td.Name == "app_actions"
+
 			var keyResolver keyspaceIDResolver
 			if *useV3ReshardingMode {
+				if saShouldDebug {
+					scw.wr.Logger().Infof("[setassociative] [LecagySpliteCloneWorker:copy] Using v3 reshard mode")
+				}
 				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
 				}
 			} else {
+				if saShouldDebug {
+					scw.wr.Logger().Infof("[setassociative] [LecagySpliteCloneWorker:copy] Using v2 reshard mode")
+				}
 				keyResolver, err = newV2Resolver(scw.keyspaceInfo, td)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve sharding keys for keyspace %v", scw.keyspace)
 				}
 			}
 			rowSplitter := NewRowSplitter(scw.destinationShards, keyResolver)
+			rowSplitter.logger = scw.wr.Logger()
 
-			chunks, err := generateChunks(ctx, scw.wr, scw.sourceTablets[shardIndex], td, scw.sourceReaderCount, defaultMinRowsPerChunk)
+			chunks, err := generateChunks(
+				ctx,
+				scw.wr,
+				scw.sourceTablets[shardIndex],
+				td,
+				scw.sourceReaderCount,
+				defaultMinRowsPerChunk,
+			)
+
+			if saShouldDebug {
+				scw.wr.Logger().Infof("%v using chunks %v", td.Name, chunks)
+			}
+
 			if err != nil {
 				return err
 			}
@@ -551,7 +578,8 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 					// Start streaming from the source tablets.
 					tp := newSingleTabletProvider(ctx, scw.wr.TopoServer(), scw.sourceAliases[shardIndex])
-					rr, err := NewRestartableResultReader(ctx, scw.wr.Logger(), tp, td, chunk, false /* allowMultipleRetries */)
+					rr, err := NewRestartableResultReader(
+						ctx, scw.wr.Logger(), tp, td, chunk, false /* allowMultipleRetries */)
 					if err != nil {
 						processError("NewRestartableResultReader failed: %v", err)
 						return
@@ -564,7 +592,10 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 						keyspaceAndShard := topoproto.KeyspaceShardString(si.Keyspace(), si.ShardName())
 						dbNames[i] = scw.destinationDbNames[keyspaceAndShard]
 					}
-					if err := scw.processData(ctx, dbNames, td, tableIndex, rr, rowSplitter, insertChannels, scw.destinationPackCount); err != nil {
+					if err := scw.processData(
+						ctx, dbNames, td, tableIndex, rr, rowSplitter, insertChannels,
+						scw.destinationPackCount,
+					); err != nil {
 						processError("processData failed: %v", err)
 					}
 				}(td, shardIndex, tableIndex, c)
@@ -629,17 +660,49 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 // processData pumps the data out of the provided QueryResultReader.
 // It returns any error the source encounters.
-func (scw *LegacySplitCloneWorker) processData(ctx context.Context, dbNames []string, td *tabletmanagerdatapb.TableDefinition, tableIndex int, rr ResultReader, rowSplitter *RowSplitter, insertChannels []chan string, destinationPackCount int) error {
+func (scw *LegacySplitCloneWorker) processData(
+	ctx context.Context,
+	dbNames []string,
+	td *tabletmanagerdatapb.TableDefinition,
+	tableIndex int,
+	rr ResultReader,
+	rowSplitter *RowSplitter,
+	insertChannels []chan string,
+	destinationPackCount int,
+) error {
+	mlog := scw.wr.Logger()
 	// Store the baseCmd per destination shard because each tablet may have a
 	// different dbName.
 	baseCmds := make([]string, len(dbNames))
 	for i, dbName := range dbNames {
-		baseCmds[i] = "INSERT INTO " + sqlescape.EscapeID(dbName) + "." + sqlescape.EscapeID(td.Name) + " (" + strings.Join(escapeAll(td.Columns), ", ") + ") VALUES "
+		baseCmds[i] = "INSERT INTO " +
+			sqlescape.EscapeID(dbName) + "." + sqlescape.EscapeID(td.Name) +
+			" (" + strings.Join(escapeAll(td.Columns), ", ") + ") VALUES "
 	}
 	sr := rowSplitter.StartSplit()
 	packCount := 0
 
 	fields := rr.Fields()
+
+	rrr, rrrOK := rr.(*RestartableResultReader)
+	if rrrOK {
+		primaryIndexNames := rrr.td.PrimaryKeyColumns
+		primaryIndexIndexes := []int{}
+		for _, name := range primaryIndexNames {
+			for i := range fields {
+				if primaryIndexNames[i] == name {
+					primaryIndexIndexes = append(primaryIndexIndexes, i)
+					break
+				}
+			}
+		}
+
+		mlog.Infof("[setassociative] [processData] Primary indexes for %v: %v / %v",
+			td.Name, primaryIndexNames, primaryIndexIndexes)
+	} else {
+		mlog.Infof("[setassociative] [processData] unexpectedly not a restartable result reader %T", rr)
+	}
+
 	for {
 		r, err := rr.Next()
 		if err != nil {
