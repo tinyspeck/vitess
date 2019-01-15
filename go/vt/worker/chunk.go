@@ -17,6 +17,7 @@ limitations under the License.
 package worker
 
 import (
+	"bytes"
 	"fmt"
 
 	"vitess.io/vitess/go/vt/vterrors"
@@ -56,6 +57,17 @@ func (c chunk) String() string {
 	// Pad the chunk number such that all log messages align nicely.
 	digits := digits(c.total)
 	return fmt.Sprintf("%*d/%d", digits, c.number, c.total)
+}
+
+func (c chunk) String2() string {
+	encode := func(v sqltypes.Value) string {
+		buf := new(bytes.Buffer)
+		v.EncodeASCII(buf)
+		return buf.String()
+	}
+
+	return fmt.Sprintf("{start: %v, end: %v, number: %v, total: %v}",
+		encode(c.start), encode(c.end), c.number, c.total)
 }
 
 func digits(i int) int {

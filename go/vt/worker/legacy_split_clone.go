@@ -471,9 +471,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 	insertChannels := make([]chan string, len(scw.destinationShards))
 	chanLookup := []string{}
-	for i, c := range insertChannels {
-		chanLookup = append(chanLookup, fmt.Sprintf("%v -> chan %v", c, i))
-	}
+
 	scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] chanLookup list %v", chanLookup)
 	destinationWaitGroup := sync.WaitGroup{}
 	scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] destinationWriterCount: %v", scw.destinationWriterCount)
@@ -485,6 +483,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		// always have data. We then have
 		// destinationWriterCount go routines reading from it.
 		insertChannels[shardIndex] = make(chan string, scw.destinationWriterCount*2)
+		chanLookup = append(chanLookup, fmt.Sprintf("%v -> chan %v", insertChannels[shardIndex], shardIndex))
 
 		// TODO(setassociative): why is this a goroutine?
 		initDestWriters := func(keyspace, shard string, insertChannel chan string) {

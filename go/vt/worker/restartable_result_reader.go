@@ -97,7 +97,7 @@ func NewRestartableResultReader(
 	}
 
 	if r.shouldDebug() {
-		logger.Infof("[setassociative] [NewRestartableResultReader] rrr: %p created for chunk %#v", r, chunk)
+		logger.Infof("[setassociative] [NewRestartableResultReader] rrr: %p created for chunk %#v", r, chunk.String2())
 	}
 
 	// If the initial connection fails we retry once.
