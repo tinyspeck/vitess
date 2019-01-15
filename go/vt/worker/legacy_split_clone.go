@@ -49,6 +49,8 @@ import (
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 )
 
+const debugTable = "app_actions_test_split"
+
 // LegacySplitCloneWorker will clone the data within a keyspace from a
 // source set of shards to a destination set of shards.
 type LegacySplitCloneWorker struct {
@@ -468,7 +470,14 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	}
 
 	insertChannels := make([]chan string, len(scw.destinationShards))
+	chanLookup := []string{}
+	for i, c := range insertChannels {
+		chanLookup = append(chanLookup, fmt.Sprintf("%v -> chan %v", c, i))
+	}
+	scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] chanLookup list %v", chanLookup)
 	destinationWaitGroup := sync.WaitGroup{}
+	scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] destinationWriterCount: %v", scw.destinationWriterCount)
+
 	for shardIndex, si := range scw.destinationShards {
 		// we create one channel per destination tablet.  It
 		// is sized to have a buffer of a maximum of
@@ -478,27 +487,32 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		insertChannels[shardIndex] = make(chan string, scw.destinationWriterCount*2)
 
 		// TODO(setassociative): why is this a goroutine?
-		go func(keyspace, shard string, insertChannel chan string) {
+		initDestWriters := func(keyspace, shard string, insertChannel chan string) {
 			for j := 0; j < scw.destinationWriterCount; j++ {
 				destinationWaitGroup.Add(1)
-				go func(threadID int) {
+
+				runFetchLoop := func(threadID int) {
 					defer destinationWaitGroup.Done()
 
 					keyspaceAndShard := topoproto.KeyspaceShardString(keyspace, shard)
 					throttler := scw.destinationThrottlers[keyspaceAndShard]
 					defer throttler.ThreadFinished(threadID)
 
-					executor := newExecutor(
-						scw.wr, scw.tsc, throttler, keyspace, shard, threadID)
+					executor := newExecutor(scw.wr, scw.tsc, throttler, keyspace, shard, threadID)
 					scw.wr.Logger().Infof(
-						"constructed executor %p for %v/%s tid: %v",
-						executor, keyspace, shard, threadID)
+						"[setassociative] [LegacySplitCloneWorker:copy] "+
+							"constructed executor %p (%v) for %v/%s c: %v, tid: %v",
+						executor, j, keyspace, shard, insertChannel, threadID)
 					if err := executor.fetchLoop(ctx, insertChannel); err != nil {
 						processError("(tid: %v) executer.FetchLoop failed: %v", threadID, err)
 					}
-				}(j)
+				}
+
+				go runFetchLoop(j)
 			}
-		}(si.Keyspace(), si.ShardName(), insertChannels[shardIndex])
+		}
+
+		go initDestWriters(si.Keyspace(), si.ShardName(), insertChannels[shardIndex])
 	}
 
 	// read the vschema if needed
@@ -524,21 +538,21 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	for shardIndex := range scw.sourceShards {
 		sema := sync2.NewSemaphore(scw.sourceReaderCount, 0)
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
-			saShouldDebug := td.Name == "app_actions"
+			mlog := func(strfmt string, args ...interface{}) {
+				if td.Name == debugTable {
+					scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] "+strfmt, args...)
+				}
+			}
 
 			var keyResolver keyspaceIDResolver
 			if *useV3ReshardingMode {
-				if saShouldDebug {
-					scw.wr.Logger().Infof("[setassociative] [LecagySpliteCloneWorker:copy] Using v3 reshard mode")
-				}
+				mlog("Using v3 reshard mode")
 				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
 				}
 			} else {
-				if saShouldDebug {
-					scw.wr.Logger().Infof("[setassociative] [LecagySpliteCloneWorker:copy] Using v2 reshard mode")
-				}
+				mlog("Using v2 reshard mode")
 				keyResolver, err = newV2Resolver(scw.keyspaceInfo, td)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve sharding keys for keyspace %v", scw.keyspace)
@@ -556,9 +570,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 				defaultMinRowsPerChunk,
 			)
 
-			if saShouldDebug {
-				scw.wr.Logger().Infof("%v using chunks %v", td.Name, chunks)
-			}
+			mlog("%v using chunks %v", td.Name, chunks)
 
 			if err != nil {
 				return err
@@ -567,7 +579,9 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 			for _, c := range chunks {
 				sourceWaitGroup.Add(1)
-				go func(td *tabletmanagerdatapb.TableDefinition, shardIndex, tableIndex int, chunk chunk) {
+				processChunk := func(td *tabletmanagerdatapb.TableDefinition, shardIndex, tableIndex int, chunk chunk) {
+
+					mlog("%v: beginning to process %#v", td.Name, chunk)
 					defer sourceWaitGroup.Done()
 
 					sema.Acquire()
@@ -594,11 +608,14 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 					}
 					if err := scw.processData(
 						ctx, dbNames, td, tableIndex, rr, rowSplitter, insertChannels,
+						// destinationPackCount?
 						scw.destinationPackCount,
 					); err != nil {
 						processError("processData failed: %v", err)
 					}
-				}(td, shardIndex, tableIndex, c)
+				}
+
+				go processChunk(td, shardIndex, tableIndex, c)
 			}
 		}
 	}
@@ -670,7 +687,10 @@ func (scw *LegacySplitCloneWorker) processData(
 	insertChannels []chan string,
 	destinationPackCount int,
 ) error {
-	mlog := scw.wr.Logger()
+	mlog := func(fmtstr string, args ...interface{}) {
+		scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:processData] "+fmtstr, args...)
+	}
+
 	// Store the baseCmd per destination shard because each tablet may have a
 	// different dbName.
 	baseCmds := make([]string, len(dbNames))
@@ -697,10 +717,10 @@ func (scw *LegacySplitCloneWorker) processData(
 			}
 		}
 
-		mlog.Infof("[setassociative] [processData] Primary indexes for %v: %v / %v",
+		mlog("Primary indexes for %v: %v / %v",
 			td.Name, primaryIndexNames, primaryIndexIndexes)
 	} else {
-		mlog.Infof("[setassociative] [processData] unexpectedly not a restartable result reader %T", rr)
+		mlog("unexpectedly not a restartable result reader %T", rr)
 	}
 
 	for {

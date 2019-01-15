@@ -118,7 +118,7 @@ type v3Resolver struct {
 }
 
 func (r *v3Resolver) shouldDebug() (bool, error) {
-	return r.td.Name == "app_actions", nil
+	return r.td.Name == debugTable, nil
 }
 
 func (r *v3Resolver) primaryColumns() []string {

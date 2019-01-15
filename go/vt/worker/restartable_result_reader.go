@@ -70,7 +70,7 @@ type RestartableResultReader struct {
 }
 
 func (rrr *RestartableResultReader) shouldDebug() bool {
-	return rrr.td.Name == "app_actions"
+	return rrr.td.Name == debugTable
 }
 
 // NewRestartableResultReader creates a new RestartableResultReader for
@@ -97,7 +97,7 @@ func NewRestartableResultReader(
 	}
 
 	if r.shouldDebug() {
-		logger.Infof("[setassociative] [NewRestartableResultReader] rrr: %p created for chunk %#v", chunk)
+		logger.Infof("[setassociative] [NewRestartableResultReader] rrr: %p created for chunk %#v", r, chunk)
 	}
 
 	// If the initial connection fails we retry once.
@@ -341,7 +341,12 @@ func (r *RestartableResultReader) generateQuery() {
 	if len(r.td.PrimaryKeyColumns) > 0 {
 		query += " ORDER BY " + strings.Join(escapeAll(r.td.PrimaryKeyColumns), ",")
 	}
+
 	r.query = query
+
+	if r.shouldDebug() {
+		r.logger.Infof("[setassociative] [NewRestartableResultReader:generateQuery] chunk %v - %v", r.chunk.number, r.query)
+	}
 }
 
 // greaterThanTupleWhereClause builds a greater than (">") WHERE clause

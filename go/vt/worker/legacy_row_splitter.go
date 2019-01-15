@@ -20,6 +20,8 @@ package worker
 // primary key columns based on the MySQL collation.
 
 import (
+	"fmt"
+
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/topo"
@@ -76,7 +78,7 @@ func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Valu
 func (rs *RowSplitter) Send(fields []*querypb.Field, result [][][]sqltypes.Value, baseCmds []string, insertChannels []chan string, abort <-chan struct{}) bool {
 	mlog := func(strfmt string, args ...interface{}) {
 		if rs.logger != nil {
-			rs.logger.Infof("[setassociative] [RowSplitter:Send]"+strfmt, args...)
+			rs.logger.Infof("[setassociative] [RowSplitter:Send] "+strfmt, args...)
 		}
 	}
 
@@ -89,8 +91,12 @@ func (rs *RowSplitter) Send(fields []*querypb.Field, result [][][]sqltypes.Value
 				cols := rs.KeyResolver.primaryColumns()
 				idxs := rs.KeyResolver.primaryIndexes()
 
-				for j, rowVals := range result[i] {
-					mlog("queueing to channel %v/%p - %v / %v - %v", c, c, cols, idxs, rowVals[j])
+				for _, rowVals := range result[i] {
+					vals := []string{}
+					for j := 0; j < len(idxs); j++ {
+						vals = append(vals, fmt.Sprintf("%v", rowVals[j]))
+					}
+					mlog("queueing to channel %v - %v / %v - %v", c, cols, idxs, vals)
 				}
 			}
 			// also check on abort, so we don't wait forever
