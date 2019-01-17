@@ -47,9 +47,13 @@ import (
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+
+	"github.com/turbinelabs/test/stack"
 )
 
-const debugTable = "app_actions"
+func debugTable(td *tabletmanagerdatapb.TableDefinition) bool {
+	return true
+}
 
 // LegacySplitCloneWorker will clone the data within a keyspace from a
 // source set of shards to a destination set of shards.
@@ -242,6 +246,7 @@ func (scw *LegacySplitCloneWorker) run(ctx context.Context) error {
 		return vterrors.Wrap(err, "init() failed")
 	}
 	if err := checkDone(ctx); err != nil {
+		scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:run] init done failure %v", err)
 		return err
 	}
 
@@ -250,6 +255,7 @@ func (scw *LegacySplitCloneWorker) run(ctx context.Context) error {
 		return vterrors.Wrap(err, "findTargets() failed")
 	}
 	if err := checkDone(ctx); err != nil {
+		scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:run] findTargets done failure %v", err)
 		return err
 	}
 
@@ -257,6 +263,7 @@ func (scw *LegacySplitCloneWorker) run(ctx context.Context) error {
 	if err := scw.copy(ctx); err != nil {
 		return vterrors.Wrap(err, "copy() failed")
 	}
+	scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:run] fin, no errors")
 
 	return nil
 }
@@ -460,6 +467,8 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 	ctx, cancelCopy := context.WithCancel(ctx)
 	processError := func(format string, args ...interface{}) {
+		s := stack.New()
+		scw.wr.Logger().Errorf("[setassociative] [LegacySplitClone:copy:processError] processError stack\n%v", s.Format(true))
 		scw.wr.Logger().Errorf(format, args...)
 		mu.Lock()
 		if firstError == nil {
@@ -486,6 +495,10 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		// TODO(setassociative): why is this a goroutine?
 		initDestWriters := func(keyspace, shard string, insertChannel chan string) {
 			for j := 0; j < scw.destinationWriterCount; j++ {
+				// and why are we only adding to this WG in a go routine?
+				// That said, because we shouldn't hit the dwg.Wait until after
+				// swg.Wait clears that should force us to give this goroutine
+				// enough time to run
 				destinationWaitGroup.Add(1)
 
 				runFetchLoop := func(threadID int) {
@@ -536,7 +549,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		sema := sync2.NewSemaphore(scw.sourceReaderCount, 0)
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
 			mlog := func(strfmt string, args ...interface{}) {
-				if td.Name == debugTable {
+				if debugTable(td) {
 					scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] "+strfmt, args...)
 				}
 			}
@@ -574,10 +587,10 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 			}
 			scw.tableStatusList.setThreadCount(tableIndex, len(chunks)-1)
 
-			for _, c := range chunks {
+			for cnum, c := range chunks {
 				sourceWaitGroup.Add(1)
+				scw.wr.Logger().Infof("[setassociative] [LegacySplitClone:copy] sourceWaitGroup.Add(1) for %v, %v", td.Name, cnum)
 				processChunk := func(td *tabletmanagerdatapb.TableDefinition, shardIndex, tableIndex int, chunk chunk) {
-
 					mlog("%v: beginning to process %#v", td.Name, chunk)
 					defer sourceWaitGroup.Done()
 
@@ -610,6 +623,8 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 					); err != nil {
 						processError("processData failed: %v", err)
 					}
+
+					scw.wr.Logger().Infof("Completed table %v chunk %v", td.Name, c.String2())
 				}
 
 				go processChunk(td, shardIndex, tableIndex, c)
@@ -618,6 +633,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	}
 	sourceWaitGroup.Wait()
 
+	scw.wr.Logger().Infof("[setassociative] [LegacySplitCloneWorker:copy] closing insertChannels")
 	for shardIndex := range scw.destinationShards {
 		close(insertChannels[shardIndex])
 	}

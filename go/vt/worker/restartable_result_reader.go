@@ -70,7 +70,7 @@ type RestartableResultReader struct {
 }
 
 func (rrr *RestartableResultReader) shouldDebug() bool {
-	return rrr.td.Name == debugTable
+	return debugTable(rrr.td)
 }
 
 // NewRestartableResultReader creates a new RestartableResultReader for
