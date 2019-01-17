@@ -47,8 +47,6 @@ import (
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
-
-	"github.com/turbinelabs/test/stack"
 )
 
 func debugTable(td *tabletmanagerdatapb.TableDefinition) bool {
@@ -467,7 +465,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 	ctx, cancelCopy := context.WithCancel(ctx)
 	processError := func(format string, args ...interface{}) {
-		s := stack.New()
+		s := NewStack()
 		scw.wr.Logger().Errorf("[setassociative] [LegacySplitClone:copy:processError] processError stack\n%v", s.Format(true))
 		scw.wr.Logger().Errorf(format, args...)
 		mu.Lock()
