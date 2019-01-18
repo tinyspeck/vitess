@@ -514,6 +514,11 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 					if err := executor.fetchLoop(ctx, insertChannel); err != nil {
 						processError("(tid: %v) executer.FetchLoop failed: %v", threadID, err)
 					}
+
+					scw.wr.Logger().Infof(
+						"[setassociative] [LegacySplitClone:copy:renFetchLoop] completed %v/%v; tid: %v",
+						keyspace, shard, threadID
+					)
 				}
 
 				go runFetchLoop(j)

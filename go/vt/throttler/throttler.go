@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"vitess.io/vitess/go/stack"
 	"vitess.io/vitess/go/vt/discovery"
 	"vitess.io/vitess/go/vt/log"
 
@@ -223,6 +224,8 @@ func (t *Throttler) ThreadFinished(threadID int) {
 	delete(t.runningThreads, threadID)
 	t.mu.Unlock()
 
+	log.Infof("[setassociative] [Throttler:ThreadFinished]\n", s.Format(true))
+
 	t.threadFinished[threadID] = true
 	t.rateUpdateChan <- struct{}{}
 }
@@ -233,6 +236,8 @@ func (t *Throttler) Close() {
 	for _, m := range t.modules {
 		m.Stop()
 	}
+	s := stack.New()
+	log.Infof("[setassociative] [Throttler:Close]\n", s.Format(true))
 	close(t.rateUpdateChan)
 	t.closed = true
 	t.manager.unregisterThrottler(t.name)
