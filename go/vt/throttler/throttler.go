@@ -224,6 +224,7 @@ func (t *Throttler) ThreadFinished(threadID int) {
 	delete(t.runningThreads, threadID)
 	t.mu.Unlock()
 
+	s := stack.New()
 	log.Infof("[setassociative] [Throttler:ThreadFinished]\n", s.Format(true))
 
 	t.threadFinished[threadID] = true
