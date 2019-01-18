@@ -517,7 +517,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 					scw.wr.Logger().Infof(
 						"[setassociative] [LegacySplitClone:copy:renFetchLoop] completed %v/%v; tid: %v",
-						keyspace, shard, threadID
+						keyspace, shard, threadID,
 					)
 				}
 

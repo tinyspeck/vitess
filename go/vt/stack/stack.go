@@ -41,7 +41,7 @@ type Stack []frame
 
 // New generates a new stack trace. This function will not appear in
 // the trace.
-func NewStack() Stack {
+func New() Stack {
 	var results Stack
 
 	for i := 0; ; i++ {

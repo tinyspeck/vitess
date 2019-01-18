@@ -33,9 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"vitess.io/vitess/go/stack"
 	"vitess.io/vitess/go/vt/discovery"
 	"vitess.io/vitess/go/vt/log"
+	"vitess.io/vitess/go/vt/stack"
 
 	throttlerdatapb "vitess.io/vitess/go/vt/proto/throttlerdata"
 )
