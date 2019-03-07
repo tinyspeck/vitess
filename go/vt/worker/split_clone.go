@@ -550,7 +550,7 @@ func (scw *SplitCloneWorker) init(ctx context.Context) error {
 		}
 	}
 
-	if err := scw.sanityCheckShardInfos(); err != nil {
+	if err := scw.sanityCheckShardInfos(ctx); err != nil {
 		return vterrors.Wrap(err, "failed sanityCheckShardInfos")
 	}
 
@@ -596,7 +596,11 @@ func (scw *SplitCloneWorker) initShardsForHorizontalResharding(ctx context.Conte
 
 	// one side should have served types, the other one none,
 	// figure out wich is which, then double check them all
-	if len(os.Left[0].ServedTypes) > 0 {
+	leftServingTypes, err := scw.wr.TopoServer().GetShardServingTypes(ctx, os.Left[0])
+	if err != nil {
+		return fmt.Errorf("cannot get shard serving cells for: %v", os.Left[0])
+	}
+	if len(leftServingTypes) > 0 {
 		scw.sourceShards = os.Left
 		scw.destinationShards = os.Right
 	} else {
@@ -662,7 +666,7 @@ func (scw *SplitCloneWorker) initShardsForVerticalSplit(ctx context.Context) err
 	return nil
 }
 
-func (scw *SplitCloneWorker) sanityCheckShardInfos() error {
+func (scw *SplitCloneWorker) sanityCheckShardInfos(ctx context.Context) error {
 	// Verify that filtered replication is not already enabled.
 	for _, si := range scw.destinationShards {
 		if len(si.SourceShards) > 0 {
@@ -674,7 +678,18 @@ func (scw *SplitCloneWorker) sanityCheckShardInfos() error {
 	// Verify that the source is serving all serving types.
 	for _, st := range servingTypes {
 		for _, si := range scw.sourceShards {
-			if si.GetServedType(st) == nil {
+			shardServingTypes, err := scw.wr.TopoServer().GetShardServingTypes(ctx, si)
+			if err != nil {
+				return fmt.Errorf("failed to get ServingTypes for source shard %v/%v", si.Keyspace(), si.ShardName())
+
+			}
+			found := false
+			for _, shardServingType := range shardServingTypes {
+				if shardServingType == st {
+					found = true
+				}
+			}
+			if !found {
 				return fmt.Errorf("source shard %v/%v is not serving type %v", si.Keyspace(), si.ShardName(), st)
 			}
 		}
@@ -684,15 +699,32 @@ func (scw *SplitCloneWorker) sanityCheckShardInfos() error {
 	case horizontalResharding:
 		// Verify that the destination is not serving yet.
 		for _, si := range scw.destinationShards {
-			if len(si.ServedTypes) > 0 {
+			shardServingTypes, err := scw.wr.TopoServer().GetShardServingTypes(ctx, si)
+			if err != nil {
+				return fmt.Errorf("failed to get ServingTypes for destination shard %v/%v", si.Keyspace(), si.ShardName())
+
+			}
+			if len(shardServingTypes) > 0 {
 				return fmt.Errorf("destination shard %v/%v is serving some types", si.Keyspace(), si.ShardName())
 			}
 		}
+
 	case verticalSplit:
 		// Verify that the destination is serving all types.
 		for _, st := range servingTypes {
 			for _, si := range scw.destinationShards {
-				if si.GetServedType(st) == nil {
+				shardServingTypes, err := scw.wr.TopoServer().GetShardServingTypes(ctx, si)
+				if err != nil {
+					return fmt.Errorf("failed to get ServingTypes for source shard %v/%v", si.Keyspace(), si.ShardName())
+
+				}
+				found := false
+				for _, shardServingType := range shardServingTypes {
+					if shardServingType == st {
+						found = true
+					}
+				}
+				if !found {
 					return fmt.Errorf("source shard %v/%v is not serving type %v", si.Keyspace(), si.ShardName(), st)
 				}
 			}
@@ -914,6 +946,13 @@ func mergeOrSingle(readers []ResultReader, td *tabletmanagerdatapb.TableDefiniti
 
 func (scw *SplitCloneWorker) getSourceResultReader(ctx context.Context, td *tabletmanagerdatapb.TableDefinition, state StatusWorkerState, chunk chunk, txID int64) (ResultReader, error) {
 	sourceReaders := make([]ResultReader, len(scw.sourceShards))
+	var readers []ResultReader
+	defer func() {
+		for _, i := range readers {
+			i.Close(ctx)
+		}
+	}()
+
 	for shardIndex, si := range scw.sourceShards {
 		var sourceResultReader ResultReader
 		var err error
@@ -941,15 +980,26 @@ func (scw *SplitCloneWorker) getSourceResultReader(ctx context.Context, td *tabl
 			if err != nil {
 				return nil, fmt.Errorf("NewRestartableResultReader for source: %v failed: %v", tp.description(), err)
 			}
+			readers = append(readers, sourceResultReader)
 		}
-		// TODO: We could end up in a situation where some readers have been created but not all. In this situation, we would not close up all readers
 		sourceReaders[shardIndex] = sourceResultReader
 	}
-	return mergeOrSingle(sourceReaders, td)
+	resultReader, err := mergeOrSingle(sourceReaders, td)
+	if err == nil {
+		readers = readers[:0]
+	}
+	return resultReader, err
 }
 
 func (scw *SplitCloneWorker) getDestinationResultReader(ctx context.Context, td *tabletmanagerdatapb.TableDefinition, state StatusWorkerState, chunk chunk) (ResultReader, error) {
 	destReaders := make([]ResultReader, len(scw.destinationShards))
+	var readers []ResultReader
+	defer func() {
+		for _, i := range readers {
+			i.Close(ctx)
+		}
+	}()
+
 	for shardIndex, si := range scw.destinationShards {
 		tp := newShardTabletProvider(scw.tsc, scw.tabletTracker, si.Keyspace(), si.ShardName(), topodatapb.TabletType_MASTER)
 		destResultReader, err := NewRestartableResultReader(ctx, scw.wr.Logger(), tp, td, chunk, true /* allowMultipleRetries */)
@@ -958,7 +1008,11 @@ func (scw *SplitCloneWorker) getDestinationResultReader(ctx context.Context, td 
 		}
 		destReaders[shardIndex] = destResultReader
 	}
-	return mergeOrSingle(destReaders, td)
+	resultReader, err := mergeOrSingle(destReaders, td)
+	if err == nil {
+		readers = readers[:0]
+	}
+	return resultReader, err
 }
 
 func (scw *SplitCloneWorker) cloneAChunk(ctx context.Context, td *tabletmanagerdatapb.TableDefinition, tableIndex int, chunk chunk, processError func(string, ...interface{}), state StatusWorkerState, tableStatusList *tableStatusList, keyResolver keyspaceIDResolver, start time.Time, insertChannels []chan string, txID int64, statsCounters []*stats.CountersWithSingleLabel) {
