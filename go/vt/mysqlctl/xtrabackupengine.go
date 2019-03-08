@@ -31,6 +31,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 	"vitess.io/vitess/go/mysql"
+	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/mysqlctl/backupstorage"
 	"vitess.io/vitess/go/vt/vterrors"
@@ -77,7 +78,7 @@ func (be *XtrabackupEngine) backupFileName() string {
 
 // ExecuteBackup returns a boolean that indicates if the backup is usable,
 // and an overall error.
-func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, logger logutil.Logger, bh backupstorage.BackupHandle, backupConcurrency int, hookExtraEnv map[string]string) (bool, error) {
+func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, dbconfigs *dbconfigs.DBConfigs, logger logutil.Logger, bh backupstorage.BackupHandle, backupConcurrency int, hookExtraEnv map[string]string) (bool, error) {
 
 	/* TODO uncomment if we keep this option
 	if *xtrabackupEnginePath == "" {
@@ -87,15 +88,13 @@ func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysql
 	backupProgram := path.Join(*xtrabackupEnginePath, xtrabackup)
 	// TODO check that the executable file exists, exit if it doesn't or isn't executable
 
-	// add --slave-info assuming this is a replica tablet
-	// TODO what if it is master?
-
-	// TODO need to pass backup username here
+	connParams := dbconfigs.Backup()
+	dbUser := connParams.Uname
+	// assumption is that this user can connect without a password and has all necessary privileges
 	flagsToExec := []string{"--defaults-file=" + cnf.path,
 		"--backup",
 		"--socket=" + cnf.SocketFile,
-		"--slave-info",
-		//"--user=vt_dba",
+		"--user=" + dbUser,
 	}
 	if *xtrabackupStreamMode != "" {
 		flagsToExec = append(flagsToExec, "--stream="+*xtrabackupStreamMode)

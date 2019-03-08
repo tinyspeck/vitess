@@ -82,6 +82,11 @@ GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD
 GRANT SELECT
   ON _vt.* TO 'orc_client_user'@'%';
 
+# Backup user with all privileges.
+CREATE USER 'vt_backup'@'localhost';
+GRANT ALL ON *.* TO 'vt_backup'@'localhost';
+GRANT GRANT OPTION ON *.* TO 'vt_backup'@'localhost';
+
 FLUSH PRIVILEGES;
 
 RESET SLAVE ALL;

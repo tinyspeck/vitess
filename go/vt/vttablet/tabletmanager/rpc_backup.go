@@ -79,7 +79,7 @@ func (agent *ActionAgent) Backup(ctx context.Context, concurrency int, logger lo
 	// now we can run the backup
 	dir := fmt.Sprintf("%v/%v", tablet.Keyspace, tablet.Shard)
 	name := fmt.Sprintf("%v.%v", time.Now().UTC().Format("2006-01-02.150405"), topoproto.TabletAliasString(tablet.Alias))
-	returnErr := mysqlctl.Backup(ctx, agent.Cnf, agent.MysqlDaemon, l, dir, name, concurrency, agent.hookExtraEnv())
+	returnErr := mysqlctl.Backup(ctx, agent.Cnf, agent.MysqlDaemon, agent.DBConfigs, l, dir, name, concurrency, agent.hookExtraEnv())
 
 	if *mysqlctl.BackupEngineImplementation != xtrabackupEngine {
 		// change our type back to the original value
