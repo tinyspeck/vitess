@@ -241,6 +241,12 @@ type TxPoolController interface {
 	// Subsequent statements can access the connection through the transaction id.
 	Begin(ctx context.Context, options *querypb.ExecuteOptions) (int64, error)
 
+	// GetConn begins a transaction, and returns the associated transaction id.
+	// Subsequent statements can access the connection through the transaction id.
+	GetConn(ctx context.Context, options *querypb.ExecuteOptions) (int64, error)
+
+	ReleaseConn(ctx context.Context, transactionID int64, mc messageCommitter) error
+
 	// Commit commits the specified transaction.
 	Commit(ctx context.Context, transactionID int64, mc messageCommitter) error
 
@@ -766,6 +772,39 @@ func (tsv *TabletServer) SchemaEngine() *schema.Engine {
 	return tsv.se
 }
 
+// GetConn starts a new transaction. This is allowed only if the state is StateServing.
+func (tsv *TabletServer) GetConn(ctx context.Context, target *querypb.Target, options *querypb.ExecuteOptions) (transactionID int64, err error) {
+	err = tsv.execRequest(
+		ctx, tsv.BeginTimeout.Get(),
+		"GetConn", "", nil,
+		target, options, true /* isBegin */, false, /* allowOnShutdown */
+		func(ctx context.Context, logStats *tabletenv.LogStats) error {
+			defer tabletenv.QueryStats.Record("GetConn", time.Now())
+			if tsv.txThrottler.Throttle() {
+				// TODO(erez): I think this should be RESOURCE_EXHAUSTED.
+				return vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "Transaction throttled")
+			}
+			transactionID, err = tsv.teCtrl.GetConn(ctx, options)
+			logStats.TransactionID = transactionID
+			return err
+		},
+	)
+	return transactionID, err
+}
+
+func (tsv *TabletServer) ReleaseConn(ctx context.Context, target *querypb.Target, transactionID int64) (err error) {
+	return tsv.execRequest(
+		ctx, tsv.QueryTimeout.Get(),
+		"ReleaseConn", "", nil,
+		target, nil, false /* isBegin */, true, /* allowOnShutdown */
+		func(ctx context.Context, logStats *tabletenv.LogStats) error {
+			defer tabletenv.QueryStats.Record("RELEASE_CONN", time.Now())
+			logStats.TransactionID = transactionID
+			return tsv.teCtrl.ReleaseConn(ctx, transactionID, tsv.messager)
+		},
+	)
+}
+
 // Begin starts a new transaction. This is allowed only if the state is StateServing.
 func (tsv *TabletServer) Begin(ctx context.Context, target *querypb.Target, options *querypb.ExecuteOptions) (transactionID int64, err error) {
 	err = tsv.execRequest(
@@ -1075,6 +1114,38 @@ func (tsv *TabletServer) ExecuteBatch(ctx context.Context, target *querypb.Targe
 	}
 	defer tsv.endRequest(false)
 	defer tsv.handlePanicAndSendLogStats("batch", nil, nil)
+
+	if tsv.qe.autoCommit.Get() && asTransaction {
+		transactionID, err = tsv.GetConn(ctx, target, options)
+		if err != nil {
+			return nil, err
+		}
+
+		if err = tsv.Commit(ctx, target, transactionID); err != nil {
+			transactionID = 0
+			return nil, err
+		}
+		transactionID = 0
+
+		// err := tsv.ReleaseConn(ctx, target, transactionID)
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// results = make([]sqltypes.Result, 0, len(queries))
+		// for _, bound := range queries {
+		// 	localReply, err := tsv.Execute(ctx, target, bound.Sql, bound.BindVariables, transactionID, options)
+		// 	if err != nil {
+		// 		transactionID = 0
+		// 		return nil, err
+		// 	}
+		// 	results = append(results, *localReply)
+		// }
+
+		// transactionID = 0
+
+		// return results, nil
+	}
 
 	if asTransaction {
 		transactionID, err = tsv.Begin(ctx, target, options)
@@ -1844,9 +1915,9 @@ func (tsv *TabletServer) BroadcastHealth(terTimestamp int64, stats *querypb.Real
 	target := tsv.target
 	tsv.mu.Unlock()
 	shr := &querypb.StreamHealthResponse{
-		Target:                              &target,
-		TabletAlias:                         &tsv.alias,
-		Serving:                             tsv.IsServing(),
+		Target:      &target,
+		TabletAlias: &tsv.alias,
+		Serving:     tsv.IsServing(),
 		TabletExternallyReparentedTimestamp: terTimestamp,
 		RealtimeStats:                       stats,
 	}

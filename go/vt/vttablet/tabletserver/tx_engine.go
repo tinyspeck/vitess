@@ -266,6 +266,37 @@ func (te *TxEngine) AcceptReadOnly() error {
 
 // Begin begins a transaction, and returns the associated transaction id.
 // Subsequent statements can access the connection through the transaction id.
+func (te *TxEngine) GetConn(ctx context.Context, options *querypb.ExecuteOptions) (int64, error) {
+	te.stateLock.Lock()
+
+	canOpenTransactions := te.state == AcceptingReadOnly || te.state == AcceptingReadAndWrite
+	if !canOpenTransactions {
+		// We are not in a state where we can start new transactions. Abort.
+		te.stateLock.Unlock()
+		return 0, vterrors.Errorf(vtrpc.Code_UNAVAILABLE, "tx engine can't accept new transactions in state %v", te.state)
+	}
+
+	isWriteTransaction := options == nil || options.TransactionIsolation != querypb.ExecuteOptions_CONSISTENT_SNAPSHOT_READ_ONLY
+	if te.state == AcceptingReadOnly && isWriteTransaction {
+		te.stateLock.Unlock()
+		return 0, vterrors.Errorf(vtrpc.Code_UNAVAILABLE, "tx engine can only accept read-only transactions in current state")
+	}
+
+	te.stateLock.Unlock()
+	return te.txPool.GetConn(ctx, options)
+}
+
+func (te *TxEngine) RecycleConn(transactionID int64) error {
+	txConn, err := te.txPool.Get(transactionID, "getting connection to release it")
+	if err != nil {
+		return err
+	}
+	txConn.Recycle()
+	return nil
+}
+
+// Begin begins a transaction, and returns the associated transaction id.
+// Subsequent statements can access the connection through the transaction id.
 func (te *TxEngine) Begin(ctx context.Context, options *querypb.ExecuteOptions) (int64, error) {
 	te.stateLock.Lock()
 
@@ -294,6 +325,10 @@ func (te *TxEngine) Begin(ctx context.Context, options *querypb.ExecuteOptions) 
 // Commit commits the specified transaction.
 func (te *TxEngine) Commit(ctx context.Context, transactionID int64, mc messageCommitter) error {
 	return te.txPool.Commit(ctx, transactionID, mc)
+}
+
+func (te *TxEngine) ReleaseConn(ctx context.Context, transactionID int64, mc messageCommitter) error {
+	return te.txPool.ReleaseConn(ctx, transactionID, mc)
 }
 
 // Rollback rolls back the specified transaction.

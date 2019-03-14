@@ -192,6 +192,69 @@ func (axp *TxPool) WaitForEmpty() {
 	axp.activePool.WaitForEmpty()
 }
 
+// GetConn gets a connection without actually starting a transaction.
+// Subsequent statements can access the connection through the transaction id.
+func (axp *TxPool) GetConn(ctx context.Context, options *querypb.ExecuteOptions) (int64, error) {
+	var conn *connpool.DBConn
+	var err error
+	immediateCaller := callerid.ImmediateCallerIDFromContext(ctx)
+	effectiveCaller := callerid.EffectiveCallerIDFromContext(ctx)
+
+	if !axp.limiter.Get(immediateCaller, effectiveCaller) {
+		return 0, vterrors.Errorf(vtrpcpb.Code_RESOURCE_EXHAUSTED, "per-user transaction pool connection limit exceeded")
+	}
+
+	waiterCount := axp.waiters.Add(1)
+	defer axp.waiters.Add(-1)
+
+	if waiterCount > axp.waiterCap.Get() {
+		return 0, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "transaction pool waiter count exceeded")
+	}
+
+	var connGetSucceded bool
+	defer func() {
+		if connGetSucceded {
+			return
+		}
+
+		if conn != nil {
+			conn.Recycle()
+		}
+		axp.limiter.Release(immediateCaller, effectiveCaller)
+	}()
+
+	if options.GetClientFoundRows() {
+		conn, err = axp.foundRowsPool.Get(ctx)
+	} else {
+		conn, err = axp.conns.Get(ctx)
+	}
+	if err != nil {
+		switch err {
+		case connpool.ErrConnPoolClosed:
+			return 0, err
+		case pools.ErrTimeout:
+			axp.LogActive()
+			return 0, vterrors.Errorf(vtrpcpb.Code_RESOURCE_EXHAUSTED, "transaction pool connection limit exceeded")
+		}
+		return 0, err
+	}
+
+	connGetSucceded = true
+	transactionID := axp.lastID.Add(1)
+	axp.activePool.Register(
+		transactionID,
+		newTxConnection(
+			conn,
+			transactionID,
+			axp,
+			immediateCaller,
+			effectiveCaller,
+		),
+		options.GetWorkload() != querypb.ExecuteOptions_DBA,
+	)
+	return transactionID, nil
+}
+
 // Begin begins a transaction, and returns the associated transaction id.
 // Subsequent statements can access the connection through the transaction id.
 func (axp *TxPool) Begin(ctx context.Context, options *querypb.ExecuteOptions) (int64, error) {
@@ -267,6 +330,19 @@ func (axp *TxPool) Begin(ctx context.Context, options *querypb.ExecuteOptions) (
 		options.GetWorkload() != querypb.ExecuteOptions_DBA,
 	)
 	return transactionID, nil
+}
+
+// Commit commits the specified transaction.
+func (axp *TxPool) ReleaseConn(ctx context.Context, transactionID int64, mc messageCommitter) error {
+	conn, err := axp.Get(transactionID, "for commit")
+	if err != nil {
+		return err
+	}
+	defer conn.conclude(TxCommit, "transaction committed")
+	defer mc.LockDB(conn.NewMessages, conn.ChangedMessages)()
+	conn.Close()
+	mc.UpdateCaches(conn.NewMessages, conn.ChangedMessages)
+	return nil
 }
 
 // Commit commits the specified transaction.
