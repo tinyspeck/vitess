@@ -340,7 +340,6 @@ func (axp *TxPool) ReleaseConn(ctx context.Context, transactionID int64, mc mess
 	}
 	defer conn.conclude(TxCommit, "transaction committed")
 	defer mc.LockDB(conn.NewMessages, conn.ChangedMessages)()
-	conn.Close()
 	mc.UpdateCaches(conn.NewMessages, conn.ChangedMessages)
 	return nil
 }

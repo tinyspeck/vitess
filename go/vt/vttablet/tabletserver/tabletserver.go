@@ -1121,30 +1121,28 @@ func (tsv *TabletServer) ExecuteBatch(ctx context.Context, target *querypb.Targe
 			return nil, err
 		}
 
-		if err = tsv.Commit(ctx, target, transactionID); err != nil {
-			transactionID = 0
-			return nil, err
+		results = make([]sqltypes.Result, 0, len(queries))
+		for _, bound := range queries {
+			localReply, err := tsv.Execute(ctx, target, bound.Sql, bound.BindVariables, transactionID, options)
+			if err != nil {
+				transactionID = 0
+				err := tsv.ReleaseConn(ctx, target, transactionID)
+				if err != nil {
+					return nil, err
+				}
+				return nil, err
+			}
+			results = append(results, *localReply)
 		}
+
+		err := tsv.ReleaseConn(ctx, target, transactionID)
 		transactionID = 0
 
-		// err := tsv.ReleaseConn(ctx, target, transactionID)
-		// if err != nil {
-		// 	return nil, err
-		// }
+		if err != nil {
+			return nil, err
+		}
 
-		// results = make([]sqltypes.Result, 0, len(queries))
-		// for _, bound := range queries {
-		// 	localReply, err := tsv.Execute(ctx, target, bound.Sql, bound.BindVariables, transactionID, options)
-		// 	if err != nil {
-		// 		transactionID = 0
-		// 		return nil, err
-		// 	}
-		// 	results = append(results, *localReply)
-		// }
-
-		// transactionID = 0
-
-		// return results, nil
+		return results, nil
 	}
 
 	if asTransaction {
