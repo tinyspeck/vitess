@@ -73,10 +73,11 @@ const (
 	Dba      = "dba"
 	Filtered = "filtered"
 	Repl     = "repl"
+	Backup   = "backup"
 )
 
 // All can be used to register all flags: RegisterFlags(All...)
-var All = []string{App, AppDebug, AllPrivs, Dba, Filtered, Repl}
+var All = []string{App, AppDebug, AllPrivs, Dba, Filtered, Repl, Backup}
 
 // RegisterFlags registers the flags for the given DBConfigFlag.
 // For instance, vttablet will register client, dba and repl.
@@ -142,7 +143,7 @@ func (dbcfgs *DBConfigs) AppDebugWithDB() *mysql.ConnParams {
 	return dbcfgs.makeParams(AppDebug, true)
 }
 
-// AllPrivsWithDB returns connection parameters for appdebug with dbname set.
+// AllPrivsWithDB returns connection parameters for allprivs with dbname set.
 func (dbcfgs *DBConfigs) AllPrivsWithDB() *mysql.ConnParams {
 	return dbcfgs.makeParams(AllPrivs, true)
 }
@@ -152,22 +153,32 @@ func (dbcfgs *DBConfigs) Dba() *mysql.ConnParams {
 	return dbcfgs.makeParams(Dba, false)
 }
 
-// DbaWithDB returns connection parameters for appdebug with dbname set.
+// DbaWithDB returns connection parameters for dba with dbname set.
 func (dbcfgs *DBConfigs) DbaWithDB() *mysql.ConnParams {
 	return dbcfgs.makeParams(Dba, true)
 }
 
-// FilteredWithDB returns connection parameters for appdebug with dbname set.
+// FilteredWithDB returns connection parameters for filtered with dbname set.
 func (dbcfgs *DBConfigs) FilteredWithDB() *mysql.ConnParams {
 	return dbcfgs.makeParams(Filtered, true)
 }
 
-// Repl returns connection parameters for appdebug with no dbname set.
+// Repl returns connection parameters for repl with no dbname set.
 func (dbcfgs *DBConfigs) Repl() *mysql.ConnParams {
 	return dbcfgs.makeParams(Repl, false)
 }
 
-// AppWithDB returns connection parameters for app with dbname set.
+// Backup returns connection parameters for backup with no dbname set.
+func (dbcfgs *DBConfigs) Backup() *mysql.ConnParams {
+	return dbcfgs.makeParams(Backup, false)
+}
+
+// BackupWithDB returns connection parameters for backup with dbname set.
+func (dbcfgs *DBConfigs) BackupWithDB() *mysql.ConnParams {
+	return dbcfgs.makeParams(Backup, true)
+}
+
+// makeParams returns connection parameters with dbname set if withDB is true.
 func (dbcfgs *DBConfigs) makeParams(userKey string, withDB bool) *mysql.ConnParams {
 	orig := dbcfgs.userConfigs[userKey]
 	if orig == nil {

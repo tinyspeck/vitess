@@ -264,12 +264,12 @@ function install_chromedriver() {
   local version="$1"
   local dist="$2"
 
-  curl -sL "http://chromedriver.storage.googleapis.com/$version/chromedriver_linux64.zip" > chromedriver_linux64.zip
+  curl -sL "https://chromedriver.storage.googleapis.com/$version/chromedriver_linux64.zip" > chromedriver_linux64.zip
   unzip -o -q chromedriver_linux64.zip -d "$dist"
   rm chromedriver_linux64.zip
 }
 if [ "$BUILD_TESTS" == 1 ] ; then
-    install_dep "chromedriver" "2.44" "$VTROOT/dist/chromedriver" install_chromedriver
+    install_dep "chromedriver" "73.0.3683.20" "$VTROOT/dist/chromedriver" install_chromedriver
 fi
 
 
@@ -332,7 +332,7 @@ if [ "$BUILD_TESTS" == 1 ] ; then
       echo "Found MySQL 5.6+ installation in $VT_MYSQL_ROOT."
       ;;
 
-    "MariaDB")
+    "MariaDB" | "MariaDB103")
       myversion="$("$VT_MYSQL_ROOT/bin/mysql" --version)"
       [[ "$myversion" =~ MariaDB ]] || fail "Couldn't find MariaDB in $VT_MYSQL_ROOT. Set VT_MYSQL_ROOT to override search location."
       echo "Found MariaDB installation in $VT_MYSQL_ROOT."

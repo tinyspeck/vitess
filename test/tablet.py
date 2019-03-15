@@ -543,6 +543,7 @@ class Tablet(object):
 
     if supports_backups:
       args.extend(['-restore_from_backup'] + get_backup_storage_flags())
+      args.extend(['-db_backup_user=vt_backup'])
 
       # When vttablet restores from backup, it will re-generate the .cnf file.
       # So we need to have EXTRA_MY_CNF set properly.

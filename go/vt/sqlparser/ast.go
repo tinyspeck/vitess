@@ -17,7 +17,6 @@ limitations under the License.
 package sqlparser
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -265,9 +264,9 @@ func String(node SQLNode) string {
 }
 
 // Append appends the SQLNode to the buffer.
-func Append(buf *bytes.Buffer, node SQLNode) {
+func Append(buf *strings.Builder, node SQLNode) {
 	tbuf := &TrackedBuffer{
-		Buffer: buf,
+		Builder: buf,
 	}
 	node.Format(tbuf)
 }
@@ -404,7 +403,6 @@ func (node *Select) AddWhere(expr Expr) {
 		Left:  node.Where.Expr,
 		Right: expr,
 	}
-	return
 }
 
 // AddHaving adds the boolean expression to the
@@ -427,7 +425,6 @@ func (node *Select) AddHaving(expr Expr) {
 		Left:  node.Having.Expr,
 		Right: expr,
 	}
-	return
 }
 
 // ParenSelect is a parenthesized SELECT statement.
@@ -1031,8 +1028,8 @@ type ColumnType struct {
 	// Generic field options.
 	NotNull       BoolVal
 	Autoincrement BoolVal
-	Default       *SQLVal
-	OnUpdate      *SQLVal
+	Default       Expr
+	OnUpdate      Expr
 	Comment       *SQLVal
 
 	// Numeric field options
@@ -1170,6 +1167,8 @@ func (ct *ColumnType) SQLType() querypb.Type {
 			return sqltypes.Uint64
 		}
 		return sqltypes.Int64
+	case keywordStrings[BOOL], keywordStrings[BOOLEAN]:
+		return sqltypes.Uint8
 	case keywordStrings[TEXT]:
 		return sqltypes.Text
 	case keywordStrings[TINYTEXT]:
@@ -2172,6 +2171,7 @@ func (*IntervalExpr) iExpr()      {}
 func (*CollateExpr) iExpr()       {}
 func (*FuncExpr) iExpr()          {}
 func (*TimestampFuncExpr) iExpr() {}
+func (*CurTimeFuncExpr) iExpr()   {}
 func (*CaseExpr) iExpr()          {}
 func (*ValuesFuncExpr) iExpr()    {}
 func (*ConvertExpr) iExpr()       {}
@@ -2901,6 +2901,32 @@ func (node *TimestampFuncExpr) replace(from, to Expr) bool {
 		return true
 	}
 	return false
+}
+
+// CurTimeFuncExpr represents the function and arguments for CURRENT DATE/TIME functions
+// supported functions are documented in the grammar
+type CurTimeFuncExpr struct {
+	Name ColIdent
+	Fsp  Expr // fractional seconds precision, integer from 0 to 6
+}
+
+// Format formats the node.
+func (node *CurTimeFuncExpr) Format(buf *TrackedBuffer) {
+	buf.Myprintf("%s(%v)", node.Name.String(), node.Fsp)
+}
+
+func (node *CurTimeFuncExpr) walkSubtree(visit Visit) error {
+	if node == nil {
+		return nil
+	}
+	return Walk(
+		visit,
+		node.Fsp,
+	)
+}
+
+func (node *CurTimeFuncExpr) replace(from, to Expr) bool {
+	return replaceExprs(from, to, &node.Fsp)
 }
 
 // CollateExpr represents dynamic collate operator.

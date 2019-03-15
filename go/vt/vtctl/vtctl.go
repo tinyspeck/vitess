@@ -114,7 +114,6 @@ import (
 	"vitess.io/vitess/go/sync2"
 	hk "vitess.io/vitess/go/vt/hook"
 	"vitess.io/vitess/go/vt/key"
-	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/schemamanager"
 	"vitess.io/vitess/go/vt/sqlparser"
@@ -441,7 +440,7 @@ func addCommand(groupName string, c command) {
 			return
 		}
 	}
-	panic(fmt.Errorf("Trying to add to missing group %v", groupName))
+	panic(fmt.Errorf("trying to add to missing group %v", groupName))
 }
 
 func addCommandGroup(groupName string) {
@@ -502,7 +501,7 @@ func dumpTablets(ctx context.Context, wr *wrangler.Wrangler, tabletAliases []*to
 	for _, tabletAlias := range tabletAliases {
 		ti, ok := tabletMap[topoproto.TabletAliasString(tabletAlias)]
 		if !ok {
-			log.Warningf("failed to load tablet %v", tabletAlias)
+			wr.Logger().Warningf("failed to load tablet %v", tabletAlias)
 		} else {
 			wr.Logger().Printf("%v\n", fmtTabletAwkable(ti))
 		}
@@ -525,7 +524,7 @@ func getFileParam(flag, flagFile, name string) (string, error) {
 	}
 	data, err := ioutil.ReadFile(flagFile)
 	if err != nil {
-		return "", fmt.Errorf("Cannot read file %v: %v", flagFile, err)
+		return "", fmt.Errorf("cannot read file %v: %v", flagFile, err)
 	}
 	return string(data), nil
 }
@@ -540,15 +539,13 @@ func keyspaceParamsToKeyspaces(ctx context.Context, wr *wrangler.Wrangler, param
 	for _, param := range params {
 		if param[0] == '/' {
 			// this is a topology-specific path
-			for _, path := range params {
-				result = append(result, path)
-			}
+			result = append(result, params...)
 		} else {
 			// this is not a path, so assume a keyspace name,
 			// possibly with wildcards
 			keyspaces, err := wr.TopoServer().ResolveKeyspaceWildcard(ctx, param)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to resolve keyspace wildcard %v: %v", param, err)
+				return nil, fmt.Errorf("failed to resolve keyspace wildcard %v: %v", param, err)
 			}
 			result = append(result, keyspaces...)
 		}
@@ -578,7 +575,7 @@ func shardParamsToKeyspaceShards(ctx context.Context, wr *wrangler.Wrangler, par
 			// name / shard name, each possibly with wildcards
 			keyspaceShards, err := wr.TopoServer().ResolveShardWildcard(ctx, param)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to resolve keyspace/shard wildcard %v: %v", param, err)
+				return nil, fmt.Errorf("failed to resolve keyspace/shard wildcard %v: %v", param, err)
 			}
 			result = append(result, keyspaceShards...)
 		}
@@ -608,7 +605,7 @@ func parseTabletType(param string, types []topodatapb.TabletType) (topodatapb.Ta
 		return topodatapb.TabletType_UNKNOWN, fmt.Errorf("invalid tablet type %v: %v", param, err)
 	}
 	if !topoproto.IsTypeInList(topodatapb.TabletType(tabletType), types) {
-		return topodatapb.TabletType_UNKNOWN, fmt.Errorf("Type %v is not one of: %v", tabletType, strings.Join(topoproto.MakeStringTypeList(types), " "))
+		return topodatapb.TabletType_UNKNOWN, fmt.Errorf("type %v is not one of: %v", tabletType, strings.Join(topoproto.MakeStringTypeList(types), " "))
 	}
 	return tabletType, nil
 }
@@ -1158,7 +1155,7 @@ func commandCreateShard(ctx context.Context, wr *wrangler.Wrangler, subFlags *fl
 
 	err = wr.TopoServer().CreateShard(ctx, keyspace, shard)
 	if *force && topo.IsErrType(err, topo.NodeExists) {
-		log.Infof("shard %v/%v already exists (ignoring error with -force)", keyspace, shard)
+		wr.Logger().Infof("shard %v/%v already exists (ignoring error with -force)", keyspace, shard)
 		err = nil
 	}
 	return err
@@ -1485,7 +1482,7 @@ func commandDeleteShard(ctx context.Context, wr *wrangler.Wrangler, subFlags *fl
 		case err == nil:
 			// keep going
 		case topo.IsErrType(err, topo.NoNode):
-			log.Infof("Shard %v/%v doesn't exist, skipping it", ks.Keyspace, ks.Shard)
+			wr.Logger().Infof("Shard %v/%v doesn't exist, skipping it", ks.Keyspace, ks.Shard)
 		default:
 			return err
 		}
@@ -1790,7 +1787,7 @@ func commandValidate(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.
 	}
 
 	if subFlags.NArg() != 0 {
-		log.Warningf("action Validate doesn't take any parameter any more")
+		wr.Logger().Warningf("action Validate doesn't take any parameter any more")
 	}
 	return wr.Validate(ctx, *pingTablets)
 }
@@ -2065,7 +2062,7 @@ func commandGetPermissions(ctx context.Context, wr *wrangler.Wrangler, subFlags 
 	}
 	p, err := wr.GetPermissions(ctx, tabletAlias)
 	if err == nil {
-		log.Infof("%v", p.String()) // they can contain '%'
+		wr.Logger().Infof("%v", p.String()) // they can contain '%'
 	}
 	return err
 }
@@ -2109,7 +2106,7 @@ func commandGetVSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *fla
 	if err != nil {
 		return err
 	}
-	b, err := json.MarshalIndent(schema, "", "  ")
+	b, err := json2.MarshalIndentPB(schema, "  ")
 	if err != nil {
 		wr.Logger().Printf("%v\n", err)
 		return err
