@@ -53,6 +53,7 @@ var (
 	xtrabackupRestoreFlags = flag.String("xtrabackup_restore_flags", "", "flags to pass to restore command. these will be added to the end of the command. These need to match the ones used for backup e.g. --compress / --decompress, --encrypt / --decrypt")
 	// streaming mode
 	xtrabackupStreamMode = flag.String("xtrabackup_stream_mode", "tar", "which mode to use if streaming, valid values are tar and xbstream")
+	xtrabackupUser       = flag.String("xtrabackup_user", "", "User to use for xtrabackup")
 )
 
 const (
@@ -92,18 +93,15 @@ func (be *XtrabackupEngine) backupFileName() string {
 
 // ExecuteBackup returns a boolean that indicates if the backup is usable,
 // and an overall error.
-func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, dbconfigs *dbconfigs.DBConfigs, logger logutil.Logger, bh backupstorage.BackupHandle, backupConcurrency int, hookExtraEnv map[string]string) (bool, error) {
+func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, logger logutil.Logger, bh backupstorage.BackupHandle, backupConcurrency int, hookExtraEnv map[string]string) (bool, error) {
 
 	backupProgram := path.Join(*xtrabackupEnginePath, xtrabackup)
-	// TODO check that the executable file exists, exit if it doesn't or isn't executable
 
-	connParams := dbconfigs.Backup()
-	dbUser := connParams.Uname
-	// assumption is that this user can connect without a password and has all necessary privileges
 	flagsToExec := []string{"--defaults-file=" + cnf.path,
 		"--backup",
 		"--socket=" + cnf.SocketFile,
-		"--user=" + dbUser,
+		"--slave-info",
+		"--user=" + *xtrabackupUser,
 	}
 	if *xtrabackupStreamMode != "" {
 		flagsToExec = append(flagsToExec, "--stream="+*xtrabackupStreamMode)
@@ -119,11 +117,15 @@ func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysql
 	if err != nil {
 		return false, vterrors.Wrapf(err, "cannot create backup file %v", backupFileName)
 	}
-	defer func() {
+	closeFile := func(wc io.WriteCloser, fileName string) {
 		if closeErr := wc.Close(); err == nil {
 			err = closeErr
+		} else if closeErr != nil {
+			// since we already have an error just log this
+			logger.Errorf("Error closing file %v", fileName)
 		}
-	}()
+	}
+	defer closeFile(wc, backupFileName)
 
 	backupCmd := exec.Command(backupProgram, flagsToExec...)
 	backupOut, _ := backupCmd.StdoutPipe()
@@ -186,15 +188,11 @@ func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysql
 	logger.Infof("Found position: %v", position)
 
 	// open the MANIFEST
-	wc, err = bh.AddFile(ctx, backupManifest, 0)
+	mwc, err := bh.AddFile(ctx, backupManifest, 0)
 	if err != nil {
 		return usable, vterrors.Wrapf(err, "cannot add %v to backup", backupManifest)
 	}
-	defer func() {
-		if closeErr := wc.Close(); err == nil {
-			err = closeErr
-		}
-	}()
+	defer closeFile(mwc, backupManifest)
 
 	// JSON-encode and write the MANIFEST
 	bm := &XtraBackupManifest{
@@ -209,7 +207,7 @@ func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, cnf *Mycnf, mysql
 	if err != nil {
 		return usable, vterrors.Wrapf(err, "cannot JSON encode %v", backupManifest)
 	}
-	if _, err := wc.Write([]byte(data)); err != nil {
+	if _, err := mwc.Write([]byte(data)); err != nil {
 		return usable, vterrors.Wrapf(err, "cannot write %v", backupManifest)
 	}
 

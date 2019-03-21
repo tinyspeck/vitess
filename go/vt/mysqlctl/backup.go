@@ -19,7 +19,6 @@ package mysqlctl
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +31,8 @@ import (
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/mysqlctl/backupstorage"
+	"vitess.io/vitess/go/vt/proto/vtrpc"
+	"vitess.io/vitess/go/vt/vterrors"
 )
 
 // This file handles the backup and restore related code
@@ -87,17 +88,17 @@ func Backup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, dbconfigs *dbco
 	// Start the backup with the BackupStorage.
 	bs, err := backupstorage.GetBackupStorage()
 	if err != nil {
-		return err
+		return vterrors.Wrap(err, "unable to get backup storage")
 	}
 	defer bs.Close()
 	bh, err := bs.StartBackup(ctx, dir, name)
 	if err != nil {
-		return fmt.Errorf("StartBackup failed: %v", err)
+		return vterrors.Wrap(err, "StartBackup failed")
 	}
 
 	be, err := GetBackupEngine()
 	if err != nil {
-		return fmt.Errorf("Failed to find backup engine: %v", err)
+		return vterrors.Wrap(err, "failed to find backup engine")
 	}
 
 	// Take the backup, and either AbortBackup or EndBackup.
@@ -133,7 +134,7 @@ func Backup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, dbconfigs *dbco
 func checkNoDB(ctx context.Context, mysqld MysqlDaemon, dbName string) (bool, error) {
 	qr, err := mysqld.FetchSuperQuery(ctx, "SHOW DATABASES")
 	if err != nil {
-		return false, fmt.Errorf("checkNoDB failed: %v", err)
+		return false, vterrors.Wrap(err, "checkNoDB failed")
 	}
 
 	backtickDBName := sqlescape.EscapeID(dbName)
@@ -141,7 +142,7 @@ func checkNoDB(ctx context.Context, mysqld MysqlDaemon, dbName string) (bool, er
 		if row[0].ToString() == dbName {
 			tableQr, err := mysqld.FetchSuperQuery(ctx, "SHOW TABLES FROM "+backtickDBName)
 			if err != nil {
-				return false, fmt.Errorf("checkNoDB failed: %v", err)
+				return false, vterrors.Wrap(err, "checkNoDB failed")
 			}
 			if len(tableQr.Rows) == 0 {
 				// no tables == empty db, all is well
@@ -172,7 +173,7 @@ func removeExistingFiles(cnf *Mycnf) error {
 	}
 	for name, path := range paths {
 		if path == "" {
-			return fmt.Errorf("can't remove existing files: %v is unknown", name)
+			return vterrors.Errorf(vtrpc.Code_UNKNOWN, "can't remove existing files: %v is unknown", name)
 		}
 
 		if strings.HasSuffix(name, ".*") {
@@ -182,11 +183,11 @@ func removeExistingFiles(cnf *Mycnf) error {
 			log.Infof("Restore: removing files in %v (%v)", name, path)
 			matches, err := filepath.Glob(path)
 			if err != nil {
-				return fmt.Errorf("can't expand path glob %q: %v", path, err)
+				return vterrors.Wrapf(err, "can't expand path glob %q", path)
 			}
 			for _, match := range matches {
 				if err := os.Remove(match); err != nil {
-					return fmt.Errorf("can't remove existing file from %v (%v): %v", name, match, err)
+					return vterrors.Wrapf(err, "can't remove existing file from %v (%v)", name, match)
 				}
 			}
 			continue
@@ -199,7 +200,7 @@ func removeExistingFiles(cnf *Mycnf) error {
 		}
 		log.Infof("Restore: removing files in %v (%v)", name, path)
 		if err := os.RemoveAll(path); err != nil {
-			return fmt.Errorf("can't remove existing files in %v (%v): %v", name, path, err)
+			return vterrors.Wrapf(err, "can't remove existing files in %v (%v)", name, path)
 		}
 	}
 	return nil
@@ -252,15 +253,15 @@ func Restore(
 
 	bhs, err := bs.ListBackups(ctx, dir)
 	if err != nil {
-		return mysql.Position{}, fmt.Errorf("ListBackups failed: %v", err)
+		return mysql.Position{}, vterrors.Wrap(err, "ListBackups failed")
 	}
 
 	if len(bhs) == 0 {
 		// There are no backups (not even broken/incomplete ones).
-		logger.Errorf("No backup to restore on BackupStorage for directory %v. Starting up empty.", dir)
+		logger.Errorf("no backup to restore on BackupStorage for directory %v. Starting up empty.", dir)
 		// Since this is an empty database make sure we start replication at the beginning
 		if err = mysqld.ResetReplication(ctx); err == nil {
-			logger.Errorf("Error reseting slave replication: %v. Continuing", err)
+			logger.Errorf("error reseting slave replication: %v. Continuing", err)
 			err = ErrNoBackup
 		}
 
@@ -272,7 +273,7 @@ func Restore(
 
 	be, err := GetBackupEngine()
 	if err != nil {
-		return mysql.Position{}, fmt.Errorf("Failed to find backup engine: %v", err)
+		return mysql.Position{}, vterrors.Wrap(err, "Failed to find backup engine")
 	}
 	if rval, err = be.ExecuteRestore(ctx, cnf, mysqld, logger, dir, bhs, restoreConcurrency, hookExtraEnv); err != nil {
 		return rval, err
@@ -294,7 +295,7 @@ func Restore(
 
 	logger.Infof("Restore: running mysql_upgrade")
 	if err := mysqld.RunMysqlUpgrade(); err != nil {
-		return mysql.Position{}, fmt.Errorf("mysql_upgrade failed: %v", err)
+		return mysql.Position{}, vterrors.Wrap(err, "mysql_upgrade failed")
 	}
 
 	// Populate local_metadata before starting without --skip-networking,

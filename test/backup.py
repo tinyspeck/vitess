@@ -32,7 +32,10 @@ stream_mode = 'tar'
 xtrabackup_args = ['-backup_engine_implementation',
                    'xtrabackup',
                    '-xtrabackup_stream_mode',
-                   stream_mode]
+                   stream_mode,
+                   '-xtrabackup_user=vt_dba',
+                   '-xtrabackup_backup_flags',
+                   '--password=VtDbaPass']
 
 tablet_master = None
 tablet_replica1 = None
@@ -518,6 +521,9 @@ class TestBackup(unittest.TestCase):
     tablet_replica1.kill_vttablet()
 
     xtra_args = ['-db-credentials-file', db_credentials_file]
+    if use_xtrabackup:
+      xtra_args.extend(xtrabackup_args)
+
     hook_args = ['-backup_storage_hook',
                  'test_backup_transform',
                  '-backup_storage_compress=false']
@@ -565,6 +571,8 @@ class TestBackup(unittest.TestCase):
     # Restart the replica with the transform parameter.
     tablet_replica1.kill_vttablet()
     xtra_args = ['-db-credentials-file', db_credentials_file]
+    if use_xtrabackup:
+      xtra_args.extend(xtrabackup_args)
     hook_args = ['-backup_storage_hook','test_backup_error']
     xtra_args.extend(hook_args)
     tablet_replica1.start_vttablet(supports_backups=True,
