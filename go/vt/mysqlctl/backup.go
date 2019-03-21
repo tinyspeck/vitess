@@ -27,7 +27,6 @@ import (
 
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqlescape"
-	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/mysqlctl/backupstorage"
@@ -84,7 +83,7 @@ var (
 // - uses the BackupStorage service to store a new backup
 // - shuts down Mysqld during the backup
 // - remember if we were replicating, restore the exact same state
-func Backup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, dbconfigs *dbconfigs.DBConfigs, logger logutil.Logger, dir, name string, backupConcurrency int, hookExtraEnv map[string]string) error {
+func Backup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, logger logutil.Logger, dir, name string, backupConcurrency int, hookExtraEnv map[string]string) error {
 	// Start the backup with the BackupStorage.
 	bs, err := backupstorage.GetBackupStorage()
 	if err != nil {
@@ -102,7 +101,7 @@ func Backup(ctx context.Context, cnf *Mycnf, mysqld MysqlDaemon, dbconfigs *dbco
 	}
 
 	// Take the backup, and either AbortBackup or EndBackup.
-	usable, err := be.ExecuteBackup(ctx, cnf, mysqld, dbconfigs, logger, bh, backupConcurrency, hookExtraEnv)
+	usable, err := be.ExecuteBackup(ctx, cnf, mysqld, logger, bh, backupConcurrency, hookExtraEnv)
 	var finishErr error
 	if usable {
 		finishErr = bh.EndBackup(ctx)
