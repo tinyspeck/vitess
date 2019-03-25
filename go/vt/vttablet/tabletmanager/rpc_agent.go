@@ -110,8 +110,6 @@ type RPCAgent interface {
 
 	DemoteMaster(ctx context.Context) (string, error)
 
-	UndoDemoteMaster(ctx context.Context) error
-
 	PromoteSlaveWhenCaughtUp(ctx context.Context, replicationPosition string) (string, error)
 
 	SlaveWasPromoted(ctx context.Context) error
