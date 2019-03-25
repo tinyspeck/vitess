@@ -135,10 +135,6 @@ type FakeMysqlDaemon struct {
 	SemiSyncMasterEnabled bool
 	// SemiSyncSlaveEnabled represents the state of rpl_semi_sync_slave_enabled.
 	SemiSyncSlaveEnabled bool
-
-	// TimeoutHook is a func that can be called at the beginning of any method to fake a timeout.
-	// all a test needs to do is make it { return context.DeadlineExceeded }
-	TimeoutHook func() error
 }
 
 // NewFakeMysqlDaemon returns a FakeMysqlDaemon where mysqld appears
@@ -304,9 +300,6 @@ func (fmd *FakeMysqlDaemon) DemoteMaster() (mysql.Position, error) {
 
 // WaitMasterPos is part of the MysqlDaemon interface
 func (fmd *FakeMysqlDaemon) WaitMasterPos(_ context.Context, pos mysql.Position) error {
-	if fmd.TimeoutHook != nil {
-		return fmd.TimeoutHook()
-	}
 	if reflect.DeepEqual(fmd.WaitMasterPosition, pos) {
 		return nil
 	}
