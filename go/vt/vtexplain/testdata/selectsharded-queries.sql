@@ -19,4 +19,14 @@ select name from user where id in (select id from t1) /* non-correlated subquery
 select name from user where id not in (select id from t1) /* non-correlated subquery in NOT IN clause */;
 select name from user where exists (select id from t1) /* non-correlated subquery as EXISTS */;
 
-select * from name_info order by info /* select * and order by varchar column */
+select * from name_info order by info /* select * and order by varchar column */;
+
+SELECT * FROM music WHERE user_id IN (1,2,3);
+
+SELECT * FROM music WHERE (user_id = 1) OR (user_id = 2) OR (user_id = 3);
+
+SELECT * FROM music WHERE (user_id = 1 AND id = 2) OR (user_id = 2 AND id = 3) OR (user_id = 4 AND id = 5);
+
+select * from music where ((user_id=123 and 1=1));
+
+select * from music where (user_id=123 and 1=1);
