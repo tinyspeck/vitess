@@ -126,3 +126,38 @@ select * from name_info order by info /* select * and order by varchar column */
 1 ks_sharded/c0-: select name, info, weight_string(info) from name_info order by info asc limit 10001 /* select * and order by varchar column */
 
 ----------------------------------------------------------------------
+SELECT * FROM music WHERE user_id IN (1,2,3)
+
+1 ks_sharded/-40: select * from music where user_id in (1, 2) limit 10001
+1 ks_sharded/40-80: select * from music where user_id in (3) limit 10001
+
+----------------------------------------------------------------------
+SELECT * FROM music WHERE (user_id = 1) OR (user_id = 2) OR (user_id = 3)
+
+1 ks_sharded/-40: select * from music where ((user_id = 1) or (user_id = 2) or (user_id = 3)) limit 10001
+1 ks_sharded/40-80: select * from music where ((user_id = 1) or (user_id = 2) or (user_id = 3)) limit 10001
+1 ks_sharded/80-c0: select * from music where ((user_id = 1) or (user_id = 2) or (user_id = 3)) limit 10001
+1 ks_sharded/c0-: select * from music where ((user_id = 1) or (user_id = 2) or (user_id = 3)) limit 10001
+
+----------------------------------------------------------------------
+SELECT * FROM music WHERE (user_id = 1 AND id = 2) OR (user_id = 2 AND id = 3) OR (user_id = 4 AND id = 5)
+
+1 ks_sharded/-40: select * from music where ((user_id = 1 and id = 2) or (user_id = 2 and id = 3) or (user_id = 4 and id = 5)) limit 10001
+1 ks_sharded/40-80: select * from music where ((user_id = 1 and id = 2) or (user_id = 2 and id = 3) or (user_id = 4 and id = 5)) limit 10001
+1 ks_sharded/80-c0: select * from music where ((user_id = 1 and id = 2) or (user_id = 2 and id = 3) or (user_id = 4 and id = 5)) limit 10001
+1 ks_sharded/c0-: select * from music where ((user_id = 1 and id = 2) or (user_id = 2 and id = 3) or (user_id = 4 and id = 5)) limit 10001
+
+----------------------------------------------------------------------
+select * from music where ((user_id=123 and 1=1))
+
+1 ks_sharded/-40: select * from music where ((user_id = 123 and 1 = 1)) limit 10001
+1 ks_sharded/40-80: select * from music where ((user_id = 123 and 1 = 1)) limit 10001
+1 ks_sharded/80-c0: select * from music where ((user_id = 123 and 1 = 1)) limit 10001
+1 ks_sharded/c0-: select * from music where ((user_id = 123 and 1 = 1)) limit 10001
+
+----------------------------------------------------------------------
+select * from music where (user_id=123 and 1=1)
+
+1 ks_sharded/-40: select * from music where user_id = 123 and 1 = 1 limit 10001
+
+----------------------------------------------------------------------
