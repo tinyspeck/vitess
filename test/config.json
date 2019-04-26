@@ -19,6 +19,33 @@
 			"RetryMax": 0,
 			"Tags": []
 		},
+		"xtrabackup": {
+			"File": "xtrabackup.py",
+			"Args": [],
+			"Command": [],
+			"Manual": false,
+			"Shard": 3,
+			"RetryMax": 0,
+			"Tags": []
+		},
+		"xtrabackup_xbstream": {
+			"File": "xtrabackup_xbstream.py",
+			"Args": [],
+			"Command": [],
+			"Manual": false,
+			"Shard": 3,
+			"RetryMax": 0,
+			"Tags": []
+		},
+		"xtrabackup_xtra": {
+			"File": "xtrabackup_xtra.py",
+			"Args": [],
+			"Command": [],
+			"Manual": false,
+			"Shard": 3,
+			"RetryMax": 0,
+			"Tags": []
+		},
 		"binlog": {
 			"File": "binlog.py",
 			"Args": [],
@@ -78,6 +105,15 @@
 			"Tags": [
 				"worker_test"
 			]
+		},
+		"initial_sharding_multi": {
+			"File": "initial_sharding_multi.py",
+			"Args": [],
+			"Command": [],
+			"Manual": false,
+			"Shard": 3,
+			"RetryMax": 0,
+			"Tags": []
 		},
 		"initial_sharding_bytes": {
 			"File": "initial_sharding_bytes.py",
