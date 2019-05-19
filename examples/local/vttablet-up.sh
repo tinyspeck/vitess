@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Copyright 2017 Google Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -124,6 +124,12 @@ for uid_index in $uids; do
     -log_queries_to_file $VTDATAROOT/tmp/$tablet_logfile \
     -tablet-path $alias \
     -tablet_hostname "$tablet_hostname" \
+    -db-config-dba-charset "utf8mb4" \
+    -db-config-app-charset "utf8mb4" \
+    -db-config-appdebug-charset "utf8mb4" \
+    -db-config-allprivs-charset "utf8mb4" \
+    -db-config-repl-charset "utf8mb4" \
+    -db-config-filtered-charset "utf8mb4" \
     -init_keyspace $keyspace \
     -init_shard $shard \
     -init_tablet_type $tablet_type \
