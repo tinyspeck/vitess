@@ -237,23 +237,27 @@ func HasConnectionParams() bool {
 // is used to initialize the per-user conn params.
 func Init(defaultSocketFile string) (*DBConfigs, error) {
 	// The new base configs, if set, supersede legacy settings.
-	for _, uc := range dbConfigs.userConfigs {
-		if HasConnectionParams() {
+	if HasConnectionParams() {
+		for _, uc := range dbConfigs.userConfigs {
 			uc.param.Host = baseConfig.Host
 			uc.param.Port = baseConfig.Port
 			uc.param.UnixSocket = baseConfig.UnixSocket
-		} else if uc.param.UnixSocket == "" && uc.param.Host == "" {
-			uc.param.UnixSocket = defaultSocketFile
+			uc.param.Charset = baseConfig.Charset
+			uc.param.Flags = baseConfig.Flags
+			if uc.useSSL {
+				uc.param.SslCa = baseConfig.SslCa
+				uc.param.SslCaPath = baseConfig.SslCaPath
+				uc.param.SslCert = baseConfig.SslCert
+				uc.param.SslKey = baseConfig.SslKey
+				uc.param.ServerName = baseConfig.ServerName
+			}
 		}
-
-		uc.param.Charset = baseConfig.Charset
-		uc.param.Flags = baseConfig.Flags
-		if uc.useSSL {
-			uc.param.SslCa = baseConfig.SslCa
-			uc.param.SslCaPath = baseConfig.SslCaPath
-			uc.param.SslCert = baseConfig.SslCert
-			uc.param.SslKey = baseConfig.SslKey
-			uc.param.ServerName = baseConfig.ServerName
+	} else {
+		// Use supplied socket value if conn parameters are not specified.
+		for _, uc := range dbConfigs.userConfigs {
+			if uc.param.UnixSocket == "" && uc.param.Host == "" {
+				uc.param.UnixSocket = defaultSocketFile
+			}
 		}
 	}
 
