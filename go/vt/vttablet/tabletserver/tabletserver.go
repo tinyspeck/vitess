@@ -237,12 +237,15 @@ type TxPoolController interface {
 	// StopGently will change the state to NotServing but first wait for transactions to wrap up
 	StopGently()
 
-	// Begin begins a transaction, and returns the associated transaction id.
+	// Begin begins a transaction, and returns the associated transaction id and the
+	// statement(s) used to execute the begin (if any).
+	//
 	// Subsequent statements can access the connection through the transaction id.
-	Begin(ctx context.Context, options *querypb.ExecuteOptions) (int64, error)
+	Begin(ctx context.Context, options *querypb.ExecuteOptions) (int64, string, error)
 
-	// Commit commits the specified transaction.
-	Commit(ctx context.Context, transactionID int64, mc messageCommitter) error
+	// Commit commits the specified transaction, returning the statement used to execute
+	// the commit or "" in autocommit settings.
+	Commit(ctx context.Context, transactionID int64, mc messageCommitter) (string, error)
 
 	// Rollback rolls back the specified transaction.
 	Rollback(ctx context.Context, transactionID int64) error
@@ -773,13 +776,22 @@ func (tsv *TabletServer) Begin(ctx context.Context, target *querypb.Target, opti
 		"Begin", "begin", nil,
 		target, options, true /* isBegin */, false, /* allowOnShutdown */
 		func(ctx context.Context, logStats *tabletenv.LogStats) error {
-			defer tabletenv.QueryStats.Record("BEGIN", time.Now())
+			startTime := time.Now()
 			if tsv.txThrottler.Throttle() {
 				// TODO(erez): I think this should be RESOURCE_EXHAUSTED.
 				return vterrors.Errorf(vtrpcpb.Code_UNAVAILABLE, "Transaction throttled")
 			}
-			transactionID, err = tsv.teCtrl.Begin(ctx, options)
+			var beginSQL string
+			transactionID, beginSQL, err = tsv.teCtrl.Begin(ctx, options)
 			logStats.TransactionID = transactionID
+
+			// Record the actual statements that were executed in the logStats.
+			// If nothing was actually executed, clear out the Method so that
+			// handlePanicAndSendLogStats doesn't log the no-op.
+			logStats.OriginalSQL = beginSQL
+			if beginSQL == "" {
+				logStats.Method = ""
+			}
 			return err
 		},
 	)
@@ -793,9 +805,19 @@ func (tsv *TabletServer) Commit(ctx context.Context, target *querypb.Target, tra
 		"Commit", "commit", nil,
 		target, nil, false /* isBegin */, true, /* allowOnShutdown */
 		func(ctx context.Context, logStats *tabletenv.LogStats) error {
-			defer tabletenv.QueryStats.Record("COMMIT", time.Now())
+			startTime := time.Now()
 			logStats.TransactionID = transactionID
-			return tsv.teCtrl.Commit(ctx, transactionID, tsv.messager)
+
+			var commitSQL string
+			commitSQL, err = tsv.teCtrl.Commit(ctx, transactionID, tsv.messager)
+
+			// If nothing was actually executed, clear out the Method so that
+			// handlePanicAndSendLogStats doesn't log the no-op.
+			if commitSQL == "" {
+				logStats.Method = ""
+			}
+
+			return err
 		},
 	)
 }
@@ -1471,6 +1493,7 @@ func (tsv *TabletServer) handlePanicAndSendLogStats(
 	// Examples where we don't send the log stats:
 	// - ExecuteBatch() (logStats == nil)
 	// - beginWaitForSameRangeTransactions() (Method == "")
+	// - Begin / Commit in autocommit mode
 	if logStats != nil && logStats.Method != "" {
 		logStats.Send()
 	}
@@ -1860,9 +1883,9 @@ func (tsv *TabletServer) BroadcastHealth(terTimestamp int64, stats *querypb.Real
 	target := tsv.target
 	tsv.mu.Unlock()
 	shr := &querypb.StreamHealthResponse{
-		Target:      &target,
-		TabletAlias: &tsv.alias,
-		Serving:     tsv.IsServing(),
+		Target:                              &target,
+		TabletAlias:                         &tsv.alias,
+		Serving:                             tsv.IsServing(),
 		TabletExternallyReparentedTimestamp: terTimestamp,
 		RealtimeStats:                       stats,
 	}
