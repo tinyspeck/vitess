@@ -68,7 +68,7 @@ func (txe *TxExecutor) Prepare(transactionID int64, dtid string) error {
 		return vterrors.Errorf(vtrpcpb.Code_RESOURCE_EXHAUSTED, "prepare failed for transaction %d: %v", transactionID, err)
 	}
 
-	localConn, _, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
+	localConn, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (txe *TxExecutor) Prepare(transactionID int64, dtid string) error {
 		return err
 	}
 
-	_, err = txe.te.txPool.LocalCommit(txe.ctx, localConn, txe.messager)
+	err = txe.te.txPool.LocalCommit(txe.ctx, localConn, txe.messager)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (txe *TxExecutor) CommitPrepared(dtid string) error {
 		txe.markFailed(ctx, dtid)
 		return err
 	}
-	_, err = txe.te.txPool.LocalCommit(ctx, conn, txe.messager)
+	err = txe.te.txPool.LocalCommit(ctx, conn, txe.messager)
 	if err != nil {
 		txe.markFailed(ctx, dtid)
 		return err
@@ -130,7 +130,7 @@ func (txe *TxExecutor) CommitPrepared(dtid string) error {
 func (txe *TxExecutor) markFailed(ctx context.Context, dtid string) {
 	tabletenv.InternalErrors.Add("TwopcCommit", 1)
 	txe.te.preparedPool.SetFailed(dtid)
-	conn, _, err := txe.te.txPool.LocalBegin(ctx, &querypb.ExecuteOptions{})
+	conn, err := txe.te.txPool.LocalBegin(ctx, &querypb.ExecuteOptions{})
 	if err != nil {
 		log.Errorf("markFailed: Begin failed for dtid %s: %v", dtid, err)
 		return
@@ -142,7 +142,7 @@ func (txe *TxExecutor) markFailed(ctx context.Context, dtid string) {
 		return
 	}
 
-	if _, err = txe.te.txPool.LocalCommit(ctx, conn, txe.messager); err != nil {
+	if err = txe.te.txPool.LocalCommit(ctx, conn, txe.messager); err != nil {
 		log.Errorf("markFailed: Commit failed for dtid %s: %v", dtid, err)
 	}
 }
@@ -170,7 +170,7 @@ func (txe *TxExecutor) RollbackPrepared(dtid string, originalID int64) error {
 		return vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "2pc is not enabled")
 	}
 	defer tabletenv.QueryStats.Record("ROLLBACK_PREPARED", time.Now())
-	conn, _, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
+	conn, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
 	if err != nil {
 		goto returnConn
 	}
@@ -181,7 +181,7 @@ func (txe *TxExecutor) RollbackPrepared(dtid string, originalID int64) error {
 		goto returnConn
 	}
 
-	_, err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
+	err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
 
 returnConn:
 	if preparedConn := txe.te.preparedPool.FetchForRollback(dtid); preparedConn != nil {
@@ -200,7 +200,7 @@ func (txe *TxExecutor) CreateTransaction(dtid string, participants []*querypb.Ta
 		return vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "2pc is not enabled")
 	}
 	defer tabletenv.QueryStats.Record("CREATE_TRANSACTION", time.Now())
-	conn, _, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
+	conn, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
 	if err != nil {
 		return err
 	}
@@ -210,8 +210,7 @@ func (txe *TxExecutor) CreateTransaction(dtid string, participants []*querypb.Ta
 	if err != nil {
 		return err
 	}
-	_, err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
-	return err
+	return txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
 }
 
 // StartCommit atomically commits the transaction along with the
@@ -233,8 +232,7 @@ func (txe *TxExecutor) StartCommit(transactionID int64, dtid string) error {
 	if err != nil {
 		return err
 	}
-	_, err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
-	return err
+	return txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
 }
 
 // SetRollback transitions the 2pc transaction to the Rollback state.
@@ -250,7 +248,7 @@ func (txe *TxExecutor) SetRollback(dtid string, transactionID int64) error {
 		txe.te.txPool.Rollback(txe.ctx, transactionID)
 	}
 
-	conn, _, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
+	conn, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
 	if err != nil {
 		return err
 	}
@@ -261,7 +259,7 @@ func (txe *TxExecutor) SetRollback(dtid string, transactionID int64) error {
 		return err
 	}
 
-	_, err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
+	err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
 	if err != nil {
 		return err
 	}
@@ -277,7 +275,7 @@ func (txe *TxExecutor) ConcludeTransaction(dtid string) error {
 	}
 	defer tabletenv.QueryStats.Record("RESOLVE", time.Now())
 
-	conn, _, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
+	conn, err := txe.te.txPool.LocalBegin(txe.ctx, &querypb.ExecuteOptions{})
 	if err != nil {
 		return err
 	}
@@ -287,8 +285,7 @@ func (txe *TxExecutor) ConcludeTransaction(dtid string) error {
 	if err != nil {
 		return err
 	}
-	_, err = txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
-	return err
+	return txe.te.txPool.LocalCommit(txe.ctx, conn, txe.messager)
 }
 
 // ReadTransaction returns the metadata for the sepcified dtid.
