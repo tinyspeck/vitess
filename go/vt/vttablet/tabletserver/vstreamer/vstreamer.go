@@ -69,6 +69,7 @@ type streamerPlan struct {
 }
 
 func newVStreamer(ctx context.Context, cp *mysql.ConnParams, se *schema.Engine, startPos string, filter *binlogdatapb.Filter, kschema *vindexes.KeyspaceSchema, send func([]*binlogdatapb.VEvent) error) *vstreamer {
+	log.Infof("Creating vstreamer: startPos: %v, filter: %v, kschema: %v, dbname: %v", startPos, filter, kschema, cp.DbName)
 	ctx, cancel := context.WithCancel(ctx)
 	return &vstreamer{
 		ctx:      ctx,
@@ -338,6 +339,7 @@ func (vs *vstreamer) parseEvent(ev mysql.BinlogEvent) ([]*binlogdatapb.VEvent, e
 			return nil, nil
 		}
 		if tm.Database != "" && tm.Database != vs.cp.DbName {
+			log.Infof("Ignoring event: db %v does not match %v", tm.Database, vs.cp.DbName)
 			vs.plans[id] = nil
 			return nil, nil
 		}
@@ -357,6 +359,7 @@ func (vs *vstreamer) parseEvent(ev mysql.BinlogEvent) ([]*binlogdatapb.VEvent, e
 		if err != nil {
 			return nil, err
 		}
+		log.Infof("Saving plan under id %v: %v", id, plan)
 		if plan == nil {
 			vs.plans[id] = nil
 			return nil, nil
@@ -381,8 +384,10 @@ func (vs *vstreamer) parseEvent(ev mysql.BinlogEvent) ([]*binlogdatapb.VEvent, e
 		id := ev.TableID(vs.format)
 		plan := vs.plans[id]
 		if plan == nil {
+			log.Infof("No plan for id: %v", id)
 			return nil, nil
 		}
+		log.Infof("Found plan for id %v: %v", id, plan)
 		rows, err := ev.Rows(vs.format, plan.TableMap)
 		if err != nil {
 			return nil, err

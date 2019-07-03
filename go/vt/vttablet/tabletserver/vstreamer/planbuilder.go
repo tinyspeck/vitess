@@ -24,6 +24,7 @@ import (
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/schema"
@@ -152,6 +153,7 @@ func tableMatches(table sqlparser.TableName, dbname string, filter *binlogdatapb
 }
 
 func buildPlan(ti *Table, kschema *vindexes.KeyspaceSchema, filter *binlogdatapb.Filter) (*Plan, error) {
+	log.Infof("Building plan: table: %v, kschema: %v, filter: %v", ti, kschema, filter)
 	for _, rule := range filter.Rules {
 		switch {
 		case strings.HasPrefix(rule.Match, "/"):
@@ -161,6 +163,7 @@ func buildPlan(ti *Table, kschema *vindexes.KeyspaceSchema, filter *binlogdatapb
 				return nil, err
 			}
 			if !result {
+				log.Infof("No match found", ti, kschema, filter)
 				continue
 			}
 			return buildREPlan(ti, kschema, rule.Filter)
