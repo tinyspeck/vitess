@@ -1,5 +1,5 @@
 /*
-Copyright 2018 Google Inc.
+Copyright 2018 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -147,6 +147,19 @@ func (code UpdateOpcode) MarshalJSON() ([]byte, error) {
 // RouteType returns a description of the query routing type used by the primitive
 func (upd *Update) RouteType() string {
 	return updName[upd.Opcode]
+}
+
+// GetKeyspaceName specifies the Keyspace that this primitive routes to.
+func (upd *Update) GetKeyspaceName() string {
+	return upd.Keyspace.Name
+}
+
+// GetTableName specifies the table that this primitive routes to.
+func (upd *Update) GetTableName() string {
+	if upd.Table != nil {
+		return upd.Table.Name.String()
+	}
+	return ""
 }
 
 // Execute performs a non-streaming exec.

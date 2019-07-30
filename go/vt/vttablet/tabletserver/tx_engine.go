@@ -21,16 +21,16 @@ import (
 	"sync"
 	"time"
 
-	"vitess.io/vitess/go/vt/proto/vtrpc"
-	"vitess.io/vitess/go/vt/vterrors"
-
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/timer"
+	"vitess.io/vitess/go/trace"
 	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/dtids"
 	"vitess.io/vitess/go/vt/log"
+	"vitess.io/vitess/go/vt/proto/vtrpc"
+	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/connpool"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/tabletenv"
@@ -116,6 +116,7 @@ func NewTxEngine(checker connpool.MySQLChecker, config tabletenv.TabletConfig) *
 		config.PoolNamePrefix,
 		config.TransactionCap,
 		config.FoundRowsPoolSize,
+		config.TxPoolPrefillParallelism,
 		time.Duration(config.TransactionTimeout*1e9),
 		time.Duration(config.IdleTimeout*1e9),
 		config.TxPoolWaiterCap,
@@ -146,6 +147,7 @@ func NewTxEngine(checker connpool.MySQLChecker, config tabletenv.TabletConfig) *
 	readPool := connpool.New(
 		config.PoolNamePrefix+"TxReadPool",
 		3,
+		0,
 		time.Duration(config.IdleTimeout*1e9),
 		checker,
 	)
@@ -300,6 +302,9 @@ func (te *TxEngine) Commit(ctx context.Context, transactionID int64, mc messageC
 
 // Rollback rolls back the specified transaction.
 func (te *TxEngine) Rollback(ctx context.Context, transactionID int64) error {
+	span, ctx := trace.NewSpan(ctx, "TxEngine.Rollback")
+	defer span.Finish()
+
 	return te.txPool.Rollback(ctx, transactionID)
 }
 
