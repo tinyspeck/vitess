@@ -292,7 +292,7 @@ func (qe *QueryEngine) Open() error {
 		qe.conns.Close()
 		return err
 	}
-	qe.binlogFormat, err = conn.VerifyMode(qe.strictTransTables)
+	//qe.binlogFormat, err = conn.VerifyMode(qe.strictTransTables)
 	conn.Recycle()
 
 	if err != nil {
