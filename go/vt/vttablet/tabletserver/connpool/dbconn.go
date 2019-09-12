@@ -241,10 +241,6 @@ func (dbc *DBConn) VerifyMode(strictTransTables bool) (BinlogFormat, error) {
 		if len(qr.Rows) != 1 {
 			return 0, fmt.Errorf("incorrect rowcount received for %s: %d", getModeSQL, len(qr.Rows))
 		}
-		sqlMode := qr.Rows[0][0].ToString()
-		if !(strings.Contains(sqlMode, "STRICT_TRANS_TABLES") || strings.Contains(sqlMode, "STRICT_ALL_TABLES")) {
-			return 0, fmt.Errorf("require sql_mode to be STRICT_TRANS_TABLES or STRICT_ALL_TABLES: got '%s'", qr.Rows[0][0].ToString())
-		}
 	}
 	qr, err := dbc.conn.ExecuteFetch(getAutocommit, 2, false)
 	if err != nil {
