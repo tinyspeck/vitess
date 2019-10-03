@@ -21,6 +21,7 @@ apt-get install -y make \
                    automake \
                    libtool \
                    python-dev \
+                   python-pip \
                    python-virtualenv \
                    python-mysqldb \
                    libssl-dev \
