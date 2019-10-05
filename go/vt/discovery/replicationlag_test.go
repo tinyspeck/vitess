@@ -82,14 +82,14 @@ func TestFilterByReplicationLag(t *testing.T) {
 			[]uint32{10, 15, 25},
 		},
 		{
-			"lags of (2m, 3m, 1h) -- a single very lagged replica",
-			[]uint32{60 * 2, 60 * 3, 60 * 60},
+			"lags of (2m, 3m, 10m) -- a single very lagged replica",
+			[]uint32{60 * 2, 60 * 3, 10 * 60},
 			[]uint32{60 * 2, 60 * 3},
 		},
 		{
-			"lags of (2m, 50m, 2h) -- more of a distribution of lag. worst one removed",
-			[]uint32{60 * 2, 60 * 50, 60 * 60 * 2},
-			[]uint32{60 * 2, 60 * 50},
+			"lags of (2m, 30m, 1h) -- more of a distribution of lag. worst one removed",
+			[]uint32{60 * 2, 60 * 30, 60 * 60},
+			[]uint32{60 * 2, 60 * 30},
 		},
 		{
 			"lags of (2m, 50m, 50m) -- two pretty lagged but no outliers",
@@ -107,7 +107,7 @@ func TestFilterByReplicationLag(t *testing.T) {
 			[]uint32{1 * 60},
 		},
 		{
-			"lags of (1m, 10m) -- one considerably lagged, below minNumThreshold and below high watermark",
+			"lags of (1m, 4m) -- one considerably lagged, below minNumThreshold and below high watermark",
 			[]uint32{1 * 60, 4 * 60},
 			[]uint32{1 * 60, 4 * 60},
 		},
