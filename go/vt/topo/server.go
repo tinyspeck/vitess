@@ -136,6 +136,9 @@ type Server struct {
 	// will read the list of addresses for that cell from the
 	// global cluster and create clients as needed.
 	cells map[string]Conn
+
+	// sem protects the number of concurrent requests to the topology server
+	sem chan int
 }
 
 type cellsToAliasesMap struct {
@@ -155,6 +158,9 @@ var (
 	// topoGlobalRoot is the root path to use for the global topology
 	// server.
 	topoGlobalRoot = flag.String("topo_global_root", "", "the path of the global topology data in the global topology server")
+
+	// topoRequestConcurrency is the max number of concurrent requests allowed to the topology server
+	topoRequestConcurrency = flag.Int("topo_request_concurrency", 5, "number of concurrent requests allowed to the topology server")
 
 	// factories has the factories for the Conn objects.
 	factories = make(map[string]Factory)
@@ -199,6 +205,7 @@ func NewWithFactory(factory Factory, serverAddress, root string) (*Server, error
 		globalReadOnlyCell: connReadOnly,
 		factory:            factory,
 		cells:              make(map[string]Conn),
+		sem:                make(chan int, *topoRequestConcurrency),
 	}, nil
 }
 

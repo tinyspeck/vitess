@@ -235,7 +235,9 @@ func (ts *Server) FindAllShardsInKeyspace(ctx context.Context, keyspace string) 
 		wg.Add(1)
 		go func(shard string) {
 			defer wg.Done()
+			ts.sem <- 1 // limit the number of concurrent requests to the topo
 			si, err := ts.GetShard(ctx, keyspace, shard)
+			<-ts.sem // done; enable next request to run
 			if err != nil {
 				if IsErrType(err, NoNode) {
 					log.Warningf("GetShard(%v, %v) returned ErrNoNode, consider checking the topology.", keyspace, shard)
