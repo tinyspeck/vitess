@@ -157,17 +157,65 @@ sharding_column_name: "col2"
 	if gotShard.GetMasterAlias() != nil {
 		t.Fatalf("Expecting master alias to be nil. Was %v", gotShard.GetMasterAlias())
 	}
-	// Test TopoPost from disk to topo.
-	//	_, err = vp.RunAndOutput([]string{"TopoPost", "shard", "keyspaces/ks2/shards/00-80/Shard", ""})
 
-	// if err != nil {
-	// 	t.Fatalf("TopoCp(/keyspaces/ks3/Keyspace) failed: %v", err)
-	// }
-	// ks3, err := ts.GetKeyspace(context.Background(), "ks3")
-	// if err != nil {
-	// 	t.Fatalf("copy from disk to topo failed: %v", err)
-	// }
-	// if !proto.Equal(ks3.Keyspace, expected) {
-	// 	t.Fatalf("copy data to topo failed, got %v expected %v", ks3.Keyspace, expected)
-	// }
+	// modify shard and post it
+	// Test TopoPost from disk to topo.
+	_, err = vp.RunAndOutput(
+		[]string{
+			"TopoPost",
+			"shard",
+			"keyspaces/ks2/shards/-80/Shard",
+			`{"isMasterServing":true,"keyRange":{"end":"gA=="},"masterAlias":{"cell":"us_east_1b","uid":303093047}}`,
+		},
+	)
+
+	if err != nil {
+		t.Fatalf("TopoPost(/keyspaces/ks2/shard/-80/Shard) failed: %v", err)
+	}
+
+	// topocat again!
+	topocatAgain, err := vp.RunAndOutput([]string{"topocat", "-decode_proto_json", "keyspaces/ks2/shards/-80/Shard"})
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var jsonSlice2 []interface{}
+	json.Unmarshal([]byte(topocatAgain), &jsonSlice2)
+
+	// assert there's at least one record
+
+	marshalled2, err := json.Marshal(jsonSlice2[0])
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var gotShard2 topodatapb.Shard
+	err = jsonpb.UnmarshalString(string(marshalled2), &gotShard2)
+	if err != nil {
+		t.Fatalf("couldn't unmarshal json: %v", err)
+	}
+
+	if !gotShard2.GetIsMasterServing() {
+		t.Fatalf("Master is not serving")
+	}
+
+	if gotShard2.GetKeyRange().GetStart() != nil {
+		t.Fatalf("Start of keyrange not empty: %v", hex.Dump(gotShard2.GetKeyRange().GetStart()))
+	}
+
+	if gotShard2.GetKeyRange().GetEnd()[0] != 0x80 {
+		t.Fatalf("End of keyrange not 0x80: %v", hex.Dump(gotShard2.GetKeyRange().GetEnd()))
+	}
+
+	if gotShard2.GetMasterAlias() == nil {
+		t.Fatalf("Expecting master alias to not be nil. Was %v", gotShard2.GetMasterAlias())
+	}
+
+	if gotShard2.GetMasterAlias().GetCell() != "us_east_1b" {
+		t.Fatalf("Expecting master alias to not 'us_east_1b'. Was %v", gotShard2.GetMasterAlias().GetCell())
+	}
+
+	if gotShard2.GetMasterAlias().GetUid() != 303093047 {
+		t.Fatalf("Expecting master alias to not '303093047'. Was %v", gotShard2.GetMasterAlias().GetUid())
+	}
 }
