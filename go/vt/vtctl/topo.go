@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
 
@@ -47,12 +48,18 @@ func init() {
 		commandTopoCat,
 		"[-cell <cell>] [-decode_proto] [-decode_proto_json] [-long] <path> [<path>...]",
 		"Retrieves the file(s) at <path> from the topo service, and displays it. It can resolve wildcards, and decode the proto-encoded data."})
-
 	addCommand(topoGroupName, command{
 		"TopoCp",
 		commandTopoCp,
 		"[-cell <cell>] [-to_topo] <src> <dst>",
 		"Copies a file from topo to local file structure, or the other way around"})
+
+	addCommand(topoGroupName, command{
+		"TopoPost",
+		commandTopoPost,
+		"[-cell <cell>] <dst> <type> <json_string>",
+		"Writes a json encoded protobuf message to the specified topo destination"})
+
 }
 
 // DecodeContent uses the filename to imply a type, and proto-decodes
@@ -172,6 +179,52 @@ func copyFileToTopo(ctx context.Context, ts *topo.Server, cell, from, to string)
 		return err
 	}
 	_, err = conn.Update(ctx, to, data, nil)
+	return err
+}
+
+func commandTopoPost(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
+	cell := subFlags.String("cell", topo.GlobalCell, "topology cell to use for the write. Defaults to global cell.")
+
+	subFlags.Parse(args)
+
+	if subFlags.NArg() != 3 {
+		return fmt.Errorf("TopoPost: needs object type name, json blob and destination")
+	}
+
+	// Currently only supports topodatapb.Shard but this is only the first cut
+	objectName := subFlags.Arg(0)
+
+	// Path in topo cell that we want to update
+	destination := subFlags.Arg(1)
+
+	// Json encoded protobuf. More than likely the output of a single message retrieved from
+	// topocat
+	jsonStr := subFlags.Arg(2)
+
+	// TODO: make this type resolution a lot friendlier
+	if strings.ToLower(objectName) != strings.ToLower(topo.ShardFile) {
+		return fmt.Errorf("Only 'shard' datatype supported")
+	}
+
+	var shard topodatapb.Shard
+	err := jsonpb.UnmarshalString(jsonStr, &shard)
+	if err != nil {
+		return fmt.Errorf("couldn't unmarshal json: %v", err)
+	}
+
+	data, err := proto.Marshal(&shard)
+	if err != nil {
+		return fmt.Errorf("Error marshaling protobuf to bytes: ", err)
+	}
+
+	// We COULD also go through vitess to update this:
+	// see topo/shard.go#UpdateShardFields
+	// BUT! it doesn't have current master field
+	conn, err := wr.TopoServer().ConnForCell(ctx, *cell)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Update(ctx, destination, data, nil)
 	return err
 }
 

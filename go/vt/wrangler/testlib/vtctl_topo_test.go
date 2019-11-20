@@ -17,6 +17,9 @@ limitations under the License.
 package testlib
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -24,6 +27,8 @@ import (
 	"testing"
 
 	"golang.org/x/net/context"
+
+	"github.com/golang/protobuf/jsonpb"
 
 	"github.com/golang/protobuf/proto"
 	"vitess.io/vitess/go/vt/topo/memorytopo"
@@ -60,6 +65,13 @@ func TestVtctlTopoCommands(t *testing.T) {
 	if err := ts.CreateKeyspace(context.Background(), "ks2", &topodatapb.Keyspace{ShardingColumnName: "col2"}); err != nil {
 		t.Fatalf("CreateKeyspace() failed: %v", err)
 	}
+
+	originalShardInfo, err := ts.GetOrCreateShard(context.Background(), "ks2", "-80")
+	if err != nil {
+		t.Fatalf("GetOrCreateShard() failed: %v", err)
+	}
+	fmt.Printf("%v", originalShardInfo)
+
 	vp := NewVtctlPipe(t, ts)
 	defer vp.Close()
 
@@ -107,4 +119,55 @@ sharding_column_name: "col2"
 	if !proto.Equal(ks3.Keyspace, expected) {
 		t.Fatalf("copy data to topo failed, got %v expected %v", ks3.Keyspace, expected)
 	}
+
+	// let's see what's in topocat
+	output, err := vp.RunAndOutput([]string{"topocat", "-decode_proto_json", "keyspaces/ks2/shards/-80/Shard"})
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var jsonSlice []interface{}
+	json.Unmarshal([]byte(output), &jsonSlice)
+
+	// assert there's at least one record
+
+	marshalled, err := json.Marshal(jsonSlice[0])
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var gotShard topodatapb.Shard
+	err = jsonpb.UnmarshalString(string(marshalled), &gotShard)
+	if err != nil {
+		t.Fatalf("couldn't unmarshal json: %v", err)
+	}
+
+	if !gotShard.GetIsMasterServing() {
+		t.Fatalf("Master is not serving")
+	}
+
+	if gotShard.GetKeyRange().GetStart() != nil {
+		t.Fatalf("Start of keyrange not empty: %v", hex.Dump(gotShard.GetKeyRange().GetStart()))
+	}
+
+	if gotShard.GetKeyRange().GetEnd()[0] != 0x80 {
+		t.Fatalf("End of keyrange not 0x80: %v", hex.Dump(gotShard.GetKeyRange().GetEnd()))
+	}
+
+	if gotShard.GetMasterAlias() != nil {
+		t.Fatalf("Expecting master alias to be nil. Was %v", gotShard.GetMasterAlias())
+	}
+	// Test TopoPost from disk to topo.
+	//	_, err = vp.RunAndOutput([]string{"TopoPost", "shard", "keyspaces/ks2/shards/00-80/Shard", ""})
+
+	// if err != nil {
+	// 	t.Fatalf("TopoCp(/keyspaces/ks3/Keyspace) failed: %v", err)
+	// }
+	// ks3, err := ts.GetKeyspace(context.Background(), "ks3")
+	// if err != nil {
+	// 	t.Fatalf("copy from disk to topo failed: %v", err)
+	// }
+	// if !proto.Equal(ks3.Keyspace, expected) {
+	// 	t.Fatalf("copy data to topo failed, got %v expected %v", ks3.Keyspace, expected)
+	// }
 }
