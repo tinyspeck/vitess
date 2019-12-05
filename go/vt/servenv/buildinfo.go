@@ -105,5 +105,5 @@ func init() {
 		AppVersion.buildGitBranch,
 		fmt.Sprintf("%v", AppVersion.jenkinsBuildNumber),
 	}
-	stats.NewGaugesWithMultiLabels("BuildInformation", "build information exposed via label", buildLabels).Set(buildvalues, 1)
+	stats.NewGaugesWithMultiLabels("BuildInformation", "build information exposed via label", buildLabels).Set(buildValues, 1)
 }
