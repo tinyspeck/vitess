@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -7,7 +7,7 @@ You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreedto in writing, software
+Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
@@ -438,6 +438,9 @@ func TestExecutorSet(t *testing.T) {
 		in:  "set net_read_timeout = 600",
 		out: &vtgatepb.Session{Autocommit: true},
 	}, {
+		in:  "set foreign_key_checks = 0",
+		out: &vtgatepb.Session{Autocommit: true},
+	}, {
 		in:  "set skip_query_plan_cache = 1",
 		out: &vtgatepb.Session{Autocommit: true, Options: &querypb.ExecuteOptions{SkipQueryPlanCache: true}},
 	}, {
@@ -551,7 +554,7 @@ func TestExecutorDeleteMetadata(t *testing.T) {
 	assert.Len(t, result.Rows, 1)
 
 	// Fails if deleting key that doesn't exist
-	delete := "set @@vitess_metadata.doesnt_exist=''"
+	delete := "set @@vitess_metadata.doesn't_exist=''"
 	_, err = executor.Execute(context.Background(), "TestExecute", session, delete, nil)
 	assert.True(t, topo.IsErrType(err, topo.NoNode))
 

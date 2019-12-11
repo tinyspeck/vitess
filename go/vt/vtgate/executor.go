@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ func (e *Executor) execute(ctx context.Context, safeSession *SafeSession, sql st
 	}
 
 	stmtType := sqlparser.Preview(sql)
-	logStats.StmtType = sqlparser.StmtType(stmtType)
+	logStats.StmtType = stmtType.String()
 
 	// Mysql warnings are scoped to the current session, but are
 	// cleared when a "non-diagnostic statement" is executed:
@@ -628,7 +628,7 @@ func (e *Executor) handleSet(ctx context.Context, safeSession *SafeSession, sql 
 			if !ok {
 				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unexpected value type for wait_timeout: %T", v)
 			}
-		case "sql_mode", "net_write_timeout", "net_read_timeout", "lc_messages", "collation_connection":
+		case "sql_mode", "net_write_timeout", "net_read_timeout", "lc_messages", "collation_connection", "foreign_key_checks":
 			log.Warningf("Ignored inapplicable SET %v = %v", k, v)
 			warnings.Add("IgnoredSet", 1)
 		case "charset", "names":
@@ -1126,7 +1126,7 @@ func (e *Executor) handleComment(sql string) (*sqltypes.Result, error) {
 // StreamExecute executes a streaming query.
 func (e *Executor) StreamExecute(ctx context.Context, method string, safeSession *SafeSession, sql string, bindVars map[string]*querypb.BindVariable, target querypb.Target, callback func(*sqltypes.Result) error) (err error) {
 	logStats := NewLogStats(ctx, method, sql, bindVars)
-	logStats.StmtType = sqlparser.StmtType(sqlparser.Preview(sql))
+	logStats.StmtType = sqlparser.Preview(sql).String()
 	defer logStats.Send()
 
 	if bindVars == nil {
@@ -1137,7 +1137,7 @@ func (e *Executor) StreamExecute(ctx context.Context, method string, safeSession
 
 	// check if this is a stream statement for messaging
 	// TODO: support keyRange syntax
-	if logStats.StmtType == sqlparser.StmtType(sqlparser.StmtStream) {
+	if logStats.StmtType == sqlparser.StmtStream.String() {
 		return e.handleMessageStream(ctx, safeSession, sql, target, callback, vcursor, logStats)
 	}
 
@@ -1521,7 +1521,7 @@ func (e *Executor) prepare(ctx context.Context, safeSession *SafeSession, sql st
 	}
 
 	stmtType := sqlparser.Preview(sql)
-	logStats.StmtType = sqlparser.StmtType(stmtType)
+	logStats.StmtType = stmtType.String()
 
 	// Mysql warnings are scoped to the current session, but are
 	// cleared when a "non-diagnostic statement" is executed:
@@ -1573,9 +1573,9 @@ func (e *Executor) handlePrepare(ctx context.Context, safeSession *SafeSession, 
 	if err != nil {
 		logStats.Error = err
 		errCount = 1
-	} else {
-		logStats.RowsAffected = qr.RowsAffected
+		return nil, err
 	}
+	logStats.RowsAffected = qr.RowsAffected
 
 	plan.AddStats(1, time.Since(logStats.StartTime), uint64(logStats.ShardQueries), logStats.RowsAffected, errCount)
 

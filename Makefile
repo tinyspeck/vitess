@@ -1,4 +1,4 @@
-# Copyright 2017 Google Inc.
+# Copyright 2019 The Vitess Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ MAKEFLAGS = -s
 # Since we are not using this Makefile for compilation, limiting parallelism will not increase build time.
 .NOTPARALLEL:
 
-.PHONY: all build build_web test clean unit_test unit_test_cover unit_test_race integration_test proto proto_banner site_test site_integration_test docker_bootstrap docker_test docker_unit_test java_test reshard_tests
+.PHONY: all build build_web test clean unit_test unit_test_cover unit_test_race integration_test proto proto_banner site_test site_integration_test docker_bootstrap docker_test docker_unit_test java_test reshard_tests e2e_test e2e_test_race
 
 all: build
 
@@ -88,6 +88,10 @@ unit_test: build
 	echo $$(date): Running unit tests
 	go test $(VT_GO_PARALLEL) ./go/...
 
+e2e_test: build
+	echo $$(date): Running endtoend tests
+	go test $(VT_GO_PARALLEL) ./go/.../endtoend/...
+
 # Run the code coverage tools, compute aggregate.
 # If you want to improve in a directory, run:
 #   go test -coverprofile=coverage.out && go tool cover -html=coverage.out
@@ -96,6 +100,9 @@ unit_test_cover: build
 
 unit_test_race: build
 	tools/unit_test_race.sh
+
+e2e_test_race: build
+	tools/e2e_test_race.sh
 
 .ONESHELL:
 SHELL = /bin/bash
@@ -110,7 +117,10 @@ site_integration_test:
 
 java_test:
 	go install ./go/cmd/vtgateclienttest ./go/cmd/vtcombo
-	mvn -f java/pom.xml clean verify
+	mvn -f java/pom.xml -B clean verify
+
+install_protoc-gen-go:
+	go install github.com/golang/protobuf/protoc-gen-go
 
 # Find protoc compiler.
 # NOTE: We are *not* using the "protoc" binary (as suggested by the grpc Go
@@ -161,7 +171,7 @@ docker_bootstrap_test:
 	flavors='$(DOCKER_IMAGES_FOR_TEST)' && ./test.go -pull=false -parallel=2 -flavor=$${flavors// /,}
 
 docker_bootstrap_push:
-	for i in $(DOCKER_IMAGES); do echo "pushing boostrap image: $$i"; docker push vitess/bootstrap:$$i || exit 1; done
+	for i in $(DOCKER_IMAGES); do echo "pushing bootstrap image: $$i"; docker push vitess/bootstrap:$$i || exit 1; done
 
 # Use this target to update the local copy of your images with the one on Dockerhub.
 docker_bootstrap_pull:
