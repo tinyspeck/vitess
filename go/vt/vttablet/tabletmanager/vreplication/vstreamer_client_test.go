@@ -327,7 +327,7 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 	for _, tcase := range tests {
 		t.Run(tcase.name, func(t *testing.T) {
 			vsClient := &MySQLVStreamerClient{
-				sourceConnParams: tcase.fields.sourceConnParams,
+				sourceCp: tcase.fields.sourceConnParams,
 			}
 
 			err := vsClient.Open(tcase.args.ctx)
@@ -383,8 +383,8 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 	for _, tcase := range tests {
 		t.Run(tcase.name, func(t *testing.T) {
 			vsClient := &MySQLVStreamerClient{
-				isOpen:           tcase.fields.isOpen,
-				sourceConnParams: tcase.fields.sourceConnParams,
+				isOpen:   tcase.fields.isOpen,
+				sourceCp: tcase.fields.sourceConnParams,
 			}
 
 			err := vsClient.Open(tcase.args.ctx)
