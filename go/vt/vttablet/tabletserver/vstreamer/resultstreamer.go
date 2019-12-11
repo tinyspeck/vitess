@@ -38,7 +38,8 @@ type resultStreamer struct {
 	send      func(*binlogdatapb.VStreamResultsResponse) error
 }
 
-func newResultStreamer(ctx context.Context, cp *mysql.ConnParams, query string, send func(*binlogdatapb.VStreamResultsResponse) error) *resultStreamer {
+// NewResultStreamer creates a new result streamer
+func NewResultStreamer(ctx context.Context, cp *mysql.ConnParams, query string, send func(*binlogdatapb.VStreamResultsResponse) error) *resultStreamer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &resultStreamer{
 		ctx:    ctx,
@@ -89,12 +90,14 @@ func (rs *resultStreamer) Stream() error {
 	for {
 		select {
 		case <-rs.ctx.Done():
+			log.Errorf("Stream ended due to: %v", rs.ctx.Err())
 			return fmt.Errorf("stream ended: %v", rs.ctx.Err())
 		default:
 		}
 
 		row, err := conn.FetchNext()
 		if err != nil {
+			log.Errorf("1 - Stream ended due to: %v", err)
 			return err
 		}
 		if row == nil {
@@ -108,6 +111,7 @@ func (rs *resultStreamer) Stream() error {
 		if byteCount >= *PacketSize {
 			err = rs.send(response)
 			if err != nil {
+				log.Errorf("2 - Stream ended due to: %v", err)
 				return err
 			}
 			// empty the rows so we start over, but we keep the
@@ -120,6 +124,7 @@ func (rs *resultStreamer) Stream() error {
 	if len(response.Rows) > 0 {
 		err = rs.send(response)
 		if err != nil {
+			log.Errorf("3 - Stream ended due to: %v", err)
 			return err
 		}
 	}
@@ -143,7 +148,6 @@ func (rs *resultStreamer) startStreaming(conn *mysql.Conn) (string, error) {
 		lockConn.Close()
 	}()
 
-	log.Infof("Locking table %s for copying", rs.tableName)
 	if _, err := lockConn.ExecuteFetch(fmt.Sprintf("lock tables %s read", sqlparser.String(rs.tableName)), 0, false); err != nil {
 		return "", err
 	}

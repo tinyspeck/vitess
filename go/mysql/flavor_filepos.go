@@ -39,35 +39,20 @@ func newFilePosFlavor() flavor {
 
 // masterGTIDSet is part of the Flavor interface.
 func (flv *filePosFlavor) masterGTIDSet(c *Conn) (GTIDSet, error) {
-	qr, err := c.ExecuteFetch("SHOW SLAVE STATUS", 100, true /* wantfields */)
+	qr, err := c.ExecuteFetch("SHOW MASTER STATUS", 100, true /* wantfields */)
 	if err != nil {
 		return nil, err
 	}
 	if len(qr.Rows) == 0 {
-		qr, err = c.ExecuteFetch("SHOW MASTER STATUS", 100, true /* wantfields */)
-		if err != nil {
-			return nil, err
-		}
-		if len(qr.Rows) == 0 {
-			return nil, errors.New("no master or slave status")
-		}
-		resultMap, err := resultToMap(qr)
-		if err != nil {
-			return nil, err
-		}
-		return filePosGTID{
-			file: resultMap["File"],
-			pos:  resultMap["Position"],
-		}, nil
+		return nil, errors.New("no master or slave status")
 	}
-
 	resultMap, err := resultToMap(qr)
 	if err != nil {
 		return nil, err
 	}
 	return filePosGTID{
-		file: resultMap["Relay_Master_Log_File"],
-		pos:  resultMap["Exec_Master_Log_Pos"],
+		file: resultMap["File"],
+		pos:  resultMap["Position"],
 	}, nil
 }
 

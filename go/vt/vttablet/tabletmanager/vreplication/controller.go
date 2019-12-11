@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"vitess.io/vitess/go/vt/discovery"
@@ -44,6 +45,7 @@ var (
 	healthcheckRetryDelay      = flag.Duration("vreplication_healthcheck_retry_delay", 5*time.Second, "healthcheck retry delay")
 	healthcheckTimeout         = flag.Duration("vreplication_healthcheck_timeout", 1*time.Minute, "healthcheck retry delay")
 	retryDelay                 = flag.Duration("vreplication_retry_delay", 5*time.Second, "delay before retrying a failed binlog connection")
+	onlyOnceVdiff              sync.Once
 )
 
 // controller is created by Engine. Members are initialized upfront.
@@ -140,6 +142,7 @@ func (ct *controller) run(ctx context.Context) {
 		if err == nil {
 			return
 		}
+
 		// Sometimes, canceled contexts get wrapped as errors.
 		select {
 		case <-ctx.Done():
@@ -155,6 +158,53 @@ func (ct *controller) run(ctx context.Context) {
 		case <-timer.C:
 		}
 	}
+}
+
+func (ct *controller) runVDiff(ctx context.Context) (err error) {
+	defer func() {
+		ct.sourceTablet.Set("")
+		if x := recover(); x != nil {
+			log.Errorf("stream %v: caught panic: %v\n%s", ct.id, x, tb.Stack(4))
+			err = fmt.Errorf("panic: %v", x)
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+	}
+
+	dbClient := ct.dbClientFactory()
+	if err := dbClient.Connect(); err != nil {
+		return vterrors.Wrap(err, "can't connect to database")
+	}
+	defer dbClient.Close()
+
+	var tablet *topodatapb.Tablet
+	if ct.source.GetExternalMysql() == "" {
+		log.Infof("trying to find a tablet eligible for vreplication. stream id: %v", ct.id)
+		tablet, err = ct.tabletPicker.PickForStreaming(ctx)
+		if err != nil {
+			return err
+		}
+		log.Infof("found a tablet eligible for vreplication. stream id: %v  tablet: %s", ct.id, tablet.Alias.String())
+		ct.sourceTablet.Set(tablet.Alias.String())
+	}
+
+	switch {
+	case ct.source.Filter != nil:
+		var vsClient VStreamerClient
+		if ct.source.GetExternalMysql() == "" {
+			vsClient = NewTabletVStreamerClient(tablet, ct.mysqld)
+		} else {
+			vsClient = NewMySQLVStreamerClient()
+		}
+
+		vd := newVDiffer(ct.id, &ct.source, vsClient, ct.blpStats, dbClient, ct.vre, ct.workflow)
+		return vd.VDiff(ctx, 60*time.Second)
+	}
+	return fmt.Errorf("missing source")
 }
 
 func (ct *controller) runBlp(ctx context.Context) (err error) {
@@ -222,7 +272,7 @@ func (ct *controller) runBlp(ctx context.Context) (err error) {
 
 		var vsClient VStreamerClient
 		if ct.source.GetExternalMysql() == "" {
-			vsClient = NewTabletVStreamerClient(tablet)
+			vsClient = NewTabletVStreamerClient(tablet, nil)
 		} else {
 			vsClient = NewMySQLVStreamerClient()
 		}
