@@ -40,7 +40,7 @@ type resultStreamer struct {
 	send      func(*binlogdatapb.VStreamResultsResponse) error
 }
 
-func newResultStreamer(ctx context.Context, cp dbconfigs.Connector, query string, send func(*binlogdatapb.VStreamResultsResponse) error) *resultStreamer {
+func NewResultStreamer(ctx context.Context, cp dbconfigs.Connector, query string, send func(*binlogdatapb.VStreamResultsResponse) error) *resultStreamer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &resultStreamer{
 		ctx:    ctx,

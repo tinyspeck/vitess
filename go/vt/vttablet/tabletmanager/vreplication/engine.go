@@ -17,6 +17,7 @@ limitations under the License.
 package vreplication
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -37,10 +38,12 @@ import (
 	"vitess.io/vitess/go/vt/binlog/binlogplayer"
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/mysqlctl"
+	"vitess.io/vitess/go/vt/topo"
+
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
-	"vitess.io/vitess/go/vt/topo"
 )
 
 const (
@@ -101,6 +104,7 @@ type Engine struct {
 	cancel context.CancelFunc
 
 	ts              *topo.Server
+	tablet          *topodatapb.Tablet
 	cell            string
 	mysqld          mysqlctl.MysqlDaemon
 	dbClientFactory func() binlogplayer.DBClient
@@ -108,6 +112,12 @@ type Engine struct {
 
 	journaler map[string]*journalEvent
 	ec        *externalConnector
+
+	// VDiff Hack
+	isVDiffRunning bool
+	vdiffCancel    context.CancelFunc
+	vdiffMu        sync.Mutex
+	vdiffError     error
 }
 
 type journalEvent struct {
@@ -118,7 +128,7 @@ type journalEvent struct {
 
 // NewEngine creates a new Engine.
 // A nil ts means that the Engine is disabled.
-func NewEngine(config *tabletenv.TabletConfig, ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon) *Engine {
+func NewEngine(config *tabletenv.TabletConfig, ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon, externalConfig map[string]*dbconfigs.DBConfigs) *Engine {
 	vre := &Engine{
 		controllers: make(map[int]*controller),
 		ts:          ts,
@@ -130,23 +140,12 @@ func NewEngine(config *tabletenv.TabletConfig, ts *topo.Server, cell string, mys
 	return vre
 }
 
-// InitDBConfig should be invoked after the db name is computed.
-func (vre *Engine) InitDBConfig(dbcfgs *dbconfigs.DBConfigs) {
-	// If we're already initilized, it's a test engine. Ignore the call.
-	if vre.dbClientFactory != nil {
-		return
-	}
-	vre.dbClientFactory = func() binlogplayer.DBClient {
-		return binlogplayer.NewDBClient(dbcfgs.FilteredWithDB())
-	}
-	vre.dbName = dbcfgs.DBName
-}
-
 // NewTestEngine creates a new Engine for testing.
 func NewTestEngine(ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon, dbClientFactory func() binlogplayer.DBClient, dbname string, externalConfig map[string]*dbconfigs.DBConfigs) *Engine {
 	vre := &Engine{
 		controllers:     make(map[int]*controller),
 		ts:              ts,
+		tablet:          nil,
 		cell:            cell,
 		mysqld:          mysqld,
 		dbClientFactory: dbClientFactory,
@@ -248,6 +247,66 @@ func (vre *Engine) IsOpen() bool {
 	vre.mu.Lock()
 	defer vre.mu.Unlock()
 	return vre.isOpen
+}
+
+// RunVdiff starts a vdiff run on this tablet
+func (vre *Engine) RunVdiff() {
+	vre.vdiffMu.Lock()
+	defer vre.vdiffMu.Unlock()
+	if vre.isVDiffRunning {
+		return
+	}
+	vre.isVDiffRunning = true
+	vre.vdiffError = nil
+	var ctx context.Context
+	ctx, vre.vdiffCancel = context.WithCancel(context.Background())
+	go func() {
+		if len(vre.controllers) != 1 {
+			log.Infof("There are no replication streams, nothing to diff")
+			return
+		}
+		// This is using the vreplication id that stars at 1
+		ctrl := vre.controllers[1]
+		if ctrl == nil {
+			log.Infof("VReplication ctrl is nil, this shouldn't happen")
+		}
+		diffError := ctrl.runVDiff(ctx)
+		vre.vdiffMu.Lock()
+		defer vre.vdiffMu.Unlock()
+		vre.vdiffError = diffError
+		vre.isVDiffRunning = false
+	}()
+}
+
+// AbortVdiff aborts current vdiff run
+func (vre *Engine) AbortVdiff() {
+	vre.vdiffMu.Lock()
+	defer vre.vdiffMu.Unlock()
+	if !vre.isVDiffRunning {
+		return
+	}
+	vre.isVDiffRunning = false
+	vre.vdiffCancel()
+}
+
+// VDiffReportStatus returns status for current VDiff run
+func (vre *Engine) VDiffReportStatus() ([]byte, error) {
+	vre.vdiffMu.Lock()
+	defer vre.vdiffMu.Unlock()
+	resp := make(map[string]interface{})
+	if vre.isVDiffRunning {
+		resp["status"] = "running"
+	} else {
+		resp["status"] = "not_running"
+	}
+	if vre.vdiffError != nil {
+		resp["last_error"] = vre.vdiffError.Error()
+		return json.MarshalIndent(resp, "", "  ")
+	}
+	if VDiffStatus() != nil {
+		resp["last_diff"] = VDiffStatus()
+	}
+	return json.MarshalIndent(resp, "", "  ")
 }
 
 // Close closes the Engine service.
@@ -676,7 +735,7 @@ func (vre *Engine) WaitForPos(ctx context.Context, id int, pos string) error {
 		}
 
 		if current.AtLeast(mPos) {
-			log.Infof("position: %s reached, wait time: %v", pos, time.Since(start))
+			log.Infof("position: %s reached, wait time: %v", current, time.Since(start))
 			return nil
 		}
 
