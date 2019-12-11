@@ -94,20 +94,9 @@
 				"tools/check_make_parser.sh"
 			],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 1,
 			"Tags": []
-		},
-		"custom_sharding": {
-			"File": "custom_sharding.py",
-			"Args": [],
-			"Command": [],
-			"Manual": false,
-			"Shard": 4,
-			"RetryMax": 0,
-			"Tags": [
-				"worker_test"
-			]
 		},
 		"encrypted_replication": {
 			"File": "encrypted_replication.py",
@@ -188,7 +177,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"site_test"
@@ -212,7 +201,7 @@
 				"test/local_example.sh"
 			],
 			"Manual": false,
-			"Shard": 3,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -294,7 +283,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -303,7 +292,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"site_test"
@@ -383,7 +372,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -401,7 +390,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 2,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"site_test"
@@ -440,7 +429,19 @@
 				"tools/e2e_test_runner.sh"
 			],
 			"Manual": false,
-			"Shard": 3,
+			"Shard": 5,
+			"RetryMax": 0,
+			"Tags": []
+		},
+		"cluster_endtoend": {
+			"File": "",
+			"Args": [],
+			"Command": [
+				"make",
+				"e2e_test_cluster"
+			],
+			"Manual": false,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -452,7 +453,7 @@
 				"e2e_test_race"
 			],
 			"Manual": false,
-			"Shard": 1,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -463,7 +464,7 @@
 				"tools/unit_test_runner.sh"
 			],
 			"Manual": false,
-			"Shard": 0,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -475,7 +476,7 @@
 				"unit_test_race"
 			],
 			"Manual": false,
-			"Shard": 3,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -582,7 +583,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -600,7 +601,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 2,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"worker_test"
