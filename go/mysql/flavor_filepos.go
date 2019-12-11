@@ -47,7 +47,6 @@ func (flv *filePosFlavor) masterGTIDSet(c *Conn) (GTIDSet, error) {
 	if len(qr.Rows) == 0 {
 		return nil, errors.New("no master status")
 	}
-
 	resultMap, err := resultToMap(qr)
 	if err != nil {
 		return nil, err
