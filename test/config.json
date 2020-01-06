@@ -177,7 +177,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"site_test"
@@ -247,6 +247,28 @@
 			"RetryMax": 0,
 			"Tags": []
 		},
+		"cell_no_aliases": {
+			"File": "cell_no_aliases.py",
+			"Args": [],
+			"Command": [],
+			"Manual": false,
+			"Shard": 1,
+			"RetryMax": 0,
+			"Tags": [
+				"site_test"
+			]
+		},
+		"cell_aliases": {
+			"File": "cell_aliases.py",
+			"Args": [],
+			"Command": [],
+			"Manual": false,
+			"Shard": 1,
+			"RetryMax": 0,
+			"Tags": [
+				"site_test"
+			]
+		},
 		"mysql_server": {
 			"File": "mysql_server_test.py",
 			"Args": [],
@@ -261,7 +283,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -270,7 +292,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"site_test"
@@ -350,7 +372,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
@@ -368,7 +390,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 2,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": [
 				"site_test"
@@ -561,7 +583,7 @@
 			"Args": [],
 			"Command": [],
 			"Manual": false,
-			"Shard": 4,
+			"Shard": 5,
 			"RetryMax": 0,
 			"Tags": []
 		},
