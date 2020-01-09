@@ -653,7 +653,7 @@ func (vre *Engine) WaitForPos(ctx context.Context, id int, pos string) error {
 		}
 
 		if current.AtLeast(mPos) {
-			log.Infof("position: %s reached, wait time: %v", pos, time.Since(start))
+			log.Infof("position: %s reached, wait time: %v", current, time.Since(start))
 			return nil
 		}
 
