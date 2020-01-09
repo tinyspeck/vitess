@@ -142,7 +142,6 @@ func (ct *controller) run(ctx context.Context) {
 		if err == nil {
 			return
 		}
-
 		// Sometimes, canceled contexts get wrapped as errors.
 		select {
 		case <-ctx.Done():

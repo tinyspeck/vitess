@@ -440,10 +440,10 @@ func (df *vdiff) syncTargets(ctx context.Context, filteredReplicationWaitTime ti
 		return err
 	}
 
-	log.Infof("VReplication stopped")
 	if err := df.tmc.VReplicationWaitForPos(waitCtx, df.targetDf.master.Tablet, int(df.id), pos); err != nil {
 		return vterrors.Wrapf(err, "VReplicationWaitForPos for tablet %v", topoproto.TabletAliasString(df.targetDf.master.Tablet.Alias))
 	}
+	log.Infof("VReplication successfully stopped at position: %v", pos)
 
 	pos, err := df.tmc.MasterPosition(ctx, df.targetDf.master.Tablet)
 	if err != nil {
@@ -644,7 +644,7 @@ func (td *tableDiffer) diff(ctx context.Context, sourceReader, targetReader *res
 		if targetRow == nil {
 			// no more rows from the target
 			// we know we have rows from source, drain, update count
-			pk := td.pkString(targetRow)
+			pk := td.pkString(sourceRow)
 			log.Errorf("Draining extra row(s) found on the source. This is the extra row pk: %v", pk)
 			count, err := sourceExecutor.drain(ctx)
 			if err != nil {
