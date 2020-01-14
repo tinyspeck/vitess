@@ -26,9 +26,6 @@ import (
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/mysql"
-	"vitess.io/vitess/go/vt/vttablet/queryservice"
-	"vitess.io/vitess/go/vt/vttablet/tabletserver/schema"
-	"vitess.io/vitess/go/vt/vttablet/tabletserver/vstreamer"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
@@ -40,10 +37,7 @@ func TestTabletVStreamerClientOpen(t *testing.T) {
 	defer deleteTablet(tablet)
 
 	type fields struct {
-		isOpen         bool
-		tablet         *topodatapb.Tablet
-		target         *querypb.Target
-		tsQueryService queryservice.QueryService
+		tablet *topodatapb.Tablet
 	}
 	type args struct {
 		ctx context.Context
@@ -100,10 +94,7 @@ func TestTabletVStreamerClientClose(t *testing.T) {
 	defer deleteTablet(tablet)
 
 	type fields struct {
-		isOpen         bool
-		tablet         *topodatapb.Tablet
-		target         *querypb.Target
-		tsQueryService queryservice.QueryService
+		tablet *topodatapb.Tablet
 	}
 	type args struct {
 		ctx context.Context
@@ -279,7 +270,7 @@ func TestNewMySQLVStreamerClient(t *testing.T) {
 		{
 			name: "sets conn params for MySQLVStreamerClient ",
 			want: &MySQLVStreamerClient{
-				sourceConnParams: env.Dbcfgs.ExternalReplWithDB(),
+				sourceCp: env.Dbcfgs.ExternalReplWithDB(),
 			},
 		},
 	}
@@ -294,7 +285,6 @@ func TestNewMySQLVStreamerClient(t *testing.T) {
 
 func TestMySQLVStreamerClientOpen(t *testing.T) {
 	type fields struct {
-		isOpen           bool
 		sourceConnParams *mysql.ConnParams
 	}
 	type args struct {
@@ -332,7 +322,7 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 	for _, tcase := range tests {
 		t.Run(tcase.name, func(t *testing.T) {
 			vsClient := &MySQLVStreamerClient{
-				sourceConnParams: tcase.fields.sourceConnParams,
+				sourceCp: tcase.fields.sourceConnParams,
 			}
 
 			err := vsClient.Open(tcase.args.ctx)
@@ -363,8 +353,6 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 	type fields struct {
 		isOpen           bool
 		sourceConnParams *mysql.ConnParams
-		vsEngine         *vstreamer.Engine
-		sourceSe         *schema.Engine
 	}
 	type args struct {
 		ctx context.Context
@@ -390,8 +378,8 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 	for _, tcase := range tests {
 		t.Run(tcase.name, func(t *testing.T) {
 			vsClient := &MySQLVStreamerClient{
-				isOpen:           tcase.fields.isOpen,
-				sourceConnParams: tcase.fields.sourceConnParams,
+				isOpen:   tcase.fields.isOpen,
+				sourceCp: tcase.fields.sourceConnParams,
 			}
 
 			err := vsClient.Open(tcase.args.ctx)
@@ -419,7 +407,7 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 
 func TestMySQLVStreamerClientVStream(t *testing.T) {
 	vsClient := &MySQLVStreamerClient{
-		sourceConnParams: env.Dbcfgs.ExternalReplWithDB(),
+		sourceCp: env.Dbcfgs.ExternalReplWithDB(),
 	}
 
 	filter := &binlogdatapb.Filter{
@@ -478,7 +466,7 @@ func TestMySQLVStreamerClientVStream(t *testing.T) {
 
 func TestMySQLVStreamerClientVStreamRows(t *testing.T) {
 	vsClient := &MySQLVStreamerClient{
-		sourceConnParams: env.Dbcfgs.ExternalReplWithDB(),
+		sourceCp: env.Dbcfgs.ExternalReplWithDB(),
 	}
 
 	eventsChan := make(chan *querypb.Row, 1000)

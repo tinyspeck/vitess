@@ -38,7 +38,8 @@ type resultStreamer struct {
 	send      func(*binlogdatapb.VStreamResultsResponse) error
 }
 
-func newResultStreamer(ctx context.Context, cp *mysql.ConnParams, query string, send func(*binlogdatapb.VStreamResultsResponse) error) *resultStreamer {
+// NewResultStreamer creates a new result streamer
+func NewResultStreamer(ctx context.Context, cp *mysql.ConnParams, query string, send func(*binlogdatapb.VStreamResultsResponse) error) *resultStreamer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &resultStreamer{
 		ctx:    ctx,
@@ -143,7 +144,6 @@ func (rs *resultStreamer) startStreaming(conn *mysql.Conn) (string, error) {
 		lockConn.Close()
 	}()
 
-	log.Infof("Locking table %s for copying", rs.tableName)
 	if _, err := lockConn.ExecuteFetch(fmt.Sprintf("lock tables %s read", sqlparser.String(rs.tableName)), 0, false); err != nil {
 		return "", err
 	}

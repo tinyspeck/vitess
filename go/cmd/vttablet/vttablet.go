@@ -130,6 +130,8 @@ func main() {
 		log.Exitf("NewActionAgent() failed: %v", err)
 	}
 
+	tabletserver.InitAPI(agent.VREngine)
+
 	servenv.OnClose(func() {
 		// stop the agent so that our topo entry gets pruned properly
 		agent.Close()
