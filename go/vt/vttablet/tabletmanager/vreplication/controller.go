@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"vitess.io/vitess/go/vt/discovery"
@@ -45,7 +44,6 @@ var (
 	healthcheckRetryDelay      = flag.Duration("vreplication_healthcheck_retry_delay", 5*time.Second, "healthcheck retry delay")
 	healthcheckTimeout         = flag.Duration("vreplication_healthcheck_timeout", 1*time.Minute, "healthcheck retry delay")
 	retryDelay                 = flag.Duration("vreplication_retry_delay", 5*time.Second, "delay before retrying a failed binlog connection")
-	onlyOnceVdiff              sync.Once
 )
 
 // controller is created by Engine. Members are initialized upfront.

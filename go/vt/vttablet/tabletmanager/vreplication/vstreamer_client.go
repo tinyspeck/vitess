@@ -147,7 +147,7 @@ func (vsClient *TabletVStreamerClient) VStreamRows(ctx context.Context, query st
 // VStreamResults part of the VStreamerClient interface
 func (vsClient *TabletVStreamerClient) VStreamResults(ctx context.Context, query string, send func(*binlogdatapb.VStreamResultsResponse) error) error {
 	if !vsClient.isOpen {
-		return errors.New("Can't VStreamRows without opening client")
+		return errors.New("can't VStreamRows without opening client")
 	}
 	vsClient.target.TabletType = topodatapb.TabletType_MASTER
 	return vsClient.tsQueryService.VStreamResults(ctx, vsClient.target, query, send)
@@ -239,7 +239,7 @@ func (vsClient *MySQLVStreamerClient) VStreamRows(ctx context.Context, query str
 // VStreamResults part of the VStreamerClient interface
 func (vsClient *MySQLVStreamerClient) VStreamResults(ctx context.Context, query string, send func(*binlogdatapb.VStreamResultsResponse) error) error {
 	if !vsClient.isOpen {
-		return errors.New("Can't VStreamRows without opening client")
+		return errors.New("can't VStreamRows without opening client")
 	}
 
 	streamer := vstreamer.NewResultStreamer(ctx, vsClient.sourceCp, query, send)

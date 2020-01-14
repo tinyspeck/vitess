@@ -223,6 +223,7 @@ func (vre *Engine) IsOpen() bool {
 	return vre.isOpen
 }
 
+// RunVdiff starts a vdiff run on this tablet
 func (vre *Engine) RunVdiff() {
 	vre.vdiffMu.Lock()
 	defer vre.vdiffMu.Unlock()
@@ -249,9 +250,9 @@ func (vre *Engine) RunVdiff() {
 		vre.vdiffError = diffError
 		vre.isVDiffRunning = false
 	}()
-	return
 }
 
+// AbortVdiff aborts current vdiff run
 func (vre *Engine) AbortVdiff() {
 	vre.vdiffMu.Lock()
 	defer vre.vdiffMu.Unlock()
@@ -260,9 +261,9 @@ func (vre *Engine) AbortVdiff() {
 	}
 	vre.isVDiffRunning = false
 	vre.vdiffCancel()
-	return
 }
 
+// VDiffReportStatus returns status for current VDiff run
 func (vre *Engine) VDiffReportStatus() ([]byte, error) {
 	vre.vdiffMu.Lock()
 	defer vre.vdiffMu.Unlock()

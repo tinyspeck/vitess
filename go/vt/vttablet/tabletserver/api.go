@@ -17,16 +17,11 @@ limitations under the License.
 package tabletserver
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"vitess.io/vitess/go/acl"
 	"vitess.io/vitess/go/vt/log"
-	"vitess.io/vitess/go/vt/topo"
-	"vitess.io/vitess/go/vt/vtctl"
 	"vitess.io/vitess/go/vt/vttablet/tabletmanager/vreplication"
 )
 
@@ -57,52 +52,7 @@ func handleAPI(apiPath string, handlerFunc func(w http.ResponseWriter, r *http.R
 	})
 }
 
-func handleCollection(collection string, getFunc func(*http.Request) (interface{}, error)) {
-	handleAPI(collection+"/", func(w http.ResponseWriter, r *http.Request) error {
-		// Get the requested object.
-		obj, err := getFunc(r)
-		if err != nil {
-			if topo.IsErrType(err, topo.NoNode) {
-				http.NotFound(w, r)
-				return nil
-			}
-			return fmt.Errorf("can't get %v: %v", collection, err)
-		}
-
-		// JSON encode response.
-		data, err := vtctl.MarshalJSON(obj)
-		if err != nil {
-			return fmt.Errorf("cannot marshal data: %v", err)
-		}
-		w.Header().Set("Content-Type", jsonContentType)
-		w.Write(data)
-		return nil
-	})
-}
-
-func getItemPath(url string) string {
-	// Strip API prefix.
-	if !strings.HasPrefix(url, apiPrefix) {
-		return ""
-	}
-	url = url[len(apiPrefix):]
-
-	// Strip collection name.
-	parts := strings.SplitN(url, "/", 2)
-	if len(parts) != 2 {
-		return ""
-	}
-	return parts[1]
-}
-
-func unmarshalRequest(r *http.Request, v interface{}) error {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, v)
-}
-
+// InitAPI initializes api for tabletserver
 func InitAPI(vrEngine *vreplication.Engine) {
 	handleAPI("vdiff/start", func(w http.ResponseWriter, r *http.Request) error {
 		vrEngine.RunVdiff()
