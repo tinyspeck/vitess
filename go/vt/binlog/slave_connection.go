@@ -86,7 +86,9 @@ func connectForReplication(cp *mysql.ConnParams) (*mysql.Conn, error) {
 	if _, err := conn.ExecuteFetch("SET @master_binlog_checksum=@@global.binlog_checksum", 0, false); err != nil {
 		return nil, fmt.Errorf("failed to set @master_binlog_checksum=@@global.binlog_checksum: %v", err)
 	}
-
+	if _, err := conn.ExecuteFetch("SET @slave_uuid='cd6fb556-3b9e-11ea-a632-0e7c510a07b9'", 10, false); err != nil {
+		return nil, fmt.Errorf("failed to set @master_binlog_checksum=@@global.binlog_checksum: %v", err)
+	}
 	return conn, nil
 }
 
