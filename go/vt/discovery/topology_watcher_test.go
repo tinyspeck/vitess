@@ -410,3 +410,31 @@ func TestFilterByShard(t *testing.T) {
 		}
 	}
 }
+
+func TestFilterByKeyspace(t *testing.T) {
+	selectedKeyspaces := []string{"ks1", "ks2"}
+	testKeyspaces := []string{"ks1", "ks2", "ks3", "ks4", "ks5"}
+
+	fbk, _ := NewFilterByShard(nil, selectedKeyspaces)
+
+	for _, keyspace := range testKeyspaces {
+		tablet := &topodatapb.Tablet{
+			Keyspace: keyspace,
+			Shard:    "0",
+		}
+		got := fbk.isIncluded(tablet)
+		want := checkIsIncluded(selectedKeyspaces, keyspace)
+		if got != want {
+			t.Errorf("isIncluded(%v,0) for keyspace %v returned %v but expected %v", keyspace, keyspace, got, want)
+		}
+	}
+}
+
+func checkIsIncluded(selectedKeyspaces []string, keyspace string) bool {
+	for _, k := range selectedKeyspaces {
+		if k == keyspace {
+			return true
+		}
+	}
+	return false
+}
