@@ -411,30 +411,31 @@ func TestFilterByShard(t *testing.T) {
 	}
 }
 
+var testFilterByKeyspace = []struct {
+	keyspace string
+	expected bool
+}{
+	{"ks1", true},
+	{"ks2", true},
+	{"ks3", false},
+	{"ks4", true},
+	{"ks5", true},
+	{"ks6", false},
+	{"ks7", false},
+}
+
 func TestFilterByKeyspace(t *testing.T) {
-	selectedKeyspaces := []string{"ks1", "ks2"}
-	testKeyspaces := []string{"ks1", "ks2", "ks3", "ks4", "ks5"}
+	selectedKeyspaces := []string{"ks1", "ks2", "ks4", "ks5"}
+	fbk := NewFilterByKeyspace(nil, selectedKeyspaces)
 
-	fbk, _ := NewFilterByShard(nil, selectedKeyspaces)
-
-	for _, keyspace := range testKeyspaces {
+	for _, test := range testFilterByKeyspace {
 		tablet := &topodatapb.Tablet{
-			Keyspace: keyspace,
+			Keyspace: test.keyspace,
 			Shard:    "0",
 		}
 		got := fbk.isIncluded(tablet)
-		want := checkIsIncluded(selectedKeyspaces, keyspace)
-		if got != want {
-			t.Errorf("isIncluded(%v,0) for keyspace %v returned %v but expected %v", keyspace, keyspace, got, want)
+		if got != test.expected {
+			t.Errorf("isIncluded(%v,0) for keyspace %v returned %v but expected %v", test.keyspace, test.keyspace, got, test.expected)
 		}
 	}
-}
-
-func checkIsIncluded(selectedKeyspaces []string, keyspace string) bool {
-	for _, k := range selectedKeyspaces {
-		if k == keyspace {
-			return true
-		}
-	}
-	return false
 }
