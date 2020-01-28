@@ -438,14 +438,17 @@ func (fbs *FilterByShard) isIncluded(tablet *topodatapb.Tablet) bool {
 	return false
 }
 
-// FilterByKeyspace testing
+// FilterByKeyspace is a TabletRecorder filter that filters tablets by
+// keyspace
 type FilterByKeyspace struct {
 	tr TabletRecorder
 
 	keyspaces map[string]bool
 }
 
-// NewFilterByKeyspace testing
+// NewFilterByKeyspace creates a new FilterByKeyspace on top of an existing
+// TabletRecorder. Each filter is a keyspace entry. All tablets that match
+// a keyspace will be forwarded to the underlying TabletRecorder.
 func NewFilterByKeyspace(tr TabletRecorder, selectedKeyspaces []string) *FilterByKeyspace {
 	m := make(map[string]bool)
 	for _, keyspace := range selectedKeyspaces {
