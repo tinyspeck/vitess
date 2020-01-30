@@ -86,3 +86,5 @@ vthook*
 bin*
 
 vtdataroot*
+# Python
+py/dist/
