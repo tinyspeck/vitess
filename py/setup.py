@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2019 The Vitess Authors.
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +15,17 @@
 """This is the setup script for the submodules in the Vitess python client.
 """
 
-from distutils.core import setup
+__version__ = '4.0.1'
+from setuptools import setup
 
-
-setup(name="vitess",
+setup(
+      name="vitess",
       packages=["vtctl", "vtdb", "vtproto", "vttest", "util"],
-      platforms="Any",
+      platforms='Linux',
+      setup_requires=['wheel'],
+      install_requires=[
+            'protobuf',
+            'grpcio'
+      ],
+      version=__version__
      )

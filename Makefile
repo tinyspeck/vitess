@@ -283,3 +283,12 @@ minimaltools:
 
 dependency_check:
 	./tools/dependency_check.sh
+clean-py:
+	rm -rf py/dist
+	rm -rf py/build
+
+py-release: clean-py
+	cd ${PWD}/py && python setup.py sdist bdist_wheel && cd ../
+	echo "Finished building!"
+	echo "Upload to pypi by running:"
+	echo "python3 -m twine upload py/dist/*"
