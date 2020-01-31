@@ -1,3 +1,2 @@
-bumpversion==0.5.3
 pip==20.0.2
 setuptools==45.1.0
