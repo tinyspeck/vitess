@@ -235,14 +235,17 @@ func (tc *TabletStatsCache) StatsUpdate(ts *TabletStats) {
 			// values if necessary.  (will update both
 			// 'all' and 'healthy' as they use pointers).
 			if !trivialNonMasterUpdate {
+				log.Infof("SLACK:tablet stats cache::master update - %+v", ts)
 				*existing = *ts
 			}
 		} else {
+			log.Infof("SLACK:tablet stats cache::removing tablet entry - %+v", ts)
 			// We have an entry which we shouldn't. Remove it.
 			delete(e.all, ts.Key)
 		}
 	} else {
 		if ts.Up {
+			log.Infof("SLACK:tablet stats cache::adding tablet - %+v", ts)
 			// Add the entry.
 			e.all[ts.Key] = ts
 		} else {
@@ -261,6 +264,7 @@ func (tc *TabletStatsCache) StatsUpdate(ts *TabletStats) {
 		for _, s := range e.all {
 			allArray = append(allArray, s)
 		}
+		log.Infof("SLACK:tablet stats cache::master healthy list - %v", allArray)
 	} else {
 		// For non-master, if it is a trivial update,
 		// we just skip everything else. We don't even update the
@@ -274,6 +278,7 @@ func (tc *TabletStatsCache) StatsUpdate(ts *TabletStats) {
 		for _, s := range e.all {
 			allArray = append(allArray, s)
 		}
+		log.Infof("SLACK:tablet stats cache::healthy list recomputed - %v", allArray)
 		e.healthy = FilterByReplicationLag(allArray)
 	}
 
