@@ -150,18 +150,6 @@ func (agent *ActionAgent) InitTablet(port, gRPCPort int32) error {
 		}
 	}
 
-	// Rebuild keyspace graph if this the first tablet in this keyspace/cell
-	_, err = agent.TopoServer.GetSrvKeyspace(ctx, agent.TabletAlias.Cell, *initKeyspace)
-	switch {
-	case err == nil:
-		// NOOP
-	case topo.IsErrType(err, topo.NoNode):
-		// try to RebuildKeyspace here but ignore errors if it fails
-		topotools.RebuildKeyspace(ctx, logutil.NewConsoleLogger(), agent.TopoServer, *initKeyspace, []string{agent.TabletAlias.Cell})
-	default:
-		return vterrors.Wrap(err, "InitTablet failed to read srvKeyspace")
-	}
-
 	log.Infof("Initializing the tablet for type %v", tabletType)
 
 	// figure out the hostname
