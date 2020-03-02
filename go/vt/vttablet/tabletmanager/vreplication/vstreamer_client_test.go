@@ -26,9 +26,6 @@ import (
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/mysql"
-	"vitess.io/vitess/go/vt/vttablet/queryservice"
-	"vitess.io/vitess/go/vt/vttablet/tabletserver/schema"
-	"vitess.io/vitess/go/vt/vttablet/tabletserver/vstreamer"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
@@ -40,10 +37,7 @@ func TestTabletVStreamerClientOpen(t *testing.T) {
 	defer deleteTablet(tablet)
 
 	type fields struct {
-		isOpen         bool
-		tablet         *topodatapb.Tablet
-		target         *querypb.Target
-		tsQueryService queryservice.QueryService
+		tablet *topodatapb.Tablet
 	}
 	type args struct {
 		ctx context.Context
@@ -100,10 +94,7 @@ func TestTabletVStreamerClientClose(t *testing.T) {
 	defer deleteTablet(tablet)
 
 	type fields struct {
-		isOpen         bool
-		tablet         *topodatapb.Tablet
-		target         *querypb.Target
-		tsQueryService queryservice.QueryService
+		tablet *topodatapb.Tablet
 	}
 	type args struct {
 		ctx context.Context
@@ -184,6 +175,7 @@ func TestTabletVStreamerClientVStream(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	ctx := context.Background()
 	err := vsClient.Open(ctx)
@@ -241,6 +233,7 @@ func TestTabletVStreamerClientVStreamRows(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	qr, err := env.Mysqld.FetchSuperQuery(context.Background(), "select now()")
 	if err != nil {
@@ -294,7 +287,6 @@ func TestNewMySQLVStreamerClient(t *testing.T) {
 
 func TestMySQLVStreamerClientOpen(t *testing.T) {
 	type fields struct {
-		isOpen           bool
 		sourceConnParams *mysql.ConnParams
 	}
 	type args struct {
@@ -363,8 +355,6 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 	type fields struct {
 		isOpen           bool
 		sourceConnParams *mysql.ConnParams
-		vsEngine         *vstreamer.Engine
-		sourceSe         *schema.Engine
 	}
 	type args struct {
 		ctx context.Context
@@ -443,6 +433,7 @@ func TestMySQLVStreamerClientVStream(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	ctx := context.Background()
 	err := vsClient.Open(ctx)
@@ -497,6 +488,7 @@ func TestMySQLVStreamerClientVStreamRows(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	qr, err := env.Mysqld.FetchSuperQuery(context.Background(), "select now()")
 	if err != nil {

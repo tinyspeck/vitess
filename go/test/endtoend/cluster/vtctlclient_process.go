@@ -62,10 +62,15 @@ func (vtctlclient *VtctlClientProcess) ApplyVSchema(Keyspace string, JSON string
 
 // ExecuteCommand executes any vtctlclient command
 func (vtctlclient *VtctlClientProcess) ExecuteCommand(args ...string) (err error) {
-	args = append([]string{"-server", vtctlclient.Server}, args...)
+	pArgs := []string{"-server", vtctlclient.Server}
+
+	if *isCoverage {
+		pArgs = append(pArgs, "-test.coverprofile="+getCoveragePath("vtctlclient-"+args[0]+".out"), "-test.v")
+	}
+	pArgs = append(pArgs, args...)
 	tmpProcess := exec.Command(
 		vtctlclient.Binary,
-		args...,
+		pArgs...,
 	)
 	println(fmt.Sprintf("Executing vtctlclient with arguments %v", strings.Join(tmpProcess.Args, " ")))
 	log.Info(fmt.Sprintf("Executing vtctlclient with arguments %v", strings.Join(tmpProcess.Args, " ")))
@@ -74,15 +79,19 @@ func (vtctlclient *VtctlClientProcess) ExecuteCommand(args ...string) (err error
 
 // ExecuteCommandWithOutput executes any vtctlclient command and returns output
 func (vtctlclient *VtctlClientProcess) ExecuteCommandWithOutput(args ...string) (result string, err error) {
-	args = append([]string{"-server", vtctlclient.Server}, args...)
+	pArgs := []string{"-server", vtctlclient.Server}
+	if *isCoverage {
+		pArgs = append(pArgs, "-test.coverprofile="+getCoveragePath("vtctlclient-"+args[0]+".out"), "-test.v")
+	}
+	pArgs = append(pArgs, args...)
 	tmpProcess := exec.Command(
 		vtctlclient.Binary,
-		args...,
+		pArgs...,
 	)
 	println(fmt.Sprintf("Executing vtctlclient with arguments %v", strings.Join(tmpProcess.Args, " ")))
 	log.Info(fmt.Sprintf("Executing vtctlclient with arguments %v", strings.Join(tmpProcess.Args, " ")))
 	resultByte, err := tmpProcess.CombinedOutput()
-	return string(resultByte), err
+	return filterResultWhenRunsForCoverage(string(resultByte)), err
 }
 
 // VtctlClientProcessInstance returns a VtctlProcess handle for vtctlclient process
@@ -99,9 +108,20 @@ func VtctlClientProcessInstance(hostname string, grpcPort int, tmpDirectory stri
 
 // InitTablet initializes a tablet
 func (vtctlclient *VtctlClientProcess) InitTablet(tablet *Vttablet, cell string, keyspaceName string, hostname string, shardName string) error {
-	return vtctlclient.ExecuteCommand(
-		"InitTablet", "-hostname", hostname,
-		"-port", fmt.Sprintf("%d", tablet.HTTPPort), "-allow_update",
-		"-keyspace", keyspaceName, "-shard", shardName,
-		fmt.Sprintf("%s-%010d", cell, tablet.TabletUID), "replica")
+	tabletType := "replica"
+	if tablet.Type == "rdonly" {
+		tabletType = "rdonly"
+	}
+	args := []string{"InitTablet", "-hostname", hostname,
+		"-port", fmt.Sprintf("%d", tablet.HTTPPort), "-allow_update", "-parent",
+		"-keyspace", keyspaceName,
+		"-shard", shardName}
+	if tablet.MySQLPort > 0 {
+		args = append(args, "-mysql_port", fmt.Sprintf("%d", tablet.MySQLPort))
+	}
+	if tablet.GrpcPort > 0 {
+		args = append(args, "-grpc_port", fmt.Sprintf("%d", tablet.GrpcPort))
+	}
+	args = append(args, fmt.Sprintf("%s-%010d", cell, tablet.TabletUID), tabletType)
+	return vtctlclient.ExecuteCommand(args...)
 }

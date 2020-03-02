@@ -37,28 +37,33 @@ type MysqlctlProcess struct {
 	TabletUID    int
 	MySQLPort    int
 	InitDBFile   string
+	ExtraArgs    []string
+	InitMysql    bool
 }
 
 // InitDb executes mysqlctl command to add cell info
 func (mysqlctl *MysqlctlProcess) InitDb() (err error) {
-	tmpProcess := exec.Command(
-		mysqlctl.Binary,
-		"-log_dir", mysqlctl.LogDirectory,
+	args := []string{"-log_dir", mysqlctl.LogDirectory,
 		"-tablet_uid", fmt.Sprintf("%d", mysqlctl.TabletUID),
 		"-mysql_port", fmt.Sprintf("%d", mysqlctl.MySQLPort),
 		"init",
-		"-init_db_sql_file", mysqlctl.InitDBFile,
-	)
+		"-init_db_sql_file", mysqlctl.InitDBFile}
+	if *isCoverage {
+		args = append([]string{"-test.coverprofile=" + getCoveragePath("mysql-initdb.out"), "-test.v"}, args...)
+	}
+	tmpProcess := exec.Command(
+		mysqlctl.Binary,
+		args...)
 	return tmpProcess.Run()
 }
 
 // Start executes mysqlctl command to start mysql instance
 func (mysqlctl *MysqlctlProcess) Start() (err error) {
-	if tmpProcess, err := mysqlctl.StartProcess(); err != nil {
+	tmpProcess, err := mysqlctl.StartProcess()
+	if err != nil {
 		return err
-	} else {
-		return tmpProcess.Wait()
 	}
+	return tmpProcess.Wait()
 }
 
 // StartProcess starts the mysqlctl and returns the process reference
@@ -68,19 +73,30 @@ func (mysqlctl *MysqlctlProcess) StartProcess() (*exec.Cmd, error) {
 		"-log_dir", mysqlctl.LogDirectory,
 		"-tablet_uid", fmt.Sprintf("%d", mysqlctl.TabletUID),
 		"-mysql_port", fmt.Sprintf("%d", mysqlctl.MySQLPort),
-		"init",
-		"-init_db_sql_file", mysqlctl.InitDBFile,
 	)
+	if *isCoverage {
+		tmpProcess.Args = append(tmpProcess.Args, []string{"-test.coverprofile=" + getCoveragePath("mysql-start.out")}...)
+	}
+
+	if len(mysqlctl.ExtraArgs) > 0 {
+		tmpProcess.Args = append(tmpProcess.Args, mysqlctl.ExtraArgs...)
+	}
+	if mysqlctl.InitMysql {
+		tmpProcess.Args = append(tmpProcess.Args, "init",
+			"-init_db_sql_file", mysqlctl.InitDBFile)
+	}
+	tmpProcess.Args = append(tmpProcess.Args, "start")
+
 	return tmpProcess, tmpProcess.Start()
 }
 
 // Stop executes mysqlctl command to stop mysql instance
 func (mysqlctl *MysqlctlProcess) Stop() (err error) {
-	if tmpProcess, err := mysqlctl.StopProcess(); err != nil {
+	tmpProcess, err := mysqlctl.StopProcess()
+	if err != nil {
 		return err
-	} else {
-		return tmpProcess.Wait()
 	}
+	return tmpProcess.Wait()
 }
 
 // StopProcess executes mysqlctl command to stop mysql instance and returns process reference
@@ -88,8 +104,14 @@ func (mysqlctl *MysqlctlProcess) StopProcess() (*exec.Cmd, error) {
 	tmpProcess := exec.Command(
 		mysqlctl.Binary,
 		"-tablet_uid", fmt.Sprintf("%d", mysqlctl.TabletUID),
-		"shutdown",
 	)
+	if *isCoverage {
+		tmpProcess.Args = append(tmpProcess.Args, []string{"-test.coverprofile=" + getCoveragePath("mysql-stop.out")}...)
+	}
+	if len(mysqlctl.ExtraArgs) > 0 {
+		tmpProcess.Args = append(tmpProcess.Args, mysqlctl.ExtraArgs...)
+	}
+	tmpProcess.Args = append(tmpProcess.Args, "shutdown")
 	return tmpProcess, tmpProcess.Start()
 }
 
@@ -113,17 +135,14 @@ func MysqlCtlProcessInstance(tabletUID int, mySQLPort int, tmpDirectory string) 
 	}
 	mysqlctl.MySQLPort = mySQLPort
 	mysqlctl.TabletUID = tabletUID
+	mysqlctl.InitMysql = true
 	return mysqlctl
 }
 
-// StartMySQL process
+// StartMySQL starts mysqlctl process
 func StartMySQL(ctx context.Context, tablet *Vttablet, username string, tmpDirectory string) error {
 	tablet.MysqlctlProcess = *MysqlCtlProcessInstance(tablet.TabletUID, tablet.MySQLPort, tmpDirectory)
-	err := tablet.MysqlctlProcess.Start()
-	if err != nil {
-		return err
-	}
-	return nil
+	return tablet.MysqlctlProcess.Start()
 }
 
 // StartMySQLAndGetConnection create a connection to tablet mysql
@@ -138,8 +157,7 @@ func StartMySQLAndGetConnection(ctx context.Context, tablet *Vttablet, username 
 		UnixSocket: path.Join(os.Getenv("VTDATAROOT"), fmt.Sprintf("/vt_%010d", tablet.TabletUID), "/mysql.sock"),
 	}
 
-	conn, err := mysql.Connect(ctx, &params)
-	return conn, err
+	return mysql.Connect(ctx, &params)
 }
 
 // ExecuteCommandWithOutput executes any mysqlctl command and returns output
@@ -148,7 +166,6 @@ func (mysqlctl *MysqlctlProcess) ExecuteCommandWithOutput(args ...string) (resul
 		mysqlctl.Binary,
 		args...,
 	)
-	println(fmt.Sprintf("Executing mysqlctl with arguments %v", strings.Join(tmpProcess.Args, " ")))
 	log.Info(fmt.Sprintf("Executing mysqlctl with arguments %v", strings.Join(tmpProcess.Args, " ")))
 	resultByte, err := tmpProcess.CombinedOutput()
 	return string(resultByte), err

@@ -43,14 +43,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/test/endtoend/cluster"
-	tabletpb "vitess.io/vitess/go/vt/proto/topodata"
-	tmc "vitess.io/vitess/go/vt/vttablet/grpctmclient"
 )
 
 var (
@@ -65,8 +62,7 @@ var (
 		msg VARCHAR(64) NOT NULL,
 		PRIMARY KEY (id)
 	) Engine=InnoDB;`
-	wg       = &sync.WaitGroup{}
-	tmClient = tmc.NewClient()
+	wg = &sync.WaitGroup{}
 )
 
 const (
@@ -75,7 +71,6 @@ const (
 	demoteMasterQuery          = "SET GLOBAL read_only = ON;FLUSH TABLES WITH READ LOCK;UNLOCK TABLES;"
 	disableSemiSyncMasterQuery = "SET GLOBAL rpl_semi_sync_master_enabled = 0"
 	enableSemiSyncMasterQuery  = "SET GLOBAL rpl_semi_sync_master_enabled = 1"
-	masterPositionQuery        = "SELECT @@GLOBAL.gtid_executed;"
 	promoteSlaveQuery          = "STOP SLAVE;RESET SLAVE ALL;SET GLOBAL read_only = OFF;"
 )
 
@@ -222,7 +217,7 @@ func createCluster() (*cluster.LocalProcessCluster, int) {
 func exec(t *testing.T, conn *mysql.Conn, query string) *sqltypes.Result {
 	t.Helper()
 	qr, err := conn.ExecuteFetch(query, 1000, true)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	return qr
 }
 
@@ -235,13 +230,14 @@ func TestBufferExternalReparenting(t *testing.T) {
 }
 
 func testBufferBase(t *testing.T, isExternalParent bool) {
+	defer cluster.PanicHandler(t)
 	clusterInstance, exitCode := createCluster()
 	if exitCode != 0 {
 		os.Exit(exitCode)
 	}
 	ctx := context.Background()
 	conn, err := mysql.Connect(ctx, &vtParams)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	defer conn.Close()
 
 	// Insert two rows for the later threads (critical read, update).
@@ -290,7 +286,7 @@ func testBufferBase(t *testing.T, isExternalParent bool) {
 	//At least one thread should have been buffered.
 	//This may fail if a failover is too fast. Add retries then.
 	resp, err := http.Get(clusterInstance.VtgateProcess.VerifyURL)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	label := fmt.Sprintf("%s.%s", keyspaceUnshardedName, "0")
 	inFlightMax := 0
 	masterPromotedCount := 0
@@ -339,7 +335,7 @@ func getVarFromVtgate(t *testing.T, label string, param string, resultMap map[st
 				v := object.MapIndex(key)
 				s := fmt.Sprintf("%v", v.Interface())
 				paramVal, err = strconv.Atoi(s)
-				require.NoError(t, err)
+				require.Nil(t, err)
 			}
 		}
 	}
@@ -360,7 +356,7 @@ func externalReparenting(ctx context.Context, t *testing.T, clusterInstance *clu
 	}
 
 	// Wait for replica to catch up to master.
-	waitForReplicationPos(ctx, t, &master, &replica, 60.0)
+	cluster.WaitForReplicationPos(t, master, replica, "localhost", 60.0)
 
 	duration := time.Since(start)
 	minUnavailabilityInS := 1.0
@@ -378,7 +374,8 @@ func externalReparenting(ctx context.Context, t *testing.T, clusterInstance *clu
 	}
 
 	// Configure old master to replicate from new master.
-	_, gtID := getMasterPosition(ctx, t, &newMaster)
+
+	_, gtID := cluster.GetMasterPosition(t, *newMaster, hostname)
 
 	// Use 'localhost' as hostname because Travis CI worker hostnames
 	// are too long for MySQL replication.
@@ -390,9 +387,9 @@ func externalReparenting(ctx context.Context, t *testing.T, clusterInstance *clu
 }
 
 func waitForReplicationPos(ctx context.Context, t *testing.T, tabletA *cluster.Vttablet, tabletB *cluster.Vttablet, timeout float64) {
-	replicationPosA, _ := getMasterPosition(ctx, t, tabletA)
+	replicationPosA, _ := cluster.GetMasterPosition(t, *tabletA, hostname)
 	for {
-		replicationPosB, _ := getMasterPosition(ctx, t, tabletB)
+		replicationPosB, _ := cluster.GetMasterPosition(t, *tabletB, hostname)
 		if positionAtLeast(t, tabletA, replicationPosB, replicationPosA) {
 			break
 		}
@@ -401,18 +398,10 @@ func waitForReplicationPos(ctx context.Context, t *testing.T, tabletA *cluster.V
 	}
 }
 
-func getMasterPosition(ctx context.Context, t *testing.T, tablet *cluster.Vttablet) (string, string) {
-	vtablet := getTablet(tablet.GrpcPort)
-	newPos, err := tmClient.MasterPosition(ctx, vtablet)
-	require.NoError(t, err)
-	gtID := strings.SplitAfter(newPos, "/")[1]
-	return newPos, gtID
-}
-
 func positionAtLeast(t *testing.T, tablet *cluster.Vttablet, a string, b string) bool {
 	isAtleast := false
 	val, err := tablet.MysqlctlProcess.ExecuteCommandWithOutput("position", "at_least", a, b)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	if strings.Contains(val, "true") {
 		isAtleast = true
 	}
@@ -426,10 +415,4 @@ func waitStep(t *testing.T, msg string, timeout float64, sleepTime float64) floa
 	}
 	time.Sleep(time.Duration(sleepTime) * time.Second)
 	return timeout
-}
-
-func getTablet(tabletGrpcPort int) *tabletpb.Tablet {
-	portMap := make(map[string]int32)
-	portMap["grpc"] = int32(tabletGrpcPort)
-	return &tabletpb.Tablet{Hostname: hostname, PortMap: portMap}
 }
