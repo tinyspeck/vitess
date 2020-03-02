@@ -54,6 +54,7 @@ var (
 	timings    = stats.NewTimings("MysqlServerTimings", "MySQL server timings", "operation")
 	connCount  = stats.NewGauge("MysqlServerConnCount", "Active MySQL server connections")
 	connAccept = stats.NewCounter("MysqlServerConnAccepted", "Connections accepted by MySQL server")
+	connClose  = stats.NewCounter("MysqlServerConnClosed", "Connections closed by MySQL server")
 	connSlow   = stats.NewCounter("MysqlServerConnSlow", "Connections that took more than the configured mysql_slow_connect_warn_threshold to establish")
 
 	connCountByTLSVer = stats.NewGaugesWithSingleLabel("MysqlServerConnCountByTLSVer", "Active MySQL server connections by TLS version", "tls")
@@ -242,6 +243,7 @@ func (l *Listener) Accept() {
 	for {
 		conn, err := l.listener.Accept()
 		if err != nil {
+			connClose.Add(1)
 			// Close() was probably called.
 			return
 		}

@@ -545,6 +545,7 @@ func TestServer(t *testing.T) {
 	initialTimingCounts := timings.Counts()
 	initialConnAccept := connAccept.Get()
 	initialConnSlow := connSlow.Get()
+	initialConnClose := connClose.Get()
 
 	l.SlowConnectWarnThreshold = time.Duration(time.Nanosecond * 1)
 
@@ -566,6 +567,9 @@ func TestServer(t *testing.T) {
 	}
 	if connSlow.Get()-initialConnSlow != 1 {
 		t.Errorf("Expected ConnSlow delta=1, got %d", connSlow.Get()-initialConnSlow)
+	}
+	if connClose.Get()-initialConnClose != 0 {
+		t.Errorf("Expected ConnClose delta=0, got %d", connClose.Get()-initialConnClose)
 	}
 
 	expectedTimingDeltas := map[string]int64{
@@ -603,6 +607,9 @@ func TestServer(t *testing.T) {
 	}
 	if connSlow.Get()-initialConnSlow != 1 {
 		t.Errorf("Expected ConnSlow delta=1, got %d", connSlow.Get()-initialConnSlow)
+	}
+	if connClose.Get()-initialConnClose != 0 {
+		t.Errorf("Expected ConnClose delta=0, got %d", connClose.Get()-initialConnClose)
 	}
 
 	// Run a 'select rows' command with results.
@@ -1251,6 +1258,7 @@ func TestListenerShutdown(t *testing.T) {
 		Uname: "user1",
 		Pass:  "password1",
 	}
+	initialConnClose := connClose.Get()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -1265,6 +1273,10 @@ func TestListenerShutdown(t *testing.T) {
 	}
 
 	l.Shutdown()
+
+	if connClose.Get()-initialConnClose != 1 {
+		t.Errorf("Expected ConnClose delta=1, got %d", connClose.Get()-initialConnClose)
+	}
 
 	if err := conn.Ping(); err != nil {
 		sqlErr, ok := err.(*SQLError)
