@@ -82,6 +82,7 @@ func (res *Resolver) Execute(
 	notInTransaction bool,
 	options *querypb.ExecuteOptions,
 	logStats *LogStats,
+	autocommit bool,
 ) (*sqltypes.Result, error) {
 	rss, err := res.resolver.ResolveDestination(ctx, keyspace, tabletType, destination)
 	if err != nil {
@@ -99,7 +100,9 @@ func (res *Resolver) Execute(
 			tabletType,
 			NewSafeSession(session),
 			notInTransaction,
-			options)
+			options,
+			autocommit,
+		)
 		if isRetryableError(err) {
 			newRss, err := res.resolver.ResolveDestination(ctx, keyspace, tabletType, destination)
 			if err != nil {

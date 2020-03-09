@@ -50,7 +50,9 @@ func TestResolverExecuteKeyspaceIds(t *testing.T) {
 			nil,
 			false,
 			nil,
-			nil)
+			nil,
+			false,
+		)
 	})
 }
 
@@ -65,7 +67,9 @@ func TestResolverExecuteKeyRanges(t *testing.T) {
 			nil,
 			false,
 			nil,
-			nil)
+			nil,
+			false,
+		)
 	})
 }
 
