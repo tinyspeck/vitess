@@ -26,9 +26,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/sync2"
 	"vitess.io/vitess/go/vt/binlog"
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/sqlparser"
+	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/schema"
 
@@ -43,6 +45,25 @@ var PacketSize = flag.Int("vstream_packet_size", 30000, "Suggested packet size f
 // between the two timeouts.
 var HeartbeatTime = 900 * time.Millisecond
 
+// VStreamer exposes an externally usable interface to vstreamer.
+type VStreamer interface {
+	Stream() error
+	Cancel()
+}
+
+// NewVStreamer returns a VStreamer.
+func NewVStreamer(ctx context.Context, cp *mysql.ConnParams, se *schema.Engine, startPos string, filter *binlogdatapb.Filter, send func([]*binlogdatapb.VEvent) error) VStreamer {
+	return newVStreamer(ctx, cp, se, startPos, filter, &localVSchema{vschema: &vindexes.VSchema{}}, send)
+}
+
+// vschemaUpdateCount is for testing only.
+// vstreamer is a mutex free data structure. So, it's not safe to access its members
+// from a test. Since VSchema gets updated asynchronously, there's no way for a test
+// to wait for it. Instead, the code that updates the vschema increments this atomic
+// counter, which will let the tests poll for it to change.
+// TODO(sougou): find a better way for this.
+var vschemaUpdateCount sync2.AtomicInt64
+
 type vstreamer struct {
 	ctx    context.Context
 	cancel func()
@@ -53,9 +74,8 @@ type vstreamer struct {
 	filter   *binlogdatapb.Filter
 	send     func([]*binlogdatapb.VEvent) error
 
-	// A kschema is a VSchema for just one keyspace.
-	kevents        chan *vindexes.KeyspaceSchema
-	kschema        *vindexes.KeyspaceSchema
+	vevents        chan *localVSchema
+	vschema        *localVSchema
 	plans          map[uint64]*streamerPlan
 	journalTableID uint64
 
@@ -71,7 +91,7 @@ type streamerPlan struct {
 	TableMap *mysql.TableMap
 }
 
-func NewVStreamer(ctx context.Context, cp *mysql.ConnParams, se *schema.Engine, startPos string, filter *binlogdatapb.Filter, kschema *vindexes.KeyspaceSchema, send func([]*binlogdatapb.VEvent) error) *vstreamer {
+func newVStreamer(ctx context.Context, cp *mysql.ConnParams, se *schema.Engine, startPos string, filter *binlogdatapb.Filter, vschema *localVSchema, send func([]*binlogdatapb.VEvent) error) *vstreamer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &vstreamer{
 		ctx:      ctx,
@@ -81,18 +101,18 @@ func NewVStreamer(ctx context.Context, cp *mysql.ConnParams, se *schema.Engine, 
 		startPos: startPos,
 		filter:   filter,
 		send:     send,
-		kevents:  make(chan *vindexes.KeyspaceSchema, 1),
-		kschema:  kschema,
+		vevents:  make(chan *localVSchema, 1),
+		vschema:  vschema,
 		plans:    make(map[uint64]*streamerPlan),
 	}
 }
 
-// SetKSchema updates all existing against the new kschema.
-func (vs *vstreamer) SetKSchema(kschema *vindexes.KeyspaceSchema) {
+// SetVSchema updates all existing streams against the new vschema.
+func (vs *vstreamer) SetVSchema(vschema *localVSchema) {
 	// Since vs.Stream is a single-threaded loop. We just send an event to
 	// that thread, which helps us avoid mutexes to update the plans.
 	select {
-	case vs.kevents <- kschema:
+	case vs.vevents <- vschema:
 	case <-vs.ctx.Done():
 	}
 }
@@ -105,11 +125,17 @@ func (vs *vstreamer) Cancel() {
 func (vs *vstreamer) Stream() error {
 	defer vs.cancel()
 
-	pos, err := mysql.DecodePosition(vs.startPos)
-	if err != nil {
-		return err
+	if vs.startPos == "current" {
+		if err := vs.useCurrentPosition(); err != nil {
+			return vterrors.Wrap(err, "could not obtain current position")
+		}
+	} else {
+		pos, err := mysql.DecodePosition(vs.startPos)
+		if err != nil {
+			return vterrors.Wrap(err, "could not decode position")
+		}
+		vs.pos = pos
 	}
-	vs.pos = pos
 
 	// Ensure se is Open. If vttablet came up in a non_serving role,
 	// the schema engine may not have been initialized.
@@ -129,6 +155,16 @@ func (vs *vstreamer) Stream() error {
 	}
 	err = vs.parseEvents(vs.ctx, events)
 	return wrapError(err, vs.pos)
+}
+
+func (vs *vstreamer) useCurrentPosition() error {
+	conn, err := mysql.Connect(vs.ctx, vs.cp)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	vs.pos, err = conn.MasterPosition()
+	return err
 }
 
 func (vs *vstreamer) parseEvents(ctx context.Context, events <-chan mysql.BinlogEvent) error {
@@ -223,10 +259,12 @@ func (vs *vstreamer) parseEvents(ctx context.Context, events <-chan mysql.Binlog
 					return fmt.Errorf("error sending event: %v", err)
 				}
 			}
-		case vs.kschema = <-vs.kevents:
+		case vs.vschema = <-vs.vevents:
 			if err := vs.rebuildPlans(); err != nil {
 				return err
 			}
+			// Increment this counter for testing.
+			vschemaUpdateCount.Add(1)
 		case <-ctx.Done():
 			return nil
 		case <-timer.C:
@@ -470,7 +508,7 @@ func (vs *vstreamer) buildTablePlan(id uint64, tm *mysql.TableMap) (*binlogdatap
 		Name:    tm.Name,
 		Columns: cols,
 	}
-	plan, err := buildPlan(table, vs.kschema, vs.filter)
+	plan, err := buildPlan(table, vs.vschema, vs.filter)
 	if err != nil {
 		return nil, err
 	}
@@ -600,11 +638,11 @@ func (vs *vstreamer) processRowEvent(vevents []*binlogdatapb.VEvent, plan *strea
 func (vs *vstreamer) rebuildPlans() error {
 	for id, plan := range vs.plans {
 		if plan == nil {
-			// If a table has no plan, a kschema change will not
+			// If a table has no plan, a vschema change will not
 			// cause that to change.
 			continue
 		}
-		newPlan, err := buildPlan(plan.Table, vs.kschema, vs.filter)
+		newPlan, err := buildPlan(plan.Table, vs.vschema, vs.filter)
 		if err != nil {
 			return err
 		}

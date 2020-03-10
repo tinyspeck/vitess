@@ -92,6 +92,10 @@ type Executor struct {
 
 var executorOnce sync.Once
 
+const pathQueryPlans = "/debug/query_plans"
+const pathScatterStats = "/debug/scatter_stats"
+const pathVSchema = "/debug/vschema"
+
 // NewExecutor creates a new Executor.
 func NewExecutor(ctx context.Context, serv srvtopo.Server, cell, statsName string, resolver *Resolver, normalize bool, streamSize int, queryPlanCacheSize int64) *Executor {
 	e := &Executor{
@@ -117,8 +121,9 @@ func NewExecutor(ctx context.Context, serv srvtopo.Server, cell, statsName strin
 		stats.Publish("QueryPlanCacheOldest", stats.StringFunc(func() string {
 			return fmt.Sprintf("%v", e.plans.Oldest())
 		}))
-		http.Handle("/debug/query_plans", e)
-		http.Handle("/debug/vschema", e)
+		http.Handle(pathQueryPlans, e)
+		http.Handle(pathScatterStats, e)
+		http.Handle(pathVSchema, e)
 	})
 	return e
 }
@@ -182,7 +187,7 @@ func (e *Executor) execute(ctx context.Context, safeSession *SafeSession, sql st
 
 	switch stmtType {
 	case sqlparser.StmtSelect:
-		return e.handleExec(ctx, safeSession, sql, bindVars, destKeyspace, destTabletType, dest, logStats)
+		return e.handleExec(ctx, safeSession, sql, bindVars, destKeyspace, destTabletType, dest, logStats, stmtType)
 	case sqlparser.StmtInsert, sqlparser.StmtReplace, sqlparser.StmtUpdate, sqlparser.StmtDelete:
 		safeSession := safeSession
 
@@ -207,7 +212,7 @@ func (e *Executor) execute(ctx context.Context, safeSession *SafeSession, sql st
 		// at the beginning, but never after.
 		safeSession.SetAutocommittable(mustCommit)
 
-		qr, err := e.handleExec(ctx, safeSession, sql, bindVars, destKeyspace, destTabletType, dest, logStats)
+		qr, err := e.handleExec(ctx, safeSession, sql, bindVars, destKeyspace, destTabletType, dest, logStats, stmtType)
 		if err != nil {
 			return nil, err
 		}
@@ -242,7 +247,7 @@ func (e *Executor) execute(ctx context.Context, safeSession *SafeSession, sql st
 	return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unrecognized statement: %s", sql)
 }
 
-func (e *Executor) handleExec(ctx context.Context, safeSession *SafeSession, sql string, bindVars map[string]*querypb.BindVariable, destKeyspace string, destTabletType topodatapb.TabletType, dest key.Destination, logStats *LogStats) (*sqltypes.Result, error) {
+func (e *Executor) handleExec(ctx context.Context, safeSession *SafeSession, sql string, bindVars map[string]*querypb.BindVariable, destKeyspace string, destTabletType topodatapb.TabletType, dest key.Destination, logStats *LogStats, stmtType sqlparser.StatementType) (*sqltypes.Result, error) {
 	if dest != nil {
 		// V1 mode or V3 mode with a forced shard or range target
 		// TODO(sougou): change this flow to go through V3 functions
@@ -269,9 +274,24 @@ func (e *Executor) handleExec(ctx context.Context, safeSession *SafeSession, sql
 			if err != nil {
 				return nil, err
 			}
-			sqlparser.Normalize(stmt, bindVars, "vtg")
-			normalized := sqlparser.String(stmt)
+			rewriteResult, err := sqlparser.PrepareAST(stmt, bindVars, "vtg")
+			if err != nil {
+				return nil, err
+			}
+			normalized := sqlparser.String(rewriteResult.AST)
 			sql = comments.Leading + normalized + comments.Trailing
+			if rewriteResult.NeedDatabase {
+				keyspace, _, _, _ := e.ParseDestinationTarget(safeSession.TargetString)
+				log.Warningf("This is the keyspace name: ---> %v", keyspace)
+				if keyspace == "" {
+					bindVars[sqlparser.DBVarName] = sqltypes.NullBindVariable
+				} else {
+					bindVars[sqlparser.DBVarName] = sqltypes.StringBindVariable(keyspace)
+				}
+			}
+			if rewriteResult.NeedLastInsertID {
+				bindVars[sqlparser.LastInsertIDName] = sqltypes.Uint64BindVariable(safeSession.GetLastInsertId())
+			}
 		}
 		logStats.PlanTime = execStart.Sub(logStats.StartTime)
 		logStats.SQL = sql
@@ -301,8 +321,19 @@ func (e *Executor) handleExec(ctx context.Context, safeSession *SafeSession, sql
 		return nil, err
 	}
 
-	qr, err := plan.Instructions.Execute(vcursor, bindVars, true)
+	if plan.NeedsLastInsertID {
+		bindVars[sqlparser.LastInsertIDName] = sqltypes.Uint64BindVariable(safeSession.GetLastInsertId())
+	}
+	if plan.NeedsDatabaseName {
+		keyspace, _, _, _ := e.ParseDestinationTarget(safeSession.TargetString)
+		if keyspace == "" {
+			bindVars[sqlparser.DBVarName] = sqltypes.NullBindVariable
+		} else {
+			bindVars[sqlparser.DBVarName] = sqltypes.StringBindVariable(keyspace)
+		}
+	}
 
+	qr, err := plan.Instructions.Execute(vcursor, bindVars, true)
 	logStats.ExecuteTime = time.Since(execStart)
 
 	e.updateQueryCounts(plan.Instructions.RouteType(), plan.Instructions.GetKeyspaceName(), plan.Instructions.GetTableName(), int64(logStats.ShardQueries))
@@ -313,6 +344,9 @@ func (e *Executor) handleExec(ctx context.Context, safeSession *SafeSession, sql
 		errCount = 1
 	} else {
 		logStats.RowsAffected = qr.RowsAffected
+		if qr != nil && stmtType == sqlparser.StmtInsert {
+			safeSession.LastInsertId = qr.InsertID
+		}
 	}
 
 	// Check if there was partial DML execution. If so, rollback the transaction.
@@ -840,6 +874,17 @@ func (e *Executor) handleShow(ctx context.Context, safeSession *SafeSession, sql
 				}
 			}
 		}
+	case sqlparser.KeywordString(sqlparser.COLUMNS):
+		if !show.OnTable.Qualifier.IsEmpty() {
+			destKeyspace = show.OnTable.Qualifier.String()
+			show.OnTable.Qualifier = sqlparser.NewTableIdent("")
+		} else if show.ShowTablesOpt != nil {
+			destKeyspace = show.ShowTablesOpt.DbName
+			show.ShowTablesOpt.DbName = ""
+		} else {
+			break
+		}
+		sql = sqlparser.String(show)
 	case sqlparser.KeywordString(sqlparser.TABLES):
 		if show.ShowTablesOpt != nil && show.ShowTablesOpt.DbName != "" {
 			if destKeyspace == "" {
@@ -1372,7 +1417,7 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 		return nil, err
 	}
 	if !e.normalize {
-		plan, err := planbuilder.BuildFromStmt(sql, stmt, vcursor)
+		plan, err := planbuilder.BuildFromStmt(sql, stmt, vcursor, false, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1383,8 +1428,12 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 	}
 
 	// Normalize and retry.
-	sqlparser.Normalize(stmt, bindVars, "vtg")
-	normalized := sqlparser.String(stmt)
+	result, err := sqlparser.PrepareAST(stmt, bindVars, "vtg")
+	if err != nil {
+		return nil, vterrors.Wrap(err, "failed to rewrite ast before planning")
+	}
+	rewrittenStatement := result.AST
+	normalized := sqlparser.String(rewrittenStatement)
 
 	if logStats != nil {
 		logStats.SQL = comments.Leading + normalized + comments.Trailing
@@ -1395,11 +1444,11 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 	if result, ok := e.plans.Get(planKey); ok {
 		return result.(*engine.Plan), nil
 	}
-	plan, err := planbuilder.BuildFromStmt(normalized, stmt, vcursor)
+	plan, err := planbuilder.BuildFromStmt(normalized, rewrittenStatement, vcursor, result.NeedLastInsertID, result.NeedDatabase)
 	if err != nil {
 		return nil, err
 	}
-	if !skipQueryPlanCache && !sqlparser.SkipQueryPlanCacheDirective(stmt) {
+	if !skipQueryPlanCache && !sqlparser.SkipQueryPlanCacheDirective(rewrittenStatement) {
 		e.plans.Set(planKey, plan)
 	}
 	return plan, nil
@@ -1419,29 +1468,29 @@ func (e *Executor) ServeHTTP(response http.ResponseWriter, request *http.Request
 		acl.SendError(response, err)
 		return
 	}
-	if request.URL.Path == "/debug/query_plans" {
-		response.Header().Set("Content-Type", "application/json; charset=utf-8")
-		buf, err := json.MarshalIndent(e.plans.Items(), "", " ")
-		if err != nil {
-			response.Write([]byte(err.Error()))
-			return
-		}
-		ebuf := bytes.NewBuffer(nil)
-		json.HTMLEscape(ebuf, buf)
-		response.Write(ebuf.Bytes())
-	} else if request.URL.Path == "/debug/vschema" {
-		response.Header().Set("Content-Type", "application/json; charset=utf-8")
-		b, err := json.MarshalIndent(e.VSchema(), "", " ")
-		if err != nil {
-			response.Write([]byte(err.Error()))
-			return
-		}
-		buf := bytes.NewBuffer(nil)
-		json.HTMLEscape(buf, b)
-		response.Write(buf.Bytes())
-	} else {
+
+	switch request.URL.Path {
+	case pathQueryPlans:
+		returnAsJSON(response, e.plans.Items())
+	case pathVSchema:
+		returnAsJSON(response, e.VSchema())
+	case pathScatterStats:
+		e.WriteScatterStats(response)
+	default:
 		response.WriteHeader(http.StatusNotFound)
 	}
+}
+
+func returnAsJSON(response http.ResponseWriter, stuff interface{}) {
+	response.Header().Set("Content-Type", "application/json; charset=utf-8")
+	buf, err := json.MarshalIndent(stuff, "", " ")
+	if err != nil {
+		_, _ = response.Write([]byte(err.Error()))
+		return
+	}
+	ebuf := bytes.NewBuffer(nil)
+	json.HTMLEscape(ebuf, buf)
+	_, _ = response.Write(ebuf.Bytes())
 }
 
 // Plans returns the LRU plan cache
