@@ -125,6 +125,7 @@ func (sdw *SplitDiffWorker) StatusAsText() string {
 // Run is mostly a wrapper to run the cleanup at the end.
 func (sdw *SplitDiffWorker) Run(ctx context.Context) error {
 	resetVars()
+	ctx = context.TODO()
 	err := sdw.run(ctx)
 
 	sdw.SetState(WorkerStateCleanUp)
