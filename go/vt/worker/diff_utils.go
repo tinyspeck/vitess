@@ -75,7 +75,7 @@ func NewQueryResultReaderForTablet(ctx context.Context, ts *topo.Server, tabletA
 		return nil, err
 	}
 
-	stream := queryservice.ExecuteWithStreamer(ctx, conn, &querypb.Target{
+	stream := queryservice.ExecuteWithStreamer(context.TODO(), conn, &querypb.Target{
 		Keyspace:   tablet.Tablet.Keyspace,
 		Shard:      tablet.Tablet.Shard,
 		TabletType: tablet.Tablet.Type,
