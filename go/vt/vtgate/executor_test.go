@@ -1255,19 +1255,53 @@ func TestExecutorOther(t *testing.T) {
 			t.Errorf("Exec %s: %v, want %v", stmt, gotCount, wantCount)
 		}
 
-		_, err = executor.Execute(context.Background(), "TestExecute", NewSafeSession(&vtgatepb.Session{TargetString: "TestExecutor"}), stmt, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		gotCount = []int64{
-			sbc1.ExecCount.Get(),
-			sbc2.ExecCount.Get(),
-			sbclookup.ExecCount.Get(),
-		}
-		wantCount[0]++
-		if !reflect.DeepEqual(gotCount, wantCount) {
-			t.Errorf("Exec %s: %v, want %v", stmt, gotCount, wantCount)
-		}
+	tcs := []struct {
+		targetStr string
+
+		hasNoKeyspaceErr       bool
+		hasDestinationShardErr bool
+		wantCnts               cnts
+	}{
+		{
+			targetStr:        "",
+			hasNoKeyspaceErr: true,
+		},
+		{
+			targetStr:              "TestExecutor[-]",
+			hasDestinationShardErr: true,
+		},
+		{
+			targetStr: KsTestUnsharded,
+			wantCnts: cnts{
+				Sbc1Cnt:      0,
+				Sbc2Cnt:      0,
+				SbcLookupCnt: 1,
+			},
+		},
+		{
+			targetStr: "TestExecutor",
+			wantCnts: cnts{
+				Sbc1Cnt:      1,
+				Sbc2Cnt:      0,
+				SbcLookupCnt: 0,
+			},
+		},
+		{
+			targetStr: "TestExecutor/-20",
+			wantCnts: cnts{
+				Sbc1Cnt:      1,
+				Sbc2Cnt:      0,
+				SbcLookupCnt: 0,
+			},
+		},
+		{
+			targetStr: "TestExecutor[00]",
+			wantCnts: cnts{
+				Sbc1Cnt:      1,
+				Sbc2Cnt:      0,
+				SbcLookupCnt: 0,
+			},
+		},
 	}
 
 	_, err := executor.Execute(context.Background(), "TestExecute", NewSafeSession(&vtgatepb.Session{}), "analyze", nil)
