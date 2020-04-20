@@ -39,16 +39,23 @@ func ExecuteQueriesUsingVtgate(t *testing.T, session *vtgateconn.VTGateSession, 
 }
 
 func RestoreTablet(t *testing.T, localCluster *cluster.LocalProcessCluster, tablet *cluster.Vttablet, restoreKSName string, shardName string, keyspaceName string, commonTabletArg []string) {
-	err := cluster.ResetTabletDirectory(*tablet)
-	assert.Nil(t, err)
-	tm := time.Now().UTC()
-	tm.Format(time.RFC3339)
-	_, err = localCluster.VtctlProcess.ExecuteCommandWithOutput("CreateKeyspace",
-		"-keyspace_type=SNAPSHOT", "-base_keyspace="+keyspaceName,
-		"-snapshot_time", tm.Format(time.RFC3339), restoreKSName)
-	assert.Nil(t, err)
-
+	tablet.ValidateTabletRestart(t)
 	replicaTabletArgs := commonTabletArg
+
+	_, err := localCluster.VtctlProcess.ExecuteCommandWithOutput("GetKeyspace", restoreKSName)
+
+	if err != nil {
+		tm := time.Now().UTC()
+		tm.Format(time.RFC3339)
+		_, err := localCluster.VtctlProcess.ExecuteCommandWithOutput("CreateKeyspace",
+			"-keyspace_type=SNAPSHOT", "-base_keyspace="+keyspaceName,
+			"-snapshot_time", tm.Format(time.RFC3339), restoreKSName)
+		require.Nil(t, err)
+	}
+
+	if UseXb {
+		replicaTabletArgs = append(replicaTabletArgs, XbArgs...)
+	}
 	replicaTabletArgs = append(replicaTabletArgs, "-disable_active_reparents",
 		"-enable_replication_reporter=false",
 		"-init_tablet_type", "replica",
