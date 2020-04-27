@@ -1,0 +1,34 @@
+[
+    {
+        "sha": "aed84eef2b0e16a5ce4750db93e83faf31a89100",
+        "merge": false,
+        "comment": "union routing",
+        "andrew's mad": {
+                "sha": "f0d747a438d0251ce782ce73cb924e2e522d6c44",
+                "merge": true,
+                "pr": "https://github.com/tinyspeck/vitess/pull/126",
+                "comment": "Patch sqltypes.MakeRowTrusted to lean on field count",
+                "note": "@amason is putting this here because JSON refuses to let him make a comment. this is already in master, so we would need to pass --keep-redundant-commits to git-cherry-pick, which I'd rather not do.",
+                "json": "AHHHHHH ALLOW COMMENTS YOU MONSTERS"
+        }
+    },
+    {
+        "sha": "a40c5e7498f67f7084e6cb515fb36fa1410fcdac",
+        "merge": true,
+        "pr": "https://github.com/vitessio/vitess/pull/6056",
+        "comment": "Stream execute query logging"
+    },
+    {
+        "sha": "ffb2b8929919ad9b7f7e1afd97e4aea5bba87d7c",
+        "merge": true,
+        "pr": "https://github.com/vitessio/vitess/pull/6057",
+        "comment": "increment query counts in the StreamExecute API"
+    },
+    {
+        "sha": "924824b08fa78d98f0d9a708f041a51ba7799de5",
+        "merge": true,
+        "cherry-pick-args": ["--strategy", "recursive", "-X", "theirs"],
+        "pr": "https://github.com/vitessio/vitess/pull/5930",
+        "comment": "pass cell to EnsureVSchema and GetOrCreateShard"
+    }
+]
