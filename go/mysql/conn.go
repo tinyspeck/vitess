@@ -853,7 +853,12 @@ func (c *Conn) handleNextCommand(handler Handler) error {
 
 		statement, err := sqlparser.ParseStrictDDL(query)
 		if err != nil {
-			return err
+			log.Errorf("Conn %v: Error parsing prepared statement: %v", c, err)
+			if werr := c.writeErrorPacketFromError(err); werr != nil {
+				// If we can't even write the error, we're done.
+				log.Errorf("Conn %v: Error writing prepared statement error: %v", c, werr)
+				return werr
+			}
 		}
 
 		paramsCount := uint16(0)
@@ -897,12 +902,9 @@ func (c *Conn) handleNextCommand(handler Handler) error {
 
 		if stmtID != uint32(0) {
 			defer func() {
+				// Allocate a new bindvar map every time since VTGate.Execute() mutates it.
 				prepare := c.PrepareData[stmtID]
-				if prepare.BindVars != nil {
-					for k := range prepare.BindVars {
-						prepare.BindVars[k] = nil
-					}
-				}
+				prepare.BindVars = make(map[string]*querypb.BindVariable, prepare.ParamsCount)
 			}()
 		}
 

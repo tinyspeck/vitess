@@ -20,28 +20,23 @@ import (
 	"reflect"
 	"testing"
 
-	"strings"
-
+	"github.com/stretchr/testify/assert"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 )
 
-var numeric Vindex
+var numeric SingleColumn
 
 func init() {
-	numeric, _ = CreateVindex("numeric", "num", nil)
+	vindex, _ := CreateVindex("numeric", "num", nil)
+	numeric = vindex.(SingleColumn)
 }
 
-func TestNumericCost(t *testing.T) {
-	if numeric.Cost() != 0 {
-		t.Errorf("Cost(): %d, want 0", numeric.Cost())
-	}
-}
-
-func TestNumericString(t *testing.T) {
-	if strings.Compare("num", numeric.String()) != 0 {
-		t.Errorf("String(): %s, want num", numeric.String())
-	}
+func TestNumericInfo(t *testing.T) {
+	assert.Equal(t, 0, numeric.Cost())
+	assert.Equal(t, "num", numeric.String())
+	assert.True(t, numeric.IsUnique())
+	assert.False(t, numeric.NeedsVCursor())
 }
 
 func TestNumericMap(t *testing.T) {

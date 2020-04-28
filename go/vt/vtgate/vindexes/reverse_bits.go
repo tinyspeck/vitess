@@ -29,8 +29,8 @@ import (
 )
 
 var (
-	_ Vindex     = (*ReverseBits)(nil)
-	_ Reversible = (*ReverseBits)(nil)
+	_ SingleColumn = (*ReverseBits)(nil)
+	_ Reversible   = (*ReverseBits)(nil)
 )
 
 // ReverseBits defines vindex that reverses the bits of a number.
@@ -59,9 +59,9 @@ func (vind *ReverseBits) IsUnique() bool {
 	return true
 }
 
-// IsFunctional returns true since the Vindex is functional.
-func (vind *ReverseBits) IsFunctional() bool {
-	return true
+// NeedsVCursor satisfies the Vindex interface.
+func (vind *ReverseBits) NeedsVCursor() bool {
+	return false
 }
 
 // Map returns the corresponding KeyspaceId values for the given ids.

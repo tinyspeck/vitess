@@ -158,7 +158,7 @@ func (be *XtrabackupEngine) ExecuteBackup(ctx context.Context, params BackupPara
 
 	// open the MANIFEST
 	params.Logger.Infof("Writing backup MANIFEST")
-	mwc, err := bh.AddFile(ctx, backupManifestFileName, 0)
+	mwc, err := bh.AddFile(ctx, backupManifestFileName, backupstorage.FileSizeUnknown)
 	if err != nil {
 		return false, vterrors.Wrapf(err, "cannot add %v to backup", backupManifestFileName)
 	}
@@ -328,7 +328,11 @@ func (be *XtrabackupEngine) backupFiles(ctx context.Context, params BackupParams
 		// Enforce minimum block size.
 		blockSize = 1024
 	}
-	if _, err := copyToStripes(destWriters, backupOut, blockSize); err != nil {
+	// Add a buffer in front of the raw stdout pipe so io.CopyN() can use the
+	// buffered reader's WriteTo() method instead of allocating a new buffer
+	// every time.
+	backupOutBuf := bufio.NewReaderSize(backupOut, int(blockSize))
+	if _, err := copyToStripes(destWriters, backupOutBuf, blockSize); err != nil {
 		return replicationPosition, vterrors.Wrap(err, "cannot copy output from xtrabackup command")
 	}
 

@@ -23,6 +23,7 @@ import (
 
 	"strings"
 
+	"github.com/stretchr/testify/assert"
 	"vitess.io/vitess/go/sqltypes"
 
 	"vitess.io/vitess/go/vt/key"
@@ -113,17 +114,21 @@ func TestLookupNonUniqueNew(t *testing.T) {
 	}
 }
 
-func TestLookupNonUniqueCost(t *testing.T) {
+func TestLookupNonUniqueInfo(t *testing.T) {
 	lookupNonUnique := createLookup(t, "lookup", false)
-	if lookupNonUnique.Cost() != 20 {
-		t.Errorf("Cost(): %d, want 20", lookupNonUnique.Cost())
-	}
+	assert.Equal(t, 20, lookupNonUnique.Cost())
+	assert.Equal(t, "lookup", lookupNonUnique.String())
+	assert.False(t, lookupNonUnique.IsUnique())
+	assert.True(t, lookupNonUnique.NeedsVCursor())
 }
 
-func TestLookupNonUniqueString(t *testing.T) {
+func TestLookupNilVCursor(t *testing.T) {
 	lookupNonUnique := createLookup(t, "lookup", false)
-	if strings.Compare("lookup", lookupNonUnique.String()) != 0 {
-		t.Errorf("String(): %s, want lookup", lookupNonUnique.String())
+
+	_, err := lookupNonUnique.Map(nil, []sqltypes.Value{sqltypes.NewInt64(1), sqltypes.NewInt64(2)})
+	want := "cannot perform lookup: no vcursor provided"
+	if err == nil || err.Error() != want {
+		t.Errorf("Map(nil vcursor) err: %v, want %v", err, want)
 	}
 }
 
@@ -175,7 +180,7 @@ func TestLookupNonUniqueMap(t *testing.T) {
 }
 
 func TestLookupNonUniqueMapAutocommit(t *testing.T) {
-	lookupNonUnique, err := CreateVindex("lookup", "lookup", map[string]string{
+	vindex, err := CreateVindex("lookup", "lookup", map[string]string{
 		"table":      "t",
 		"from":       "fromc",
 		"to":         "toc",
@@ -184,6 +189,7 @@ func TestLookupNonUniqueMapAutocommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	lookupNonUnique := vindex.(SingleColumn)
 	vc := &vcursor{numRows: 2}
 
 	got, err := lookupNonUnique.Map(vc, []sqltypes.Value{sqltypes.NewInt64(1), sqltypes.NewInt64(2)})
@@ -315,7 +321,7 @@ func TestLookupNonUniqueVerify(t *testing.T) {
 }
 
 func TestLookupNonUniqueVerifyAutocommit(t *testing.T) {
-	lookupNonUnique, err := CreateVindex("lookup", "lookup", map[string]string{
+	vindex, err := CreateVindex("lookup", "lookup", map[string]string{
 		"table":      "t",
 		"from":       "fromc",
 		"to":         "toc",
@@ -324,6 +330,7 @@ func TestLookupNonUniqueVerifyAutocommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	lookupNonUnique := vindex.(SingleColumn)
 	vc := &vcursor{numRows: 1}
 
 	_, err = lookupNonUnique.Verify(vc, []sqltypes.Value{sqltypes.NewInt64(1), sqltypes.NewInt64(2)}, [][]byte{[]byte("test1"), []byte("test2")})
@@ -539,7 +546,7 @@ func TestLookupNonUniqueUpdate(t *testing.T) {
 	}
 }
 
-func createLookup(t *testing.T, name string, writeOnly bool) Vindex {
+func createLookup(t *testing.T, name string, writeOnly bool) SingleColumn {
 	t.Helper()
 	write := "false"
 	if writeOnly {
@@ -554,5 +561,5 @@ func createLookup(t *testing.T, name string, writeOnly bool) Vindex {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return l
+	return l.(SingleColumn)
 }

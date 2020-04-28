@@ -27,10 +27,10 @@ import (
 )
 
 var (
-	_ Vindex = (*LookupUnique)(nil)
-	_ Lookup = (*LookupUnique)(nil)
-	_ Vindex = (*LookupNonUnique)(nil)
-	_ Lookup = (*LookupNonUnique)(nil)
+	_ SingleColumn = (*LookupUnique)(nil)
+	_ Lookup       = (*LookupUnique)(nil)
+	_ SingleColumn = (*LookupNonUnique)(nil)
+	_ Lookup       = (*LookupNonUnique)(nil)
 )
 
 func init() {
@@ -61,9 +61,9 @@ func (ln *LookupNonUnique) IsUnique() bool {
 	return false
 }
 
-// IsFunctional returns false since the Vindex is not functional.
-func (ln *LookupNonUnique) IsFunctional() bool {
-	return false
+// NeedsVCursor satisfies the Vindex interface.
+func (ln *LookupNonUnique) NeedsVCursor() bool {
+	return true
 }
 
 // Map can map ids to key.Destination objects.
@@ -216,9 +216,9 @@ func (lu *LookupUnique) IsUnique() bool {
 	return true
 }
 
-// IsFunctional returns false since the Vindex is not functional.
-func (lu *LookupUnique) IsFunctional() bool {
-	return false
+// NeedsVCursor satisfies the Vindex interface.
+func (lu *LookupUnique) NeedsVCursor() bool {
+	return true
 }
 
 // Map can map ids to key.Destination objects.

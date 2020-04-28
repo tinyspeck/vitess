@@ -18,33 +18,28 @@ package vindexes
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 )
 
-var hash Vindex
+var hash SingleColumn
 
 func init() {
 	hv, err := CreateVindex("hash", "nn", map[string]string{"Table": "t", "Column": "c"})
 	if err != nil {
 		panic(err)
 	}
-	hash = hv
+	hash = hv.(SingleColumn)
 }
 
-func TestHashCost(t *testing.T) {
-	if hash.Cost() != 1 {
-		t.Errorf("Cost(): %d, want 1", hash.Cost())
-	}
-}
-
-func TestHashString(t *testing.T) {
-	if strings.Compare("nn", hash.String()) != 0 {
-		t.Errorf("String(): %s, want hash", hash.String())
-	}
+func TestHashInfo(t *testing.T) {
+	assert.Equal(t, 1, hash.Cost())
+	assert.Equal(t, "nn", hash.String())
+	assert.True(t, hash.IsUnique())
+	assert.False(t, hash.NeedsVCursor())
 }
 
 func TestHashMap(t *testing.T) {
