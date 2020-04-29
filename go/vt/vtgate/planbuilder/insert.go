@@ -66,6 +66,9 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 			return nil, errors.New("unsupported: auto-inc and select in insert")
 		}
 		eins.Query = generateQuery(ins)
+		if err := validatePayloadSize(ins, eins); err != nil {
+			return nil, err
+		}
 		return eins, nil
 	case sqlparser.Values:
 		rows = insertValues
@@ -74,6 +77,9 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 	}
 	if eins.Table.AutoIncrement == nil {
 		eins.Query = generateQuery(ins)
+		if err := validatePayloadSize(ins, eins); err != nil {
+			return nil, err
+		}
 		return eins, nil
 	}
 
@@ -94,6 +100,9 @@ func buildInsertUnshardedPlan(ins *sqlparser.Insert, table *vindexes.Table, vsch
 		return nil, err
 	}
 	eins.Query = generateQuery(ins)
+	if err := validatePayloadSize(ins, eins); err != nil {
+		return nil, err
+	}
 	return eins, nil
 }
 
@@ -180,6 +189,10 @@ func buildInsertShardedPlan(ins *sqlparser.Insert, table *vindexes.Table) (*engi
 	eins.VindexValues = routeValues
 	eins.Query = generateQuery(ins)
 	generateInsertShardedQuery(ins, eins, rows)
+	if err := validatePayloadSize(ins, eins); err != nil {
+		return nil, err
+	}
+
 	return eins, nil
 }
 
@@ -272,4 +285,32 @@ func isVindexChanging(setClauses sqlparser.UpdateExprs, colVindexes []*vindexes.
 		}
 	}
 	return false
+}
+
+func isAboveMaxPayloadSize(eins *engine.Insert, threshold int) bool {
+	switch eins.Opcode {
+	case engine.InsertUnsharded:
+		totalBytes := len(eins.Query)
+		return totalBytes > threshold
+	default:
+		totalBytes := len(eins.Prefix) + len(eins.Suffix)
+		for _, m := range eins.Mid {
+			totalBytes += len(m)
+		}
+		return totalBytes > threshold
+	}
+}
+
+func validatePayloadSize(ins *sqlparser.Insert, eins *engine.Insert) error {
+	directives := sqlparser.ExtractCommentDirectives(ins.Comments)
+	threshold, isSet := maxPayloadSize(directives)
+	if isSet {
+		if threshold == 0 {
+			return errors.New("invalid DirectiveMaxPayloadSize value")
+		}
+		if isAboveMaxPayloadSize(eins, threshold) {
+			return errors.New("unsupported: payload size above threshold")
+		}
+	}
+	return nil
 }

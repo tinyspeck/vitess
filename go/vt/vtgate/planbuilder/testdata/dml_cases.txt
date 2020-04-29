@@ -516,6 +516,25 @@
   }
 }
 
+# simple insert unsharded -- within max payload size
+"insert /*vt+ MAX_PAYLOAD_SIZE=100 */ into unsharded values(1, 2)"
+{
+  "Original": "insert /*vt+ MAX_PAYLOAD_SIZE=100 */ into unsharded values(1, 2)",
+  "Instructions": {
+    "Opcode": "InsertUnsharded",
+    "Keyspace": {
+      "Name": "main",
+      "Sharded": false
+    },
+    "Query": "insert /*vt+ MAX_PAYLOAD_SIZE=100 */ into unsharded values (1, 2)",
+    "Table": "unsharded"
+  }
+}
+
+# simple insert unsharded -- above max payload size
+"insert /*vt+ MAX_PAYLOAD_SIZE=10 */ into unsharded values(1, 2)"
+"unsupported: payload size above threshold"
+
 # simple upsert unsharded
 "insert into unsharded values(1, 2) on duplicate key update x = 3"
 {
@@ -1227,6 +1246,36 @@
     "MultiShardAutocommit": true
   }
 }
+
+# insert with multiple rows sharded -- within max payload size
+"insert /*vt+ MAX_PAYLOAD_SIZE=150 */ into user(id) values (1), (2)"
+{
+  "Original": "insert /*vt+ MAX_PAYLOAD_SIZE=150 */ into user(id) values (1), (2)",
+  "Instructions": {
+    "Opcode": "InsertSharded",
+    "Keyspace": {
+      "Name": "user",
+      "Sharded": true
+    },
+    "Query": "insert /*vt+ MAX_PAYLOAD_SIZE=150 */ into user(id, Name, Costly) values (:_Id0, :_Name0, :_Costly0), (:_Id1, :_Name1, :_Costly1)",
+    "Values": [[[":__seq0",":__seq1"]],[[null,null]],[[null,null]]],
+    "Table": "user",
+    "Generate": {
+      "Keyspace": {
+        "Name": "main",
+        "Sharded": false
+      },
+      "Query": "select next :n values from seq",
+      "Values": [1,2]
+    },
+    "Prefix": "insert /*vt+ MAX_PAYLOAD_SIZE=150 */ into user(id, Name, Costly) values ",
+    "Mid": ["(:_Id0, :_Name0, :_Costly0)","(:_Id1, :_Name1, :_Costly1)"]
+  }
+}
+
+# insert with multiple rows sharded -- within max payload size
+"insert /*vt+ MAX_PAYLOAD_SIZE=100 */ into user(id) values (1), (2)"
+"unsupported: payload size above threshold"
 
 # insert into a vindex not allowed
 "insert into user_index(id) values(1)"
