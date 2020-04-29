@@ -27,7 +27,6 @@ import (
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/mysql/fakesqldb"
 	"vitess.io/vitess/go/sqltypes"
-	"vitess.io/vitess/go/stats"
 	"vitess.io/vitess/go/sync2"
 	"vitess.io/vitess/go/vt/dbconnpool"
 	"vitess.io/vitess/go/vt/mysqlctl"
@@ -58,12 +57,19 @@ type FakeMysqlDaemon struct {
 	// test owner responsibility to have these two match)
 	Replicating bool
 
+	// SlaveIORunning is always true except in one testcase
+	// where we want to test error handling during SetMaster
+	SlaveIORunning bool
+
 	// CurrentMasterPosition is returned by MasterPosition
 	// and SlaveStatus
 	CurrentMasterPosition mysql.Position
 
 	// SlaveStatusError is used by SlaveStatus
 	SlaveStatusError error
+
+	// StartSlaveError is used by StartSlave
+	StartSlaveError error
 
 	// CurrentMasterHost is returned by SlaveStatus
 	CurrentMasterHost string
@@ -91,12 +97,18 @@ type FakeMysqlDaemon struct {
 	// (as "%v:%v"). If it doesn't match, SetMaster will return an error.
 	SetMasterInput string
 
+	// SetMasterError is used by SetMaster
+	SetMasterError error
+
 	// WaitMasterPosition is checked by WaitMasterPos, if the
 	// same it returns nil, if different it returns an error
 	WaitMasterPosition mysql.Position
 
-	// PromoteSlaveResult is returned by PromoteSlave
-	PromoteSlaveResult mysql.Position
+	// PromoteResult is returned by Promote
+	PromoteResult mysql.Position
+
+	// PromoteError is used by Promote
+	PromoteError error
 
 	// SchemaFunc provides the return value for GetSchema.
 	// If not defined, the "Schema" field will be used instead, see below.
@@ -147,12 +159,13 @@ type FakeMysqlDaemon struct {
 // 'db' can be nil if the test doesn't use a database at all.
 func NewFakeMysqlDaemon(db *fakesqldb.DB) *FakeMysqlDaemon {
 	result := &FakeMysqlDaemon{
-		db:      db,
-		Running: true,
+		db:             db,
+		Running:        true,
+		SlaveIORunning: true,
 	}
 	if db != nil {
 		result.appPool = dbconnpool.NewConnectionPool("AppConnPool", 5, time.Minute, 0)
-		result.appPool.Open(db.ConnParams(), stats.NewTimings("", "", ""))
+		result.appPool.Open(db.ConnParams())
 	}
 	return result
 }
@@ -211,10 +224,12 @@ func (fmd *FakeMysqlDaemon) SlaveStatus() (mysql.SlaveStatus, error) {
 	return mysql.SlaveStatus{
 		Position:            fmd.CurrentMasterPosition,
 		SecondsBehindMaster: fmd.SecondsBehindMaster,
-		SlaveIORunning:      fmd.Replicating,
-		SlaveSQLRunning:     fmd.Replicating,
-		MasterHost:          fmd.CurrentMasterHost,
-		MasterPort:          fmd.CurrentMasterPort,
+		// implemented as AND to avoid changing all tests that were
+		// previously using Replicating = false
+		SlaveIORunning:  fmd.Replicating && fmd.SlaveIORunning,
+		SlaveSQLRunning: fmd.Replicating,
+		MasterHost:      fmd.CurrentMasterHost,
+		MasterPort:      fmd.CurrentMasterPort,
 	}, nil
 }
 
@@ -250,7 +265,19 @@ func (fmd *FakeMysqlDaemon) SetSuperReadOnly(on bool) error {
 
 // StartSlave is part of the MysqlDaemon interface.
 func (fmd *FakeMysqlDaemon) StartSlave(hookExtraEnv map[string]string) error {
+	if fmd.StartSlaveError != nil {
+		return fmd.StartSlaveError
+	}
 	return fmd.ExecuteSuperQueryList(context.Background(), []string{
+		"START SLAVE",
+	})
+}
+
+// RestartSlave is part of the MysqlDaemon interface.
+func (fmd *FakeMysqlDaemon) RestartSlave(hookExtraEnv map[string]string) error {
+	return fmd.ExecuteSuperQueryList(context.Background(), []string{
+		"STOP SLAVE",
+		"RESET SLAVE",
 		"START SLAVE",
 	})
 }
@@ -289,6 +316,9 @@ func (fmd *FakeMysqlDaemon) SetMaster(ctx context.Context, masterHost string, ma
 	if fmd.SetMasterInput != input {
 		return fmt.Errorf("wrong input for SetMasterCommands: expected %v got %v", fmd.SetMasterInput, input)
 	}
+	if fmd.SetMasterError != nil {
+		return fmd.SetMasterError
+	}
 	cmds := []string{}
 	if slaveStopBefore {
 		cmds = append(cmds, "STOP SLAVE")
@@ -321,9 +351,12 @@ func (fmd *FakeMysqlDaemon) WaitMasterPos(_ context.Context, pos mysql.Position)
 	return fmt.Errorf("wrong input for WaitMasterPos: expected %v got %v", fmd.WaitMasterPosition, pos)
 }
 
-// PromoteSlave is part of the MysqlDaemon interface
-func (fmd *FakeMysqlDaemon) PromoteSlave(hookExtraEnv map[string]string) (mysql.Position, error) {
-	return fmd.PromoteSlaveResult, nil
+// Promote is part of the MysqlDaemon interface
+func (fmd *FakeMysqlDaemon) Promote(hookExtraEnv map[string]string) (mysql.Position, error) {
+	if fmd.PromoteError != nil {
+		return mysql.Position{}, fmd.PromoteError
+	}
+	return fmd.PromoteResult, nil
 }
 
 // ExecuteSuperQueryList is part of the MysqlDaemon interface
@@ -445,18 +478,18 @@ func (fmd *FakeMysqlDaemon) GetAppConnection(ctx context.Context) (*dbconnpool.P
 
 // GetDbaConnection is part of the MysqlDaemon interface.
 func (fmd *FakeMysqlDaemon) GetDbaConnection() (*dbconnpool.DBConnection, error) {
-	return dbconnpool.NewDBConnection(fmd.db.ConnParams(), stats.NewTimings("", "", ""))
+	return dbconnpool.NewDBConnection(context.Background(), fmd.db.ConnParams())
 }
 
 // GetAllPrivsConnection is part of the MysqlDaemon interface.
 func (fmd *FakeMysqlDaemon) GetAllPrivsConnection() (*dbconnpool.DBConnection, error) {
-	return dbconnpool.NewDBConnection(fmd.db.ConnParams(), stats.NewTimings("", "", ""))
+	return dbconnpool.NewDBConnection(context.Background(), fmd.db.ConnParams())
 }
 
 // SetSemiSyncEnabled is part of the MysqlDaemon interface.
-func (fmd *FakeMysqlDaemon) SetSemiSyncEnabled(master, slave bool) error {
+func (fmd *FakeMysqlDaemon) SetSemiSyncEnabled(master, replica bool) error {
 	fmd.SemiSyncMasterEnabled = master
-	fmd.SemiSyncSlaveEnabled = slave
+	fmd.SemiSyncSlaveEnabled = replica
 	return nil
 }
 

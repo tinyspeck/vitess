@@ -17,12 +17,13 @@ MAKEFLAGS = -s
 export GOBIN=$(PWD)/bin
 export GO111MODULE=on
 export GODEBUG=tls13=0
+export REWRITER=go/vt/sqlparser/rewriter.go
 
 # Disabled parallel processing of target prerequisites to avoid that integration tests are racing each other (e.g. for ports) and may fail.
 # Since we are not using this Makefile for compilation, limiting parallelism will not increase build time.
 .NOTPARALLEL:
 
-.PHONY: all build build_web test clean unit_test unit_test_cover unit_test_race integration_test proto proto_banner site_test site_integration_test docker_bootstrap docker_test docker_unit_test java_test reshard_tests e2e_test e2e_test_race minimaltools tools
+.PHONY: all build build_web install test clean unit_test unit_test_cover unit_test_race integration_test proto proto_banner site_test site_integration_test docker_bootstrap docker_test docker_unit_test java_test reshard_tests e2e_test e2e_test_race minimaltools tools
 
 all: build
 
@@ -37,6 +38,17 @@ ifdef VT_EXTRA_BUILD_FLAGS
 export EXTRA_BUILD_FLAGS := $(VT_EXTRA_BUILD_FLAGS)
 endif
 
+# This target needs to be manually run every time any file within web/vtctld2/app is modified to regenerate rice-box.go
+embed_static: 
+	cd go/vt/vtctld
+	go run github.com/GeertJohan/go.rice/rice embed-go
+	go build .
+
+embed_config:
+	cd go/vt/mysqlctl
+	go run github.com/GeertJohan/go.rice/rice embed-go
+	go build .
+
 build_web:
 	echo $$(date): Building web artifacts
 	cd web/vtctld2 && ng build -prod
@@ -49,15 +61,31 @@ endif
 	bash ./build.env
 	go install $(EXTRA_BUILD_FLAGS) $(VT_GO_PARALLEL) -ldflags "$(shell tools/build_version_flags.sh)" ./go/...
 
+debug:
+ifndef NOBANNER
+	echo $$(date): Building source tree
+endif
+	bash ./build.env
+	go install $(EXTRA_BUILD_FLAGS) $(VT_GO_PARALLEL) -ldflags "$(shell tools/build_version_flags.sh)" -gcflags -'N -l' ./go/...
+
+# install copies the files needed to run Vitess into the given directory tree.
+# Usage: make install PREFIX=/path/to/install/root
+install: build
+	# binaries
+	mkdir -p "$${PREFIX}/bin"
+	cp "$${VTROOT}/bin/"{mysqlctld,vtctld,vtctlclient,vtgate,vttablet,vtworker,vtbackup} "$${PREFIX}/bin/"
+
 parser:
 	make -C go/vt/sqlparser
+
+visitor:
+	go generate go/vt/sqlparser/rewriter.go
 
 # To pass extra flags, run test.go manually.
 # For example: go run test.go -docker=false -- --extra-flag
 # For more info see: go run test.go -help
-test: build dependency_check
-	echo $$(date): Running unit tests
-	tools/unit_test_runner.sh
+test:
+	go run test.go -docker=false
 
 site_test: unit_test site_integration_test
 
@@ -65,14 +93,19 @@ clean:
 	go clean -i ./go/...
 	rm -rf third_party/acolyte
 	rm -rf go/vt/.proto.tmp
+	rm -rf ./visitorgen
 
 # Remove everything including stuff pulled down by bootstrap.sh
-cleanall:
+cleanall: clean
 	# directories created by bootstrap.sh
 	# - exclude vtdataroot and vthook as they may have data we want
 	rm -rf bin dist lib pkg
 	# Remind people to run bootstrap.sh again
 	echo "Please run 'make tools' again to setup your environment"
+
+unit_test: build dependency_check
+	echo $$(date): Running unit tests
+	tools/unit_test_runner.sh
 
 e2e_test: build
 	echo $$(date): Running endtoend tests
@@ -111,40 +144,24 @@ java_test:
 install_protoc-gen-go:
 	go install github.com/golang/protobuf/protoc-gen-go
 
-# Find protoc compiler.
-# NOTE: We are *not* using the "protoc" binary (as suggested by the grpc Go
-#       quickstart for example). Instead, we run "protoc" via the Python
-#       wrapper script which is provided by the "grpcio-tools" PyPi package.
-#       (The package includes the compiler as library, but not as binary.
-#       Therefore, we have to use the wrapper script they provide.)
-ifneq ($(wildcard $(VTROOT)/dist/grpc/usr/local/lib/python2.7/site-packages/grpc_tools/protoc.py),)
-# IMPORTANT: The next line must not be indented.
-PROTOC_COMMAND := python -m grpc_tools.protoc
-endif
-
 PROTO_SRCS = $(wildcard proto/*.proto)
 PROTO_SRC_NAMES = $(basename $(notdir $(PROTO_SRCS)))
-PROTO_PY_OUTS = $(foreach name, $(PROTO_SRC_NAMES), py/vtproto/$(name)_pb2.py)
 PROTO_GO_OUTS = $(foreach name, $(PROTO_SRC_NAMES), go/vt/proto/$(name)/$(name).pb.go)
 
-# This rule rebuilds all the go and python files from the proto definitions for gRPC.
-proto: proto_banner $(PROTO_GO_OUTS) $(PROTO_PY_OUTS)
-
-proto_banner:
-ifeq (,$(PROTOC_COMMAND))
-	$(error "Cannot find protoc compiler. Did bootstrap.sh succeed, and did you execute 'source dev.env'?")
-endif
+# This rule rebuilds all the go files from the proto definitions for gRPC.
+proto: $(PROTO_GO_OUTS)
 
 ifndef NOBANNER
 	echo $$(date): Compiling proto definitions
 endif
 
-$(PROTO_PY_OUTS): py/vtproto/%_pb2.py: proto/%.proto
-	$(PROTOC_COMMAND) -Iproto $< --python_out=py/vtproto --grpc_python_out=py/vtproto
-
+# TODO(sougou): find a better way around this temp hack.
+VTTOP=$(VTROOT)/../../..
 $(PROTO_GO_OUTS): install_protoc-gen-go proto/*.proto
 	for name in $(PROTO_SRC_NAMES); do \
-		cd $(VTROOT)/src && PATH=$(VTROOT)/bin:$(PATH) $(VTROOT)/bin/protoc --go_out=plugins=grpc:. -Ivitess.io/vitess/proto vitess.io/vitess/proto/$${name}.proto; \
+		cd $(VTTOP)/src && \
+		$(VTROOT)/bin/protoc --go_out=plugins=grpc:. -Ivitess.io/vitess/proto vitess.io/vitess/proto/$${name}.proto && \
+		goimports -w $(VTROOT)/go/vt/proto/$${name}/$${name}.pb.go; \
 	done
 
 # Helper targets for building Docker images.
@@ -199,41 +216,61 @@ docker_base_percona80:
 	chmod -R o=g *
 	docker build -f docker/base/Dockerfile.percona80 -t vitess/base:percona80 .
 
-# Run "make docker_lite PROMPT_NOTICE=false" to avoid that the script
-# prompts you to press ENTER and confirm that the vitess/base image is not
-# rebuild by this target as well.
 docker_lite:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE)
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile -t vitess/lite .
 
 docker_lite_mysql56:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) mysql56
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.mysql56 -t vitess/lite:mysql56 .
 
 docker_lite_mysql57:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) mysql57
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.mysql57 -t vitess/lite:mysql57 .
+
+docker_lite_ubi7.mysql57:
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.ubi7.mysql57 -t vitess/lite:ubi7.mysql57 .
 
 docker_lite_mysql80:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) mysql80
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.mysql80 -t vitess/lite:mysql80 .
+
+docker_lite_ubi7.mysql80:
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.ubi7.mysql80 -t vitess/lite:ubi7.mysql80 .
 
 docker_lite_mariadb:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) mariadb
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.mariadb -t vitess/lite:mariadb .
 
 docker_lite_mariadb103:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) mariadb103
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.mariadb103 -t vitess/lite:mariadb103 .
 
 docker_lite_percona:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) percona
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.percona -t vitess/lite:percona .
 
 docker_lite_percona57:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) percona57
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.percona57 -t vitess/lite:percona57 .
+
+docker_lite_ubi7.percona57:
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.ubi7.percona57 -t vitess/lite:ubi7.percona57 .
 
 docker_lite_percona80:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) percona80
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.percona80 -t vitess/lite:percona80 .
+
+docker_lite_ubi7.percona80:
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.ubi7.percona80 -t vitess/lite:ubi7.percona80 .
 
 docker_lite_alpine:
-	cd docker/lite && ./build.sh --prompt=$(PROMPT_NOTICE) alpine
-
-docker_guestbook:
-	cd examples/kubernetes/guestbook && ./build.sh
+	chmod -R o=g *
+	docker build -f docker/lite/Dockerfile.alpine -t vitess/lite:alpine .
 
 # This rule loads the working copy of the code into a bootstrap image,
 # and then runs the tests inside Docker.
@@ -243,12 +280,6 @@ docker_test:
 
 docker_unit_test:
 	go run test.go -flavor $(flavor) unit
-
-# This can be used to rebalance the total average runtime of each group of
-# tests in Travis. The results are saved in test/config.json, which you can
-# then commit and push.
-rebalance_tests:
-	go run test.go -rebalance 5
 
 # Release a version.
 # This will generate a tar.gz file into the releases folder with the current source
@@ -275,11 +306,33 @@ packages: docker_base
 
 tools:
 	echo $$(date): Installing dependencies
-	BUILD_PYTHON=0 ./bootstrap.sh
+	./bootstrap.sh
 
 minimaltools:
 	echo $$(date): Installing minimal dependencies
-	BUILD_PYTHON=0 BUILD_JAVA=0 BUILD_CONSUL=0 ./bootstrap.sh
+	BUILD_CHROME=0 BUILD_JAVA=0 BUILD_CONSUL=0 ./bootstrap.sh
 
 dependency_check:
 	./tools/dependency_check.sh
+
+GEN_BASE_DIR ?= ./go/vt/topo/k8stopo
+
+client_go_gen:
+	echo $$(date): Regenerating client-go code
+	# Delete and re-generate the deepcopy types
+	find $(GEN_BASE_DIR)/apis/topo/v1beta1 -type f -name 'zz_generated*' -exec rm '{}' \;
+	deepcopy-gen -i $(GEN_BASE_DIR)/apis/topo/v1beta1 -O zz_generated.deepcopy -o ./ --bounding-dirs $(GEN_BASE_DIR)/apis --go-header-file $(GEN_BASE_DIR)/boilerplate.go.txt
+
+	# Delete, generate, and move the client libraries
+	rm -rf go/vt/topo/k8stopo/client
+
+	# There is no way to get client-gen to automatically put files in the right place and still have the right import path so we generate and move them
+
+	# Generate client, informers, and listers
+	client-gen -o ./ --input 'topo/v1beta1' --clientset-name versioned --input-base 'vitess.io/vitess/go/vt/topo/k8stopo/apis/' -i vitess.io/vitess --output-package vitess.io/vitess/go/vt/topo/k8stopo/client/clientset --go-header-file $(GEN_BASE_DIR)/boilerplate.go.txt
+	lister-gen -o ./ --input-dirs  vitess.io/vitess/go/vt/topo/k8stopo/apis/topo/v1beta1 --output-package vitess.io/vitess/go/vt/topo/k8stopo/client/listers --go-header-file $(GEN_BASE_DIR)/boilerplate.go.txt
+	informer-gen -o ./ --input-dirs  vitess.io/vitess/go/vt/topo/k8stopo/apis/topo/v1beta1 --versioned-clientset-package vitess.io/vitess/go/vt/topo/k8stopo/client/clientset/versioned --listers-package vitess.io/vitess/go/vt/topo/k8stopo/client/listers --output-package vitess.io/vitess/go/vt/topo/k8stopo/client/informers --go-header-file $(GEN_BASE_DIR)/boilerplate.go.txt
+
+	# Move and cleanup
+	mv vitess.io/vitess/go/vt/topo/k8stopo/client go/vt/topo/k8stopo/
+	rmdir -p vitess.io/vitess/go/vt/topo/k8stopo/

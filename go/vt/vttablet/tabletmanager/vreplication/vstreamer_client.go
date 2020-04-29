@@ -23,15 +23,11 @@ import (
 
 	"golang.org/x/net/context"
 
-	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/grpcclient"
-	"vitess.io/vitess/go/vt/mysqlctl"
-	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/vttablet/queryservice"
 	"vitess.io/vitess/go/vt/vttablet/tabletconn"
-	"vitess.io/vitess/go/vt/vttablet/tabletserver/connpool"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/schema"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/tabletenv"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/vstreamer"
@@ -87,8 +83,8 @@ type MySQLVStreamerClient struct {
 
 	isOpen bool
 
-	sourceCp *mysql.ConnParams
-	sourceSe *schema.Engine
+	sourceConnParams dbconfigs.Connector
+	sourceSe         *schema.Engine
 }
 
 // NewTabletVStreamerClient creates a new TabletVStreamerClient
@@ -113,7 +109,7 @@ func (vsClient *TabletVStreamerClient) Open(ctx context.Context) (err error) {
 	}
 	vsClient.isOpen = true
 
-	vsClient.tsQueryService, err = tabletconn.GetDialer()(vsClient.tablet, grpcclient.FailFast(false))
+	vsClient.tsQueryService, err = tabletconn.GetDialer()(vsClient.tablet, grpcclient.FailFast(true))
 	return err
 }
 
@@ -187,8 +183,9 @@ func (vsClient *MySQLVStreamerClient) Open(ctx context.Context) (err error) {
 
 	// Let's create all the required components by vstreamer
 
-	vsClient.sourceSe = schema.NewEngine(checker{}, tabletenv.DefaultQsConfig)
-	vsClient.sourceSe.InitDBConfig(vsClient.sourceCp)
+	config := tabletenv.NewDefaultConfig()
+	vsClient.sourceSe = schema.NewEngine(tabletenv.NewTestEnv(config, nil, "VStreamerClientTest"))
+	vsClient.sourceSe.InitDBConfig(vsClient.sourceConnParams)
 	err = vsClient.sourceSe.Open()
 	if err != nil {
 		return err
@@ -214,7 +211,7 @@ func (vsClient *MySQLVStreamerClient) VStream(ctx context.Context, startPos stri
 	if !vsClient.isOpen {
 		return errors.New("can't VStream without opening client")
 	}
-	streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, startPos, filter, &vindexes.KeyspaceSchema{}, send)
+	streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceConnParams, vsClient.sourceSe, startPos, filter, send)
 	return streamer.Stream()
 }
 
@@ -231,18 +228,7 @@ func (vsClient *MySQLVStreamerClient) VStreamRows(ctx context.Context, query str
 		}
 		row = r.Rows[0]
 	}
-
-	streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, query, row, &vindexes.KeyspaceSchema{}, send)
-	return streamer.Stream()
-}
-
-// VStreamResults part of the VStreamerClient interface
-func (vsClient *MySQLVStreamerClient) VStreamResults(ctx context.Context, query string, send func(*binlogdatapb.VStreamResultsResponse) error) error {
-	if !vsClient.isOpen {
-		return errors.New("can't VStreamRows without opening client")
-	}
-
-	streamer := vstreamer.NewResultStreamer(ctx, vsClient.sourceCp, query, send)
+	streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceConnParams, vsClient.sourceSe, query, row, send)
 	return streamer.Stream()
 }
 
@@ -348,9 +334,3 @@ func executeFetchContext(ctx context.Context, conn *mysql.Conn, query string, ma
 func InitVStreamerClient(cfg *dbconfigs.DBConfigs) {
 	dbcfgs = cfg
 }
-
-type checker struct{}
-
-var _ = connpool.MySQLChecker(checker{})
-
-func (checker) CheckMySQL() {}

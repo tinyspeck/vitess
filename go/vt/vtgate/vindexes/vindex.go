@@ -35,8 +35,8 @@ import (
 // in the current context and session of a VTGate request. Vindexes
 // can use this interface to execute lookup queries.
 type VCursor interface {
-	Execute(method string, query string, bindvars map[string]*querypb.BindVariable, isDML bool, co vtgatepb.CommitOrder) (*sqltypes.Result, error)
-	ExecuteKeyspaceID(keyspace string, ksid []byte, query string, bindVars map[string]*querypb.BindVariable, isDML, autocommit bool) (*sqltypes.Result, error)
+	Execute(method string, query string, bindvars map[string]*querypb.BindVariable, rollbackOnError bool, co vtgatepb.CommitOrder) (*sqltypes.Result, error)
+	ExecuteKeyspaceID(keyspace string, ksid []byte, query string, bindVars map[string]*querypb.BindVariable, rollbackOnError, autocommit bool) (*sqltypes.Result, error)
 }
 
 // Vindex defines the interface required to register a vindex.
@@ -56,8 +56,15 @@ type Vindex interface {
 	Cost() int
 
 	// IsUnique returns true if the Vindex is unique.
-	// Which means Map() maps to either a KeyRange or a single KeyspaceID.
+	// A Unique Vindex is allowed to return non-unique values like
+	// a keyrange. This is in situations where the vindex does not
+	// have enough information to map to a keyspace id. If so, such
+	// a vindex cannot be primary.
 	IsUnique() bool
+
+	// NeedsVCursor returns true if the Vindex makes calls into the
+	// VCursor. Such vindexes cannot be used by vreplication.
+	NeedsVCursor() bool
 }
 
 // SingleColumn defines the interface for a single column vindex.

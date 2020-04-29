@@ -18,7 +18,6 @@ package sqlparser
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 
@@ -156,7 +155,7 @@ var keywords = map[string]int{
 	"describe":            DESCRIBE,
 	"deterministic":       UNUSED,
 	"distinct":            DISTINCT,
-	"distinctrow":         UNUSED,
+	"distinctrow":         DISTINCTROW,
 	"div":                 DIV,
 	"double":              DOUBLE,
 	"drop":                DROP,
@@ -174,6 +173,7 @@ var keywords = map[string]int{
 	"exit":                UNUSED,
 	"explain":             EXPLAIN,
 	"expansion":           EXPANSION,
+	"extended":            EXTENDED,
 	"false":               FALSE,
 	"fetch":               UNUSED,
 	"fields":              FIELDS,
@@ -184,6 +184,7 @@ var keywords = map[string]int{
 	"for":                 FOR,
 	"force":               FORCE,
 	"foreign":             FOREIGN,
+	"format":              FORMAT,
 	"from":                FROM,
 	"full":                FULL,
 	"fulltext":            FULLTEXT,
@@ -204,6 +205,7 @@ var keywords = map[string]int{
 	"ignore":              IGNORE,
 	"in":                  IN,
 	"index":               INDEX,
+	"indexes":             INDEXES,
 	"infile":              UNUSED,
 	"inout":               UNUSED,
 	"inner":               INNER,
@@ -339,7 +341,7 @@ var keywords = map[string]int{
 	"sqlwarning":          UNUSED,
 	"sql_big_result":      UNUSED,
 	"sql_cache":           SQL_CACHE,
-	"sql_calc_found_rows": UNUSED,
+	"sql_calc_found_rows": SQL_CALC_FOUND_ROWS,
 	"sql_no_cache":        SQL_NO_CACHE,
 	"sql_small_result":    UNUSED,
 	"ssl":                 UNUSED,
@@ -365,6 +367,8 @@ var keywords = map[string]int{
 	"to":                  TO,
 	"trailing":            UNUSED,
 	"transaction":         TRANSACTION,
+	"tree":                TREE,
+	"traditional":         TRADITIONAL,
 	"trigger":             TRIGGER,
 	"true":                TRUE,
 	"truncate":            TRUNCATE,
@@ -391,6 +395,7 @@ var keywords = map[string]int{
 	"vindex":              VINDEX,
 	"vindexes":            VINDEXES,
 	"view":                VIEW,
+	"vitess":              VITESS,
 	"vitess_metadata":     VITESS_METADATA,
 	"vschema":             VSCHEMA,
 	"warnings":            WARNINGS,
@@ -452,15 +457,23 @@ func (tkn *Tokenizer) Lex(lval *yySymType) int {
 	return typ
 }
 
+// PositionedErr holds context related to parser errors
+type PositionedErr struct {
+	Err  string
+	Pos  int
+	Near []byte
+}
+
+func (p PositionedErr) Error() string {
+	if p.Near != nil {
+		return fmt.Sprintf("%s at position %v near '%s'", p.Err, p.Pos, p.Near)
+	}
+	return fmt.Sprintf("%s at position %v", p.Err, p.Pos)
+}
+
 // Error is called by go yacc if there's a parsing error.
 func (tkn *Tokenizer) Error(err string) {
-	buf := &bytes2.Buffer{}
-	if tkn.lastToken != nil {
-		fmt.Fprintf(buf, "%s at position %v near '%s'", err, tkn.Position, tkn.lastToken)
-	} else {
-		fmt.Fprintf(buf, "%s at position %v", err, tkn.Position)
-	}
-	tkn.LastError = errors.New(buf.String())
+	tkn.LastError = PositionedErr{Err: err, Pos: tkn.Position, Near: tkn.lastToken}
 
 	// Try and re-sync to the next statement
 	tkn.skipStatement()
@@ -487,6 +500,26 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 
 	tkn.skipBlank()
 	switch ch := tkn.lastChar; {
+	case ch == '@':
+		tokenID := AT_ID
+		tkn.next()
+		if tkn.lastChar == '@' {
+			tokenID = AT_AT_ID
+			tkn.next()
+		}
+		var tID int
+		var tBytes []byte
+		ch = tkn.lastChar
+		tkn.next()
+		if ch == '`' {
+			tID, tBytes = tkn.scanLiteralIdentifier()
+		} else {
+			tID, tBytes = tkn.scanIdentifier(byte(ch), true)
+		}
+		if tID == LEX_ERROR {
+			return tID, nil
+		}
+		return tokenID, tBytes
 	case isLetter(ch):
 		tkn.next()
 		if ch == 'X' || ch == 'x' {
@@ -501,11 +534,7 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 				return tkn.scanBitLiteral()
 			}
 		}
-		isDbSystemVariable := false
-		if ch == '@' && tkn.lastChar == '@' {
-			isDbSystemVariable = true
-		}
-		return tkn.scanIdentifier(byte(ch), isDbSystemVariable)
+		return tkn.scanIdentifier(byte(ch), false)
 	case isDigit(ch):
 		return tkn.scanNumber(false)
 	case ch == ':':
@@ -644,17 +673,20 @@ func (tkn *Tokenizer) skipBlank() {
 	}
 }
 
-func (tkn *Tokenizer) scanIdentifier(firstByte byte, isDbSystemVariable bool) (int, []byte) {
+func (tkn *Tokenizer) scanIdentifier(firstByte byte, isVariable bool) (int, []byte) {
 	buffer := &bytes2.Buffer{}
 	buffer.WriteByte(firstByte)
-	for isLetter(tkn.lastChar) || isDigit(tkn.lastChar) || (isDbSystemVariable && isCarat(tkn.lastChar)) {
+	for isLetter(tkn.lastChar) ||
+		isDigit(tkn.lastChar) ||
+		tkn.lastChar == '@' ||
+		(isVariable && isCarat(tkn.lastChar)) {
 		buffer.WriteByte(byte(tkn.lastChar))
 		tkn.next()
 	}
 	lowered := bytes.ToLower(buffer.Bytes())
 	loweredStr := string(lowered)
 	if keywordID, found := keywords[loweredStr]; found {
-		return keywordID, lowered
+		return keywordID, buffer.Bytes()
 	}
 	// dual must always be case-insensitive
 	if loweredStr == "dual" {
@@ -948,7 +980,7 @@ func (tkn *Tokenizer) reset() {
 }
 
 func isLetter(ch uint16) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch == '@'
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
 
 func isCarat(ch uint16) bool {

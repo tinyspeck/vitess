@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	watchPollDuration = flag.Duration("topo_consul_watch_poll_duration", 30*time.Second, "time of the long poll for watch queries. Interrupting a watch may wait for up to that time.")
+	watchPollDuration = flag.Duration("topo_consul_watch_poll_duration", 30*time.Second, "time of the long poll for watch queries.")
 )
 
 // Watch is part of the topo.Conn interface.

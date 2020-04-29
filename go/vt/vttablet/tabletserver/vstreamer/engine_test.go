@@ -81,16 +81,16 @@ func TestUpdateVSchema(t *testing.T) {
 
 	// We have to start at least one stream to start the vschema watcher.
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+	cancel()
 	filter := &binlogdatapb.Filter{
 		Rules: []*binlogdatapb.Rule{{
 			Match: "/.*/",
 		}},
 	}
-
-	_ = startStream(ctx, t, filter, "")
-	cancel()
+	// Stream should terminate immediately due to canceled context.
+	_ = engine.Stream(ctx, "current", filter, func(_ []*binlogdatapb.VEvent) error {
+		return nil
+	})
 
 	startCount := expectUpdateCount(t, 1)
 
@@ -100,36 +100,46 @@ func TestUpdateVSchema(t *testing.T) {
 	expectUpdateCount(t, startCount+1)
 
 	want := `{
-  "sharded": true,
-  "tables": {
-    "t1": {
-      "name": "t1",
-      "column_vindexes": [
-        {
-          "columns": [
-            "id1"
+  "routing_rules": {},
+  "keyspaces": {
+    "vttest": {
+      "sharded": true,
+      "tables": {
+        "dual": {
+          "type": "reference",
+          "name": "dual"
+        },
+        "t1": {
+          "name": "t1",
+          "column_vindexes": [
+            {
+              "columns": [
+                "id1"
+              ],
+              "type": "hash",
+              "name": "hash",
+              "vindex": {}
+            }
           ],
-          "type": "hash",
-          "name": "hash",
-          "vindex": {}
+          "ordered": [
+            {
+              "columns": [
+                "id1"
+              ],
+              "type": "hash",
+              "name": "hash",
+              "vindex": {}
+            }
+          ]
         }
-      ],
-      "ordered": [
-        {
-          "columns": [
-            "id1"
-          ],
-          "type": "hash",
-          "name": "hash",
-          "vindex": {}
-        }
-      ]
+      },
+      "vindexes": {
+        "hash": {}
+      }
     }
-  },
-  "vindexes": {
-    "hash": {}
   }
 }`
+
 	b, err := json.MarshalIndent(engine.vschema(), "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -141,7 +151,7 @@ func TestUpdateVSchema(t *testing.T) {
 
 func expectUpdateCount(t *testing.T, wantCount int64) int64 {
 	for i := 0; i < 10; i++ {
-		gotCount := vschemaUpdates.Get()
+		gotCount := engine.vschemaUpdates.Get()
 		if gotCount >= wantCount {
 			return gotCount
 		}

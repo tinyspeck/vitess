@@ -19,6 +19,7 @@ package tabletmanager
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"vitess.io/vitess/go/vt/logutil"
@@ -460,6 +461,7 @@ func (agent *ActionAgent) UndoDemoteMaster(ctx context.Context) error {
 // PromoteSlaveWhenCaughtUp waits for this slave to be caught up on
 // replication up to the provided point, and then makes the slave the
 // shard master.
+// Deprecated
 func (agent *ActionAgent) PromoteSlaveWhenCaughtUp(ctx context.Context, position string) (string, error) {
 	if err := agent.lock(ctx); err != nil {
 		return "", err
@@ -475,7 +477,7 @@ func (agent *ActionAgent) PromoteSlaveWhenCaughtUp(ctx context.Context, position
 		return "", err
 	}
 
-	pos, err = agent.MysqlDaemon.PromoteSlave(agent.hookExtraEnv())
+	pos, err = agent.MysqlDaemon.Promote(agent.hookExtraEnv())
 	if err != nil {
 		return "", err
 	}
@@ -494,6 +496,7 @@ func (agent *ActionAgent) PromoteSlaveWhenCaughtUp(ctx context.Context, position
 	if err != nil {
 		return "", err
 	}
+
 	// We only update agent's masterTermStartTime if we were able to update the topo.
 	// This ensures that in case of a failure, we are never in a situation where the
 	// tablet's timestamp is ahead of the topo's timestamp.
@@ -634,7 +637,6 @@ func (agent *ActionAgent) setMasterLocked(ctx context.Context, parentAlias *topo
 	if err := agent.fixSemiSync(tabletType); err != nil {
 		return err
 	}
-
 	// Update the master address only if needed.
 	// We don't want to interrupt replication for no reason.
 	parent, err := agent.TopoServer.GetTablet(ctx, parentAlias)
@@ -646,13 +648,17 @@ func (agent *ActionAgent) setMasterLocked(ctx context.Context, parentAlias *topo
 	if status.MasterHost != masterHost || status.MasterPort != masterPort {
 		// This handles both changing the address and starting replication.
 		if err := agent.MysqlDaemon.SetMaster(ctx, masterHost, masterPort, wasReplicating, shouldbeReplicating); err != nil {
-			return err
+			if err := agent.handleRelayLogError(err); err != nil {
+				return err
+			}
 		}
 	} else if shouldbeReplicating {
 		// The address is correct. Just start replication if needed.
 		if !status.SlaveRunning() {
 			if err := agent.MysqlDaemon.StartSlave(agent.hookExtraEnv()); err != nil {
-				return err
+				if err := agent.handleRelayLogError(err); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -740,14 +746,56 @@ func (agent *ActionAgent) StopReplicationAndGetStatus(ctx context.Context) (*rep
 	return mysql.SlaveStatusToProto(rs), nil
 }
 
+// PromoteReplica makes the current tablet the master
+func (agent *ActionAgent) PromoteReplica(ctx context.Context) (string, error) {
+	if err := agent.lock(ctx); err != nil {
+		return "", err
+	}
+	defer agent.unlock()
+
+	pos, err := agent.MysqlDaemon.Promote(agent.hookExtraEnv())
+	if err != nil {
+		return "", err
+	}
+
+	// If using semi-sync, we need to enable it before going read-write.
+	if err := agent.fixSemiSync(topodatapb.TabletType_MASTER); err != nil {
+		return "", err
+	}
+
+	// Set the server read-write
+	startTime := time.Now()
+	if _, err := topotools.ChangeType(ctx, agent.TopoServer, agent.TabletAlias, topodatapb.TabletType_MASTER, logutil.TimeToProto(startTime)); err != nil {
+		return "", err
+	}
+
+	// We call SetReadOnly only after the topo has been updated to avoid
+	// situations where two tablets are master at the DB level but not at the vitess level
+	if err := agent.MysqlDaemon.SetReadOnly(false); err != nil {
+		return "", err
+	}
+
+	// We only update agent's masterTermStartTime if we were able to update the topo.
+	// This ensures that in case of a failure, we are never in a situation where the
+	// tablet's timestamp is ahead of the topo's timestamp.
+	agent.setMasterTermStartTime(startTime)
+
+	if err := agent.refreshTablet(ctx, "PromoteReplica"); err != nil {
+		return "", err
+	}
+
+	return mysql.EncodePosition(pos), nil
+}
+
 // PromoteSlave makes the current tablet the master
+// Deprecated
 func (agent *ActionAgent) PromoteSlave(ctx context.Context) (string, error) {
 	if err := agent.lock(ctx); err != nil {
 		return "", err
 	}
 	defer agent.unlock()
 
-	pos, err := agent.MysqlDaemon.PromoteSlave(agent.hookExtraEnv())
+	pos, err := agent.MysqlDaemon.Promote(agent.hookExtraEnv())
 	if err != nil {
 		return "", err
 	}
@@ -766,6 +814,7 @@ func (agent *ActionAgent) PromoteSlave(ctx context.Context) (string, error) {
 	if _, err := topotools.ChangeType(ctx, agent.TopoServer, agent.TabletAlias, topodatapb.TabletType_MASTER, logutil.TimeToProto(startTime)); err != nil {
 		return "", err
 	}
+
 	// We only update agent's masterTermStartTime if we were able to update the topo.
 	// This ensures that in case of a failure, we are never in a situation where the
 	// tablet's timestamp is ahead of the topo's timestamp.
@@ -852,4 +901,18 @@ func (agent *ActionAgent) fixSemiSyncAndReplication(tabletType topodatapb.Tablet
 		return vterrors.Wrap(err, "failed to StartSlave")
 	}
 	return nil
+}
+
+func (agent *ActionAgent) handleRelayLogError(err error) error {
+	// attempt to fix this error:
+	// Slave failed to initialize relay log info structure from the repository (errno 1872) (sqlstate HY000) during query: START SLAVE
+	// see https://bugs.mysql.com/bug.php?id=83713 or https://github.com/vitessio/vitess/issues/5067
+	if strings.Contains(err.Error(), "Slave failed to initialize relay log info structure from the repository") {
+		// Stop, reset and start slave again to resolve this error
+		if err := agent.MysqlDaemon.RestartSlave(agent.hookExtraEnv()); err != nil {
+			return err
+		}
+		return nil
+	}
+	return err
 }

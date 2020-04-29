@@ -19,6 +19,8 @@ package engine
 import (
 	"encoding/json"
 
+	"vitess.io/vitess/go/vt/vtgate/evalengine"
+
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
@@ -39,25 +41,12 @@ type VindexFunc struct {
 	// TODO(sougou): add support for MultiColumn.
 	Vindex vindexes.SingleColumn
 	Value  sqltypes.PlanValue
-}
 
-// MarshalJSON serializes the VindexFunc into a JSON representation.
-// It's used for testing and diagnostics.
-func (vf *VindexFunc) MarshalJSON() ([]byte, error) {
-	v := struct {
-		Opcode VindexOpcode
-		Fields []*querypb.Field
-		Cols   []int
-		Vindex string
-		Value  sqltypes.PlanValue
-	}{
-		Opcode: vf.Opcode,
-		Fields: vf.Fields,
-		Cols:   vf.Cols,
-		Vindex: vf.Vindex.String(),
-		Value:  vf.Value,
-	}
-	return json.Marshal(v)
+	// VindexFunc does not take inputs
+	noInputs
+
+	// VindexFunc does not need to work inside a tx
+	noTxNeeded
 }
 
 // VindexOpcode is the opcode for a VindexFunc.
@@ -122,7 +111,7 @@ func (vf *VindexFunc) mapVindex(vcursor VCursor, bindVars map[string]*querypb.Bi
 	if err != nil {
 		return nil, err
 	}
-	vkey, err := sqltypes.Cast(k, sqltypes.VarBinary)
+	vkey, err := evalengine.Cast(k, sqltypes.VarBinary)
 	if err != nil {
 		return nil, err
 	}
@@ -189,4 +178,26 @@ func (vf *VindexFunc) buildRow(id sqltypes.Value, ksid []byte, kr *topodatapb.Ke
 		}
 	}
 	return row
+}
+
+func (vf *VindexFunc) description() PrimitiveDescription {
+	fields := map[string]string{}
+	for _, field := range vf.Fields {
+		fields[field.Name] = field.Type.String()
+	}
+
+	other := map[string]interface{}{
+		"Fields":  fields,
+		"Columns": vf.Cols,
+		"Value":   vf.Value,
+	}
+	if vf.Vindex != nil {
+		other["Vindex"] = vf.Vindex.String()
+	}
+
+	return PrimitiveDescription{
+		OperatorType: "VindexFunc",
+		Variant:      vindexOpcodeName[vf.Opcode],
+		Other:        other,
+	}
 }

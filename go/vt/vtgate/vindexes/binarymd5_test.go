@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"strings"
-
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 )
@@ -33,16 +33,11 @@ func init() {
 	binVindex = vindex.(SingleColumn)
 }
 
-func TestBinaryMD5Cost(t *testing.T) {
-	if binVindex.Cost() != 1 {
-		t.Errorf("Cost(): %d, want 1", binVindex.Cost())
-	}
-}
-
-func TestBinaryMD5String(t *testing.T) {
-	if strings.Compare("binary_md5_varchar", binVindex.String()) != 0 {
-		t.Errorf("String(): %s, want binary_md5_varchar", binVindex.String())
-	}
+func TestBinaryMD5Info(t *testing.T) {
+	assert.Equal(t, 1, binVindex.Cost())
+	assert.Equal(t, "binary_md5_varchar", binVindex.String())
+	assert.True(t, binVindex.IsUnique())
+	assert.False(t, binVindex.NeedsVCursor())
 }
 
 func TestBinaryMD5Map(t *testing.T) {
@@ -86,9 +81,7 @@ func TestBinaryMD5Verify(t *testing.T) {
 func TestSQLValue(t *testing.T) {
 	val := sqltypes.NewVarBinary("Test")
 	got, err := binVindex.Map(nil, []sqltypes.Value{val})
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	out := string(got[0].(key.DestinationKeyspaceID))
 	want := "\f\xbcf\x11\xf5T\vЀ\x9a8\x8d\xc9Za["
 	if out != want {

@@ -18,9 +18,13 @@ package vstreamer
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/mysql"
@@ -31,6 +35,112 @@ import (
 type testcase struct {
 	input  interface{}
 	output [][]string
+}
+
+func TestFilteredVarBinary(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	execStatements(t, []string{
+		"create table t1(id1 int, val varbinary(128), primary key(id1))",
+	})
+	defer execStatements(t, []string{
+		"drop table t1",
+	})
+	engine.se.Reload(context.Background())
+
+	filter := &binlogdatapb.Filter{
+		Rules: []*binlogdatapb.Rule{{
+			Match:  "t1",
+			Filter: "select id1, val from t1 where val = 'newton'",
+		}},
+	}
+
+	testcases := []testcase{{
+		input: []string{
+			"begin",
+			"insert into t1 values (1, 'kepler')",
+			"insert into t1 values (2, 'newton')",
+			"insert into t1 values (3, 'newton')",
+			"insert into t1 values (4, 'kepler')",
+			"insert into t1 values (5, 'newton')",
+			"update t1 set val = 'newton' where id1 = 1",
+			"update t1 set val = 'kepler' where id1 = 2",
+			"update t1 set val = 'newton' where id1 = 2",
+			"update t1 set val = 'kepler' where id1 = 1",
+			"delete from t1 where id1 in (2,3)",
+			"commit",
+		},
+		output: [][]string{{
+			`begin`,
+			`type:FIELD field_event:<table_name:"t1" fields:<name:"id1" type:INT32 > fields:<name:"val" type:VARBINARY > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:6 values:"2newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:6 values:"3newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:6 values:"5newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:6 values:"1newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<before:<lengths:1 lengths:6 values:"2newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:6 values:"2newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<before:<lengths:1 lengths:6 values:"1newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<before:<lengths:1 lengths:6 values:"2newton" > > row_changes:<before:<lengths:1 lengths:6 values:"3newton" > > > `,
+			`gtid`,
+			`commit`,
+		}},
+	}}
+	runCases(t, filter, testcases, "")
+}
+
+func TestFilteredInt(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	execStatements(t, []string{
+		"create table t1(id1 int, id2 int, val varbinary(128), primary key(id1))",
+	})
+	defer execStatements(t, []string{
+		"drop table t1",
+	})
+	engine.se.Reload(context.Background())
+
+	filter := &binlogdatapb.Filter{
+		Rules: []*binlogdatapb.Rule{{
+			Match:  "t1",
+			Filter: "select id1, val from t1 where id2 = 200",
+		}},
+	}
+
+	testcases := []testcase{{
+		input: []string{
+			"begin",
+			"insert into t1 values (1, 100, 'aaa')",
+			"insert into t1 values (2, 200, 'bbb')",
+			"insert into t1 values (3, 100, 'ccc')",
+			"insert into t1 values (4, 200, 'ddd')",
+			"insert into t1 values (5, 200, 'eee')",
+			"update t1 set val = 'newddd' where id1 = 4",
+			"update t1 set id2 = 200 where id1 = 1",
+			"update t1 set id2 = 100 where id1 = 2",
+			"update t1 set id2 = 100 where id1 = 1",
+			"update t1 set id2 = 200 where id1 = 2",
+			"commit",
+		},
+		output: [][]string{{
+			`begin`,
+			`type:FIELD field_event:<table_name:"t1" fields:<name:"id1" type:INT32 > fields:<name:"val" type:VARBINARY > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:3 values:"2bbb" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:3 values:"4ddd" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:3 values:"5eee" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<before:<lengths:1 lengths:3 values:"4ddd" > after:<lengths:1 lengths:6 values:"4newddd" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:3 values:"1aaa" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<before:<lengths:1 lengths:3 values:"2bbb" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<before:<lengths:1 lengths:3 values:"1aaa" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:3 values:"2bbb" > > > `,
+			`gtid`,
+			`commit`,
+		}},
+	}}
+	runCases(t, filter, testcases, "")
 }
 
 func TestStatements(t *testing.T) {
@@ -55,8 +165,6 @@ func TestStatements(t *testing.T) {
 			"update stream1 set val='bbb' where id = 1",
 			"commit",
 		},
-		// MySQL issues GTID->BEGIN.
-		// MariaDB issues BEGIN->GTID.
 		output: [][]string{{
 			`begin`,
 			`type:FIELD field_event:<table_name:"stream1" fields:<name:"id" type:INT32 > fields:<name:"val" type:VARBINARY > > `,
@@ -111,41 +219,89 @@ func TestStatements(t *testing.T) {
 			`gtid`,
 			`type:DDL ddl:"truncate table stream2" `,
 		}},
-	}, {
-		// repair, optimize and analyze show up in binlog stream, but ignored by vitess.
-		input: "repair table stream2",
-		output: [][]string{{
-			`gtid`,
-			`type:OTHER `,
-		}},
-	}, {
-		input: "optimize table stream2",
-		output: [][]string{{
-			`gtid`,
-			`type:OTHER `,
-		}},
-	}, {
-		input: "analyze table stream2",
-		output: [][]string{{
-			`gtid`,
-			`type:OTHER `,
-		}},
-	}, {
-		// select, set, show and describe don't get logged.
-		input: "select * from stream1",
-	}, {
-		input: "set @val=1",
-	}, {
-		input: "show tables",
-	}, {
-		input: "describe stream1",
 	}}
-	runCases(t, nil, testcases, "")
+	runCases(t, nil, testcases, "current")
 
 	// Test FilePos flavor
-	engine.cp.Flavor = "FilePos"
-	defer func() { engine.cp.Flavor = "" }()
-	runCases(t, nil, testcases, "")
+	savedEngine := engine
+	defer func() { engine = savedEngine }()
+	engine = customEngine(t, func(in mysql.ConnParams) mysql.ConnParams {
+		in.Flavor = "FilePos"
+		return in
+	})
+	defer engine.Close()
+	runCases(t, nil, testcases, "current")
+}
+
+// TestOther tests "other" and "priv" statements. These statements can
+// produce very different events depending on the version of mysql or
+// mariadb. So, we just show that vreplication transmits "OTHER" events
+// if the binlog is affected by the statement.
+func TestOther(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	execStatements(t, []string{
+		"create table stream1(id int, val varbinary(128), primary key(id))",
+		"create table stream2(id int, val varbinary(128), primary key(id))",
+	})
+	defer execStatements(t, []string{
+		"drop table stream1",
+		"drop table stream2",
+	})
+	engine.se.Reload(context.Background())
+
+	testcases := []string{
+		"repair table stream2",
+		"optimize table stream2",
+		"analyze table stream2",
+		"select * from stream1",
+		"set @val=1",
+		"show tables",
+		"describe stream1",
+		"grant select on stream1 to current_user()",
+		"revoke select on stream1 from current_user()",
+	}
+
+	// customRun is a modified version of runCases.
+	customRun := func(mode string) {
+		t.Logf("Run mode: %v", mode)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		ch := startStream(ctx, t, nil, "")
+
+		want := [][]string{{
+			`gtid`,
+			`type:OTHER `,
+		}}
+
+		for _, stmt := range testcases {
+			startPosition := masterPosition(t)
+			execStatement(t, stmt)
+			endPosition := masterPosition(t)
+			if startPosition == endPosition {
+				t.Logf("statement %s did not affect binlog", stmt)
+				continue
+			}
+			expectLog(ctx, t, stmt, ch, want)
+		}
+		cancel()
+		if evs, ok := <-ch; ok {
+			t.Fatalf("unexpected evs: %v", evs)
+		}
+	}
+	customRun("gtid")
+
+	// Test FilePos flavor
+	savedEngine := engine
+	defer func() { engine = savedEngine }()
+	engine = customEngine(t, func(in mysql.ConnParams) mysql.ConnParams {
+		in.Flavor = "FilePos"
+		return in
+	})
+	defer engine.Close()
+	customRun("filePos")
 }
 
 func TestRegexp(t *testing.T) {
@@ -203,9 +359,7 @@ func TestREKeyRange(t *testing.T) {
 	})
 	engine.se.Reload(context.Background())
 
-	if err := env.SetVSchema(shardedVSchema); err != nil {
-		t.Fatal(err)
-	}
+	setVSchema(t, shardedVSchema)
 	defer env.SetVSchema("{}")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -264,9 +418,7 @@ func TestREKeyRange(t *testing.T) {
     }
   }
 }`
-	if err := env.SetVSchema(altVSchema); err != nil {
-		t.Fatal(err)
-	}
+	setVSchema(t, altVSchema)
 
 	// Only the first insert should be sent.
 	input = []string{
@@ -297,9 +449,7 @@ func TestInKeyRangeMultiColumn(t *testing.T) {
 	})
 	engine.se.Reload(context.Background())
 
-	if err := env.SetVSchema(multicolumnVSchema); err != nil {
-		t.Fatal(err)
-	}
+	setVSchema(t, multicolumnVSchema)
 	defer env.SetVSchema("{}")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -354,9 +504,7 @@ func TestREMultiColumnVindex(t *testing.T) {
 	})
 	engine.se.Reload(context.Background())
 
-	if err := env.SetVSchema(multicolumnVSchema); err != nil {
-		t.Fatal(err)
-	}
+	setVSchema(t, multicolumnVSchema)
 	defer env.SetVSchema("{}")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -424,8 +572,6 @@ func TestSelectFilter(t *testing.T) {
 			"insert into t1 values (2, 4, 'aaa')",
 			"commit",
 		},
-		// MySQL issues GTID->BEGIN.
-		// MariaDB issues BEGIN->GTID.
 		output: [][]string{{
 			`begin`,
 			`type:FIELD field_event:<table_name:"t1" fields:<name:"id2" type:INT32 > fields:<name:"val" type:VARBINARY > > `,
@@ -1042,11 +1188,117 @@ func TestStatementMode(t *testing.T) {
 	runCases(t, nil, testcases, "")
 }
 
-func runCases(t *testing.T, filter *binlogdatapb.Filter, testcases []testcase, postion string) {
+func TestHeartbeat(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := startStream(ctx, t, nil, "")
+	evs := <-ch
+	require.Equal(t, 1, len(evs))
+	assert.Equal(t, binlogdatapb.VEventType_HEARTBEAT, evs[0].Type)
+}
+
+func TestNoFutureGTID(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	// Execute something to make sure we have ranges in GTIDs.
+	execStatements(t, []string{
+		"create table stream1(id int, val varbinary(128), primary key(id))",
+	})
+	defer execStatements(t, []string{
+		"drop table stream1",
+	})
+	engine.se.Reload(context.Background())
+
+	pos := masterPosition(t)
+	t.Logf("current position: %v", pos)
+	// Both mysql and mariadb have '-' in their gtids.
+	// Invent a GTID in the future.
+	index := strings.LastIndexByte(pos, '-')
+	num, err := strconv.Atoi(pos[index+1:])
+	require.NoError(t, err)
+	future := pos[:index+1] + fmt.Sprintf("%d", num+1)
+	t.Logf("future position: %v", future)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := make(chan []*binlogdatapb.VEvent)
+	go func() {
+		for range ch {
+		}
+	}()
+	defer close(ch)
+	err = vstream(ctx, t, future, nil, ch)
+	want := "is ahead of current position"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("err: %v, must contain %s", err, want)
+	}
+}
+
+func TestFilteredMultipleWhere(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	execStatements(t, []string{
+		"create table t1(id1 int, id2 int, id3 int, val varbinary(128), primary key(id1))",
+	})
+	defer execStatements(t, []string{
+		"drop table t1",
+	})
+	engine.se.Reload(context.Background())
+
+	setVSchema(t, shardedVSchema)
+	defer env.SetVSchema("{}")
+
+	filter := &binlogdatapb.Filter{
+		Rules: []*binlogdatapb.Rule{{
+			Match:  "t1",
+			Filter: "select id1, val from t1 where in_keyrange('-80') and id2 = 200 and id3 = 1000 and val = 'newton'",
+		}},
+	}
+
+	testcases := []testcase{{
+		input: []string{
+			"begin",
+			"insert into t1 values (1, 100, 1000, 'kepler')",
+			"insert into t1 values (2, 200, 1000, 'newton')",
+			"insert into t1 values (3, 100, 2000, 'kepler')",
+			"insert into t1 values (128, 200, 1000, 'newton')",
+			"insert into t1 values (5, 200, 2000, 'kepler')",
+			"insert into t1 values (129, 200, 1000, 'kepler')",
+			"commit",
+		},
+		output: [][]string{{
+			`begin`,
+			`type:FIELD field_event:<table_name:"t1" fields:<name:"id1" type:INT32 > fields:<name:"val" type:VARBINARY > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:1 lengths:6 values:"2newton" > > > `,
+			`type:ROW row_event:<table_name:"t1" row_changes:<after:<lengths:3 lengths:6 values:"128newton" > > > `,
+			`gtid`,
+			`commit`,
+		}},
+	}}
+	runCases(t, filter, testcases, "")
+}
+
+func runCases(t *testing.T, filter *binlogdatapb.Filter, testcases []testcase, position string) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ch := startStream(ctx, t, filter, postion)
+	ch := startStream(ctx, t, filter, position)
+
+	// If position is 'current', we wait for a heartbeat to be
+	// sure the vstreamer has started.
+	if position == "current" {
+		expectLog(ctx, t, "current pos", ch, [][]string{{`gtid`, `type:OTHER `}})
+	}
 
 	for _, tcase := range testcases {
 		switch input := tcase.input.(type) {
@@ -1067,16 +1319,31 @@ func runCases(t *testing.T, filter *binlogdatapb.Filter, testcases []testcase, p
 
 func expectLog(ctx context.Context, t *testing.T, input interface{}, ch <-chan []*binlogdatapb.VEvent, output [][]string) {
 	t.Helper()
+	timer := time.NewTimer(1 * time.Minute)
+	defer timer.Stop()
 	for _, wantset := range output {
 		var evs []*binlogdatapb.VEvent
-		var ok bool
-		select {
-		case evs, ok = <-ch:
-			if !ok {
+		for {
+			select {
+			case allevs, ok := <-ch:
+				if !ok {
+					t.Fatal("stream ended early")
+				}
+				for _, ev := range allevs {
+					// Ignore spurious heartbeats that can happen on slow machines.
+					if ev.Type == binlogdatapb.VEventType_HEARTBEAT {
+						continue
+					}
+					evs = append(evs, ev)
+				}
+			case <-ctx.Done():
 				t.Fatal("stream ended early")
+			case <-timer.C:
+				t.Fatalf("timed out waiting for events: %v", wantset)
 			}
-		case <-ctx.Done():
-			t.Fatal("stream ended early")
+			if len(evs) != 0 {
+				break
+			}
 		}
 		if len(wantset) != len(evs) {
 			t.Fatalf("%v: evs\n%v, want\n%v", input, evs, wantset)
@@ -1098,9 +1365,6 @@ func expectLog(ctx context.Context, t *testing.T, input interface{}, ch <-chan [
 					t.Fatalf("%v (%d): event: %v, want commit", input, i, evs[i])
 				}
 			default:
-				if evs[i].Timestamp == 0 {
-					t.Fatalf("evs[%d].Timestamp: 0, want non-zero", i)
-				}
 				evs[i].Timestamp = 0
 				if got := fmt.Sprintf("%v", evs[i]); got != want {
 					t.Fatalf("%v (%d): event:\n%q, want\n%q", input, i, got, want)
@@ -1118,9 +1382,7 @@ func startStream(ctx context.Context, t *testing.T, filter *binlogdatapb.Filter,
 	ch := make(chan []*binlogdatapb.VEvent)
 	go func() {
 		defer close(ch)
-		if err := vstream(ctx, t, position, filter, ch); err != nil {
-			t.Error(err)
-		}
+		_ = vstream(ctx, t, position, filter, ch)
 	}()
 	return ch
 }
@@ -1163,7 +1425,11 @@ func masterPosition(t *testing.T) string {
 	// We use the engine's cp because there is one test that overrides
 	// the flavor to FilePos. If so, we have to obtain the position
 	// in that flavor format.
-	conn, err := mysql.Connect(context.Background(), engine.cp)
+	connParam, err := engine.env.DBConfigs().DbaWithDB().MysqlParams()
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := mysql.Connect(context.Background(), connParam)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1173,4 +1439,27 @@ func masterPosition(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return mysql.EncodePosition(pos)
+}
+
+func setVSchema(t *testing.T, vschema string) {
+	t.Helper()
+
+	curCount := engine.vschemaUpdates.Get()
+
+	if err := env.SetVSchema(vschema); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for curCount to go up.
+	updated := false
+	for i := 0; i < 10; i++ {
+		if engine.vschemaUpdates.Get() != curCount {
+			updated = true
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !updated {
+		t.Error("vschema did not get updated")
+	}
 }

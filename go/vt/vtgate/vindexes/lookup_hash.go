@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"vitess.io/vitess/go/vt/vtgate/evalengine"
+
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -93,6 +95,11 @@ func (lh *LookupHash) IsUnique() bool {
 	return false
 }
 
+// NeedsVCursor satisfies the Vindex interface.
+func (lh *LookupHash) NeedsVCursor() bool {
+	return true
+}
+
 // Map can map ids to key.Destination objects.
 func (lh *LookupHash) Map(vcursor VCursor, ids []sqltypes.Value) ([]key.Destination, error) {
 	out := make([]key.Destination, 0, len(ids))
@@ -114,7 +121,7 @@ func (lh *LookupHash) Map(vcursor VCursor, ids []sqltypes.Value) ([]key.Destinat
 		}
 		ksids := make([][]byte, 0, len(result.Rows))
 		for _, row := range result.Rows {
-			num, err := sqltypes.ToUint64(row[0])
+			num, err := evalengine.ToUint64(row[0])
 			if err != nil {
 				// A failure to convert is equivalent to not being
 				// able to map.
@@ -244,6 +251,11 @@ func (lhu *LookupHashUnique) IsUnique() bool {
 	return true
 }
 
+// NeedsVCursor satisfies the Vindex interface.
+func (lhu *LookupHashUnique) NeedsVCursor() bool {
+	return true
+}
+
 // Map can map ids to key.Destination objects.
 func (lhu *LookupHashUnique) Map(vcursor VCursor, ids []sqltypes.Value) ([]key.Destination, error) {
 	out := make([]key.Destination, 0, len(ids))
@@ -263,7 +275,7 @@ func (lhu *LookupHashUnique) Map(vcursor VCursor, ids []sqltypes.Value) ([]key.D
 		case 0:
 			out = append(out, key.DestinationNone{})
 		case 1:
-			num, err := sqltypes.ToUint64(result.Rows[0][0])
+			num, err := evalengine.ToUint64(result.Rows[0][0])
 			if err != nil {
 				out = append(out, key.DestinationNone{})
 				continue

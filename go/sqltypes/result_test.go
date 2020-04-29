@@ -116,14 +116,6 @@ func TestCopy(t *testing.T) {
 			{TestValue(Int64, "2"), MakeTrusted(VarChar, nil)},
 			{TestValue(Int64, "3"), TestValue(VarChar, "")},
 		},
-		Extras: &querypb.ResultExtras{
-			EventToken: &querypb.EventToken{
-				Timestamp: 123,
-				Shard:     "sh",
-				Position:  "po",
-			},
-			Fresher: true,
-		},
 	}
 	out := in.Copy()
 	if !reflect.DeepEqual(out, in) {
@@ -145,14 +137,6 @@ func TestTruncate(t *testing.T) {
 			{TestValue(Int64, "2"), MakeTrusted(VarChar, nil)},
 			{TestValue(Int64, "3"), TestValue(VarChar, "")},
 		},
-		Extras: &querypb.ResultExtras{
-			EventToken: &querypb.EventToken{
-				Timestamp: 123,
-				Shard:     "sh",
-				Position:  "po",
-			},
-			Fresher: true,
-		},
 	}
 
 	out := in.Truncate(0)
@@ -171,14 +155,6 @@ func TestTruncate(t *testing.T) {
 			{TestValue(Int64, "1")},
 			{TestValue(Int64, "2")},
 			{TestValue(Int64, "3")},
-		},
-		Extras: &querypb.ResultExtras{
-			EventToken: &querypb.EventToken{
-				Timestamp: 123,
-				Shard:     "sh",
-				Position:  "po",
-			},
-			Fresher: true,
 		},
 	}
 	if !reflect.DeepEqual(out, want) {

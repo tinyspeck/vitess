@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/vt/discovery"
@@ -60,26 +61,6 @@ func TestTxConnBegin(t *testing.T) {
 	}
 	if commitCount := sbc0.CommitCount.Get(); commitCount != 1 {
 		t.Errorf("want 1, got %d", commitCount)
-	}
-}
-
-func TestTxConnBeginDisallowed(t *testing.T) {
-	sc, _, _, _, _, _ := newTestTxConnEnv(t, "TestTxConn")
-
-	sc.txConn.mode = vtgatepb.TransactionMode_SINGLE
-	session := &vtgatepb.Session{TransactionMode: vtgatepb.TransactionMode_MULTI}
-	err := sc.txConn.Begin(context.Background(), NewSafeSession(session))
-	wantErr := "requested transaction mode MULTI disallowed: vtgate must be started with --transaction_mode=MULTI (or TWOPC). Current transaction mode: SINGLE"
-	if err == nil || err.Error() != wantErr {
-		t.Errorf("txConn.Begin: %v, want %s", err, wantErr)
-	}
-
-	sc.txConn.mode = vtgatepb.TransactionMode_MULTI
-	session = &vtgatepb.Session{TransactionMode: vtgatepb.TransactionMode_TWOPC}
-	err = sc.txConn.Begin(context.Background(), NewSafeSession(session))
-	wantErr = "requested transaction mode TWOPC disallowed: vtgate must be started with --transaction_mode=TWOPC. Current transaction mode: MULTI"
-	if err == nil || err.Error() != wantErr {
-		t.Errorf("txConn.Begin: %v, want %s", err, wantErr)
 	}
 }
 
@@ -603,9 +584,7 @@ func TestTxConnResolveOnPrepare(t *testing.T) {
 		}},
 	}}
 	err := sc.txConn.Resolve(context.Background(), dtid)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	if c := sbc0.SetRollbackCount.Get(); c != 1 {
 		t.Errorf("sbc0.SetRollbackCount: %d, want 1", c)
 	}
@@ -894,9 +873,7 @@ func TestTxConnMultiGoSessions(t *testing.T) {
 	err = txc.runSessions(input, func(s *vtgatepb.Session_ShardSession) error {
 		return nil
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestTxConnMultiGoTargets(t *testing.T) {
@@ -932,9 +909,7 @@ func TestTxConnMultiGoTargets(t *testing.T) {
 	err = txc.runTargets(input, func(t *querypb.Target) error {
 		return nil
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 }
 
 func newTestTxConnEnv(t *testing.T, name string) (sc *ScatterConn, sbc0, sbc1 *sandboxconn.SandboxConn, rss0, rss1, rss01 []*srvtopo.ResolvedShard) {

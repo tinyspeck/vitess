@@ -90,6 +90,7 @@ func newController(ctx context.Context, params map[string]string, dbClientFactor
 	ct.id = uint32(id)
 	ct.workflow = params["workflow"]
 
+	blpStats.State.Set(params["state"])
 	// Nothing to do if replication is stopped.
 	if params["state"] == binlogplayer.BlpStopped {
 		ct.cancel = func() {}
@@ -105,7 +106,7 @@ func newController(ctx context.Context, params map[string]string, dbClientFactor
 
 	if ct.source.GetExternalMysql() == "" {
 		// tabletPicker
-		if v, ok := params["cell"]; ok {
+		if v := params["cell"]; v != "" {
 			cell = v
 		}
 		if v := params["tablet_types"]; v != "" {

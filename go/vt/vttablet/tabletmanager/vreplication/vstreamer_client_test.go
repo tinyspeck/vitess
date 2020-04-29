@@ -27,6 +27,7 @@ import (
 
 	"vitess.io/vitess/go/mysql"
 
+	"vitess.io/vitess/go/vt/dbconfigs"
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -175,6 +176,7 @@ func TestTabletVStreamerClientVStream(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	ctx := context.Background()
 	err := vsClient.Open(ctx)
@@ -232,6 +234,7 @@ func TestTabletVStreamerClientVStreamRows(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	qr, err := env.Mysqld.FetchSuperQuery(context.Background(), "select now()")
 	if err != nil {
@@ -247,12 +250,13 @@ func TestTabletVStreamerClientVStreamRows(t *testing.T) {
 
 	defer vsClient.Close(ctx)
 
-	// This asserts that events are flowing through the VStream when using mysql client
-	go vsClient.VStreamRows(ctx, "select * from t1", nil, send)
-
 	execStatements(t, []string{
 		fmt.Sprintf("insert into t1 values(1, '%s', '%s')", want, want),
 	})
+
+	// This asserts that events are flowing through VStreamRows when using mysql client
+	// This needs to happen after the insert above to avoid race where select precedes the insert
+	go vsClient.VStreamRows(ctx, "select * from t1", nil, send)
 
 	select {
 	case <-eventsChan:
@@ -270,7 +274,7 @@ func TestNewMySQLVStreamerClient(t *testing.T) {
 		{
 			name: "sets conn params for MySQLVStreamerClient ",
 			want: &MySQLVStreamerClient{
-				sourceCp: env.Dbcfgs.ExternalReplWithDB(),
+				sourceConnParams: dbcfgs.ExternalReplWithDB(),
 			},
 		},
 	}
@@ -284,8 +288,12 @@ func TestNewMySQLVStreamerClient(t *testing.T) {
 }
 
 func TestMySQLVStreamerClientOpen(t *testing.T) {
+	dbc := dbconfigs.New(&mysql.ConnParams{
+		Host: "invalidhost",
+		Port: 3306,
+	})
 	type fields struct {
-		sourceConnParams *mysql.ConnParams
+		sourceConnParams dbconfigs.Connector
 	}
 	type args struct {
 		ctx context.Context
@@ -299,7 +307,7 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 		{
 			name: "initializes streamer correctly",
 			fields: fields{
-				sourceConnParams: env.Dbcfgs.ExternalReplWithDB(),
+				sourceConnParams: dbcfgs.ExternalReplWithDB(),
 			},
 			args: args{
 				ctx: context.Background(),
@@ -308,10 +316,7 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 		{
 			name: "returns error when invalid conn params are provided",
 			fields: fields{
-				sourceConnParams: &mysql.ConnParams{
-					Host: "invalidhost",
-					Port: 3306,
-				},
+				sourceConnParams: dbc,
 			},
 			args: args{
 				ctx: context.Background(),
@@ -352,7 +357,7 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 func TestMySQLVStreamerClientClose(t *testing.T) {
 	type fields struct {
 		isOpen           bool
-		sourceConnParams *mysql.ConnParams
+		sourceConnParams dbconfigs.Connector
 	}
 	type args struct {
 		ctx context.Context
@@ -367,7 +372,7 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 		{
 			name: "closes engine correctly",
 			fields: fields{
-				sourceConnParams: env.Dbcfgs.ExternalReplWithDB(),
+				sourceConnParams: dbcfgs.ExternalReplWithDB(),
 			},
 			args: args{
 				ctx: context.Background(),
@@ -407,7 +412,7 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 
 func TestMySQLVStreamerClientVStream(t *testing.T) {
 	vsClient := &MySQLVStreamerClient{
-		sourceCp: env.Dbcfgs.ExternalReplWithDB(),
+		sourceConnParams: dbcfgs.ExternalReplWithDB(),
 	}
 
 	filter := &binlogdatapb.Filter{
@@ -431,6 +436,7 @@ func TestMySQLVStreamerClientVStream(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	ctx := context.Background()
 	err := vsClient.Open(ctx)
@@ -466,7 +472,7 @@ func TestMySQLVStreamerClientVStream(t *testing.T) {
 
 func TestMySQLVStreamerClientVStreamRows(t *testing.T) {
 	vsClient := &MySQLVStreamerClient{
-		sourceCp: env.Dbcfgs.ExternalReplWithDB(),
+		sourceConnParams: dbcfgs.ExternalReplWithDB(),
 	}
 
 	eventsChan := make(chan *querypb.Row, 1000)
@@ -485,6 +491,7 @@ func TestMySQLVStreamerClientVStreamRows(t *testing.T) {
 		"drop table t1",
 		fmt.Sprintf("drop table %s.t1", vrepldb),
 	})
+	env.SchemaEngine.Reload(context.Background())
 
 	qr, err := env.Mysqld.FetchSuperQuery(context.Background(), "select now()")
 	if err != nil {
