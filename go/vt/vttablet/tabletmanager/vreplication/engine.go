@@ -133,7 +133,6 @@ func NewTestEngine(ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon, db
 	vre := &Engine{
 		controllers:     make(map[int]*controller),
 		ts:              ts,
-		tablet:          tablet,
 		cell:            cell,
 		mysqld:          mysqld,
 		dbClientFactory: dbClientFactory,

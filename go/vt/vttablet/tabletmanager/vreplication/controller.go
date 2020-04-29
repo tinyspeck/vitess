@@ -193,10 +193,14 @@ func (ct *controller) runVDiff(ctx context.Context) (err error) {
 	switch {
 	case ct.source.Filter != nil:
 		var vsClient VStreamerClient
-		if ct.source.GetExternalMysql() == "" {
-			vsClient = NewTabletVStreamerClient(tablet, ct.mysqld)
+		var err error
+		if name := ct.source.GetExternalMysql(); name != "" {
+			vsClient, err = ct.vre.ec.Get(name)
+			if err != nil {
+				return err
+			}
 		} else {
-			vsClient = NewMySQLVStreamerClient()
+			vsClient = newTabletConnector(tablet, ct.mysqld)
 		}
 
 		vd := newVDiffer(ct.id, &ct.source, vsClient, ct.blpStats, dbClient, ct.vre, ct.workflow)
@@ -276,7 +280,9 @@ func (ct *controller) runBlp(ctx context.Context) (err error) {
 				return err
 			}
 		} else {
-			vsClient = newTabletConnector(tablet)
+			// In this context, we don't really need a mysqld. Setting it to nil.
+			// T his is a slack only change hack for vifl project.
+			vsClient = newTabletConnector(tablet, nil)
 		}
 		if err := vsClient.Open(ctx); err != nil {
 			return err

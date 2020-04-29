@@ -36,6 +36,7 @@ import (
 	"vitess.io/vitess/go/vt/topo/topoproto"
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/engine"
+	"vitess.io/vitess/go/vt/vtgate/evalengine"
 	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
@@ -121,7 +122,7 @@ var currentDatabaseReport *DatabaseReport
 
 // Replicate starts a vreplication stream.
 func (df *vdiff) VDiff(ctx context.Context, filteredReplicationWaitTime time.Duration) error {
-	df.targetVStreamer = NewTabletVStreamerClient(df.vre.tablet, df.vre.mysqld)
+	df.targetVStreamer = newTabletConnector(df.vre.tablet, df.vre.mysqld)
 
 	df.sourceVStreamer.Open(ctx)
 	df.targetVStreamer.Open(ctx)
@@ -160,7 +161,7 @@ func (df *vdiff) VDiff(ctx context.Context, filteredReplicationWaitTime time.Dur
 		return vterrors.Wrap(err, "GetSchema")
 	}
 
-	df.differs, err = buildVDiffPlan(ctx, df.source.Filter, schm)
+	df.differs, err = buildVDiffPlan(ctx, df.sourceDf, df.targetDf, df.source.Filter, schm)
 	if err != nil {
 		return err
 	}
@@ -219,7 +220,7 @@ func VDiffStatus() *DatabaseReport {
 	return currentDatabaseReport
 }
 
-func buildVDiffPlan(ctx context.Context, filter *binlogdatapb.Filter, schm *tabletmanagerdatapb.SchemaDefinition) (map[string]*tableDiffer, error) {
+func buildVDiffPlan(ctx context.Context, source *dfParams, target *dfParams, filter *binlogdatapb.Filter, schm *tabletmanagerdatapb.SchemaDefinition) (map[string]*tableDiffer, error) {
 	differs := make(map[string]*tableDiffer)
 	for _, table := range schm.TableDefinitions {
 		rule, err := MatchTable(table.Name, filter)
@@ -235,7 +236,7 @@ func buildVDiffPlan(ctx context.Context, filter *binlogdatapb.Filter, schm *tabl
 			buf.Myprintf("select * from %v", sqlparser.NewTableIdent(table.Name))
 			query = buf.String()
 		}
-		differs[table.Name], err = buildDifferPlan(table, query)
+		differs[table.Name], err = buildDifferPlan(source, target, table, query)
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +244,7 @@ func buildVDiffPlan(ctx context.Context, filter *binlogdatapb.Filter, schm *tabl
 	return differs, nil
 }
 
-func buildDifferPlan(table *tabletmanagerdatapb.TableDefinition, query string) (*tableDiffer, error) {
+func buildDifferPlan(source *dfParams, target *dfParams, table *tabletmanagerdatapb.TableDefinition, query string) (*tableDiffer, error) {
 	statement, err := sqlparser.Parse(query)
 	if err != nil {
 		return nil, err
@@ -355,8 +356,8 @@ func buildDifferPlan(table *tabletmanagerdatapb.TableDefinition, query string) (
 	td.sourceExpression = sqlparser.String(sourceSelect)
 	td.targetExpression = sqlparser.String(targetSelect)
 
-	td.sourcePrimitive = newMergeSorter(td.comparePKs)
-	td.targetPrimitive = newMergeSorter(td.comparePKs)
+	td.sourcePrimitive = newMergeSorter(source, td.comparePKs)
+	td.targetPrimitive = newMergeSorter(target, td.comparePKs)
 	if len(aggregates) != 0 {
 		td.sourcePrimitive = &engine.OrderedAggregate{
 			Aggregates: aggregates,
@@ -540,31 +541,27 @@ type mergeSorter struct {
 	orderBy []engine.OrderbyParams
 }
 
-func newMergeSorter(comparePKs []int) *mergeSorter {
+// newMergeSorter creates an engine.MergeSort based on the shard streamers and pk columns.
+func newMergeSorter(participant *dfParams, comparePKs []int) *engine.MergeSort {
+	prims := make([]engine.StreamExecutor, 0, 1)
+	prims = append(prims, participant)
 	ob := make([]engine.OrderbyParams, 0, len(comparePKs))
-	for _, col := range comparePKs {
-		ob = append(ob, engine.OrderbyParams{Col: col})
+	for _, cpk := range comparePKs {
+		ob = append(ob, engine.OrderbyParams{Col: cpk})
 	}
-	return &mergeSorter{
-		orderBy: ob,
+	return &engine.MergeSort{
+		Primitives: prims,
+		OrderBy:    ob,
 	}
 }
 
-func (ms *mergeSorter) StreamExecute(vcursor engine.VCursor, bindVars map[string]*querypb.BindVariable, wantields bool, callback func(*sqltypes.Result) error) error {
-	// TODO: I don't really need to do a merge sort here, is a single stream, but I'm lazy and don't want to think.
-	_, ok := vcursor.(*resultReader)
-	if !ok {
-		return fmt.Errorf("internal error: vcursor is not a resultReader: %T", vcursor)
+func (df *dfParams) StreamExecute(vcursor engine.VCursor, bindVars map[string]*querypb.BindVariable, wantfields bool, callback func(*sqltypes.Result) error) error {
+	for result := range df.result {
+		if err := callback(result); err != nil {
+			return err
+		}
 	}
-	rss := make([]*srvtopo.ResolvedShard, 0, 1)
-	bvs := make([]map[string]*querypb.BindVariable, 0, 1)
-	rss = append(rss, &srvtopo.ResolvedShard{
-		Target: &querypb.Target{
-			Shard: "-",
-		},
-	})
-	bvs = append(bvs, bindVars)
-	return engine.MergeSort(vcursor, "", ms.orderBy, rss, bvs, callback)
+	return df.err
 }
 
 //-----------------------------------------------------------------
@@ -714,7 +711,7 @@ func (td *tableDiffer) compare(sourceRow, targetRow []sqltypes.Value, cols []int
 		if col == -1 {
 			continue
 		}
-		c, err := sqltypes.NullsafeCompare(sourceRow[col], targetRow[col])
+		c, err := evalengine.NullsafeCompare(sourceRow[col], targetRow[col])
 		if err != nil {
 			return 0, 0, err
 		}
@@ -748,10 +745,6 @@ func removeExprKeyrange(node sqlparser.Expr) sqlparser.Expr {
 		return &sqlparser.AndExpr{
 			Left:  removeExprKeyrange(node.Left),
 			Right: removeExprKeyrange(node.Right),
-		}
-	case *sqlparser.ParenExpr:
-		return &sqlparser.ParenExpr{
-			Expr: removeExprKeyrange(node.Expr),
 		}
 	}
 	return node
