@@ -46,10 +46,11 @@ import (
 )
 
 var (
-	cellsToWatch        = flag.String("cells_to_watch", "", "comma-separated list of cells for watching tablets")
-	refreshInterval     = flag.Duration("tablet_refresh_interval", 1*time.Minute, "tablet refresh interval")
-	refreshKnownTablets = flag.Bool("tablet_refresh_known_tablets", true, "tablet refresh reloads the tablet address/port map from topo in case it changes")
-	topoReadConcurrency = flag.Int("topo_read_concurrency", 32, "concurrent topo reads")
+	cellsToWatch         = flag.String("cells_to_watch", "", "comma-separated list of cells for watching tablets")
+	refreshInterval      = flag.Duration("tablet_refresh_interval", 1*time.Minute, "tablet refresh interval")
+	refreshKnownTablets  = flag.Bool("tablet_refresh_known_tablets", true, "tablet refresh reloads the tablet address/port map from topo in case it changes")
+	topoReadConcurrency  = flag.Int("topo_read_concurrency", 32, "concurrent topo reads")
+	routeReplicaToRdonly = flag.Bool("gateway_route_replica_to_rdonly", false, "route REPLICA queries to RDONLY tablets as well as REPLICA tablets")
 
 	allowedTabletTypes []topodatapb.TabletType
 
