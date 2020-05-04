@@ -21,6 +21,7 @@ set -e
 
 # shellcheck disable=SC2128
 script_root=$(dirname "${BASH_SOURCE}")
+source "${script_root}/env.sh"
 
 if [[ $EUID -eq 0 ]]; then
     echo "This script refuses to be run as root. Please switch to a regular user."

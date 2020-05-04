@@ -38,18 +38,20 @@ import (
 	"vitess.io/vitess/go/vt/vttablet/queryservice"
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	"vitess.io/vitess/go/vt/proto/topodata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 	"vitess.io/vitess/go/vt/topo/topoproto"
 )
 
 var (
-	cellsToWatch        = flag.String("cells_to_watch", "", "comma-separated list of cells for watching tablets")
-	tabletFilters       flagutil.StringListValue
-	refreshInterval     = flag.Duration("tablet_refresh_interval", 1*time.Minute, "tablet refresh interval")
-	refreshKnownTablets = flag.Bool("tablet_refresh_known_tablets", true, "tablet refresh reloads the tablet address/port map from topo in case it changes")
-	topoReadConcurrency = flag.Int("topo_read_concurrency", 32, "concurrent topo reads")
-	allowedTabletTypes  []topodatapb.TabletType
+	cellsToWatch         = flag.String("cells_to_watch", "", "comma-separated list of cells for watching tablets")
+	tabletFilters        flagutil.StringListValue
+	refreshInterval      = flag.Duration("tablet_refresh_interval", 1*time.Minute, "tablet refresh interval")
+	refreshKnownTablets  = flag.Bool("tablet_refresh_known_tablets", true, "tablet refresh reloads the tablet address/port map from topo in case it changes")
+	topoReadConcurrency  = flag.Int("topo_read_concurrency", 32, "concurrent topo reads")
+	allowedTabletTypes   []topodatapb.TabletType
+	routeReplicaToRdonly = flag.Bool("gateway_route_replica_to_rdonly", false, "route REPLICA queries to RDONLY tablets as well as REPLICA tablets")
 )
 
 const (
@@ -198,18 +200,6 @@ func (dg *discoveryGateway) WaitForTablets(ctx context.Context, tabletTypesToWai
 	return dg.tsc.WaitForAllServingTablets(ctx, targets)
 }
 
-// GetAggregateStats is part of the srvtopo.TargetStats interface.
-func (dg *discoveryGateway) GetAggregateStats(target *querypb.Target) (*querypb.AggregateStats, queryservice.QueryService, error) {
-	stats, err := dg.tsc.GetAggregateStats(target)
-	return stats, dg, err
-}
-
-// GetMasterCell is part of the srvtopo.TargetStats interface.
-func (dg *discoveryGateway) GetMasterCell(keyspace, shard string) (string, queryservice.QueryService, error) {
-	cell, err := dg.tsc.GetMasterCell(keyspace, shard)
-	return cell, dg, err
-}
-
 // Close shuts down underlying connections.
 // This function hides the inner implementation.
 func (dg *discoveryGateway) Close(ctx context.Context) error {
@@ -285,6 +275,12 @@ func (dg *discoveryGateway) withRetry(ctx context.Context, target *querypb.Targe
 		}
 
 		tablets := dg.tsc.GetHealthyTabletStats(target.Keyspace, target.Shard, target.TabletType)
+
+		// temporary hack to enable REPLICA type queries to address both REPLICA tablets and RDONLY tablets
+		if *routeReplicaToRdonly && target.TabletType == topodata.TabletType_REPLICA {
+			tablets = append(tablets, dg.tsc.GetHealthyTabletStats(target.Keyspace, target.Shard, topodata.TabletType_RDONLY)...)
+		}
+
 		if len(tablets) == 0 {
 			// fail fast if there is no tablet
 			err = vterrors.New(vtrpcpb.Code_UNAVAILABLE, "no valid tablet")

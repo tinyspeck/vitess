@@ -61,7 +61,7 @@ func main() {
 	servenv.Init()
 
 	if *tabletPath == "" {
-		log.Exit("tabletPath required")
+		log.Exit("-tablet-path required")
 	}
 	tabletAlias, err := topoproto.ParseTabletAlias(*tabletPath)
 	if err != nil {
@@ -131,7 +131,8 @@ func main() {
 	}
 
 	servenv.OnClose(func() {
-		// stop the agent so that our topo entry gets pruned properly
+		// Close the agent so that our topo entry gets pruned properly and any
+		// background goroutines that use the topo connection are stopped.
 		agent.Close()
 
 		// We will still use the topo server during lameduck period

@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -31,12 +32,13 @@ func TestLookupHashUniqueNew(t *testing.T) {
 		t.Errorf("Create(lookup, false): %v, want %v", got, want)
 	}
 
-	l, _ = CreateVindex("lookup_hash_unique", "lookup_hash_unique", map[string]string{
+	vindex, _ := CreateVindex("lookup_hash_unique", "lookup_hash_unique", map[string]string{
 		"table":      "t",
 		"from":       "fromc",
 		"to":         "toc",
 		"write_only": "true",
 	})
+	l = vindex.(SingleColumn)
 	if want, got := l.(*LookupHashUnique).writeOnly, true; got != want {
 		t.Errorf("Create(lookup, false): %v, want %v", got, want)
 	}
@@ -53,11 +55,12 @@ func TestLookupHashUniqueNew(t *testing.T) {
 	}
 }
 
-func TestLookupHashUniqueCost(t *testing.T) {
+func TestLookupHashUniqueInfo(t *testing.T) {
 	lhu := createLookup(t, "lookup_hash_unique", false)
-	if lhu.Cost() != 10 {
-		t.Errorf("Cost(): %d, want 10", lhu.Cost())
-	}
+	assert.Equal(t, 10, lhu.Cost())
+	assert.Equal(t, "lookup_hash_unique", lhu.String())
+	assert.True(t, lhu.IsUnique())
+	assert.True(t, lhu.NeedsVCursor())
 }
 
 func TestLookupHashUniqueMap(t *testing.T) {

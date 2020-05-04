@@ -55,7 +55,7 @@ def get_backup_storage_flags():
 
 
 def get_all_extra_my_cnf(extra_my_cnf):
-  all_extra_my_cnf = [environment.vttop + '/config/mycnf/default-fast.cnf']
+  all_extra_my_cnf = [environment.vtroot + '/config/mycnf/default-fast.cnf']
   flavor_my_cnf = mysql_flavor().extra_my_cnf()
   if flavor_my_cnf:
     all_extra_my_cnf.append(flavor_my_cnf)
@@ -170,7 +170,7 @@ class Tablet(object):
     return utils.run_bg(args, extra_env=extra_env)
 
   def init_mysql(self, extra_my_cnf=None, init_db=None, extra_args=None,
-                 use_rbr=False):
+                 use_rbr=True):
     """Init the mysql tablet directory, starts mysqld.
 
     Either runs 'mysqlctl init', or starts a mysqlctld process.
@@ -184,14 +184,14 @@ class Tablet(object):
     Returns:
       The forked process.
     """
-    if use_rbr:
+    if not use_rbr:
       if extra_my_cnf:
-        extra_my_cnf += ':' + environment.vttop + '/config/mycnf/rbr.cnf'
+        extra_my_cnf += ':' + environment.vtroot + '/config/mycnf/sbr.cnf'
       else:
-        extra_my_cnf = environment.vttop + '/config/mycnf/rbr.cnf'
+        extra_my_cnf = environment.vtroot + '/config/mycnf/sbr.cnf'
 
     if not init_db:
-      init_db = environment.vttop + '/config/init_db.sql'
+      init_db = environment.vtroot + '/config/init_db.sql'
 
     if self.use_mysqlctld:
       self.mysqlctld_process = self.mysqlctld(['-init_db_sql_file', init_db],

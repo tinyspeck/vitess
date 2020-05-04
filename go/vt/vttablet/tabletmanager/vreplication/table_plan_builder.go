@@ -49,7 +49,9 @@ type colExpr struct {
 	// operation==opCount: nothing is set.
 	// operation==opSum: for 'sum(a)', expr is set to 'a'.
 	operation operation
-	expr      sqlparser.Expr
+	// expr stores the expected field name from vstreamer and dictates
+	// the generated bindvar names, like a_col or b_col.
+	expr sqlparser.Expr
 	// references contains all the column names referenced in the expression.
 	references map[string]bool
 
@@ -87,7 +89,7 @@ const (
 // buildExecutionPlan is the function that builds the full plan.
 func buildReplicatorPlan(filter *binlogdatapb.Filter, tableKeys map[string][]string, copyState map[string]*sqltypes.Result) (*ReplicatorPlan, error) {
 	plan := &ReplicatorPlan{
-		VStreamFilter: &binlogdatapb.Filter{},
+		VStreamFilter: &binlogdatapb.Filter{FieldEventMode: filter.FieldEventMode},
 		TargetTables:  make(map[string]*TablePlan),
 		TablePlans:    make(map[string]*TablePlan),
 		tableKeys:     tableKeys,
@@ -331,6 +333,14 @@ func (tpb *tablePlanBuilder) analyzeExpr(selExpr sqlparser.SelectExpr) (*colExpr
 			cexpr.expr = innerCol
 			tpb.addCol(innerCol.Name)
 			cexpr.references[innerCol.Name.Lowered()] = true
+			return cexpr, nil
+		case "keyspace_id":
+			if len(expr.Exprs) != 0 {
+				return nil, fmt.Errorf("unexpected: %v", sqlparser.String(expr))
+			}
+			tpb.sendSelect.SelectExprs = append(tpb.sendSelect.SelectExprs, &sqlparser.AliasedExpr{Expr: aliased.Expr})
+			// The vstreamer responds with "keyspace_id" as the field name for this request.
+			cexpr.expr = &sqlparser.ColName{Name: sqlparser.NewColIdent("keyspace_id")}
 			return cexpr, nil
 		}
 	}

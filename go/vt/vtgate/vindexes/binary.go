@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	_ Vindex     = (*Binary)(nil)
-	_ Reversible = (*Binary)(nil)
+	_ SingleColumn = (*Binary)(nil)
+	_ Reversible   = (*Binary)(nil)
 )
 
 // Binary is a vindex that converts binary bits to a keyspace id.
@@ -54,9 +54,9 @@ func (vind *Binary) IsUnique() bool {
 	return true
 }
 
-// IsFunctional returns true since the Vindex is functional.
-func (vind *Binary) IsFunctional() bool {
-	return true
+// NeedsVCursor satisfies the Vindex interface.
+func (vind *Binary) NeedsVCursor() bool {
+	return false
 }
 
 // Verify returns true if ids maps to ksids.
