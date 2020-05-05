@@ -41,6 +41,64 @@ type keyspaceIDResolver interface {
 	keyspaceID(row []sqltypes.Value) ([]byte, error)
 }
 
+func newKeyspaceIDResolver(
+	scw *LegacySplitCloneWorker,
+	keyspaceSchema *vindexes.KeyspaceSchema,
+	td *tabletmanagerdatapb.TableDefinition,
+	useV3ReshardingMode, isVSchemalessMerge bool,
+) (keyspaceIDResolver, error) {
+	var keyResolver keyspaceIDResolver
+	var err error
+
+	if useV3ReshardingMode {
+		keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
+		if err != nil {
+			return nil, vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
+		}
+	} else if isVSchemalessMerge {
+		if len(scw.destinationShards) != 1 {
+			return nil, vterrors.Errorf(
+				vtrpc.Code_INVALID_ARGUMENT,
+				"Cannot set -enable_shard_merge with more than a single destination shard %v",
+				scw.destinationShards,
+			)
+		}
+
+		keyRange := scw.destinationShards[0].GetKeyRange()
+		var fixedValue []byte
+		if keyRange.GetStart() == nil && keyRange.GetEnd() == nil {
+			fixedValue = []byte{1}
+		} else if keyRange.GetStart() == nil && keyRange.GetEnd() != nil {
+			// do one less than the end
+			fixedValue = make([]byte, len(keyRange.GetEnd()))
+			copy(fixedValue, keyRange.GetEnd())
+
+			fixedValue[0] = fixedValue[0] - 1
+		} else {
+			fixedValue = make([]byte, len(keyRange.GetStart()))
+			copy(fixedValue, keyRange.GetStart())
+		}
+
+		keyResolver = &mergeResolver{fixedValue: fixedValue}
+	} else {
+		keyResolver, err = newV2Resolver(scw.keyspaceInfo, td)
+		if err != nil {
+			return nil, vterrors.Wrapf(err, "cannot resolve sharding keys for keyspace %v", scw.keyspace)
+		}
+	}
+
+	return keyResolver, nil
+}
+
+type mergeResolver struct {
+	fixedValue []byte
+}
+
+// keyspaceID implements the keyspaceIDResolver interface.
+func (r *mergeResolver) keyspaceID(row []sqltypes.Value) ([]byte, error) {
+	return r.fixedValue, nil
+}
+
 // v2Resolver is the keyspace id resolver that is used by VTGate V2 deployments.
 // In V2, the sharding key column name and type is the same for all tables,
 // and the keyspace ID is stored in the sharding key database column.
