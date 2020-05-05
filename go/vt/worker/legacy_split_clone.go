@@ -236,6 +236,9 @@ func (scw *LegacySplitCloneWorker) Run(ctx context.Context) error {
 
 func (scw *LegacySplitCloneWorker) run(ctx context.Context) error {
 	// first state: read what we need to do
+	// @bramos: figures out source and destination shards
+	// by looking at what shards overlap in the keyspace
+	// and picking the source as the one that has all the serving types defined
 	if err := scw.init(ctx); err != nil {
 		return vterrors.Wrap(err, "init() failed")
 	}
@@ -244,6 +247,8 @@ func (scw *LegacySplitCloneWorker) run(ctx context.Context) error {
 	}
 
 	// second state: find targets
+	// @bramos: as the comment says, for all sources and destinations, find the appropriate
+	// tablets and setup healthchecks to them
 	if err := scw.findTargets(ctx); err != nil {
 		return vterrors.Wrap(err, "findTargets() failed")
 	}
@@ -267,6 +272,8 @@ func (scw *LegacySplitCloneWorker) init(ctx context.Context) error {
 
 	// read the keyspace and validate it
 	shortCtx, cancel := context.WithTimeout(ctx, *remoteActionsTimeout)
+	// @bramos: this is empty except for the keyspace name
+	// looks at global/keyspace/viflmerge/Keyspace
 	scw.keyspaceInfo, err = scw.wr.TopoServer().GetKeyspace(shortCtx, scw.keyspace)
 	cancel()
 	if err != nil {
@@ -275,6 +282,7 @@ func (scw *LegacySplitCloneWorker) init(ctx context.Context) error {
 
 	// find the OverlappingShards in the keyspace
 	shortCtx, cancel = context.WithTimeout(ctx, *remoteActionsTimeout)
+	// look at global/keyspace/viflmerge/shards
 	osList, err := topotools.FindOverlappingShards(shortCtx, scw.wr.TopoServer(), scw.keyspace)
 	cancel()
 	if err != nil {
@@ -291,10 +299,15 @@ func (scw *LegacySplitCloneWorker) init(ctx context.Context) error {
 	// one side should have served types, the other one none,
 	// figure out which is which, then double check them all
 
+	// @bramos: go look at each cell's keyspaces/viflmerge/SrvKeyspace
+	// to see the serving types and return all the serving types.
 	leftServingTypes, err := scw.wr.TopoServer().GetShardServingTypes(ctx, os.Left[0])
 	if err != nil {
 		return fmt.Errorf("cannot get shard serving cells for: %v", os.Left[0])
 	}
+
+	// @bramos: sourceShards: -40,40-80
+	// destinationShards: -80
 	if len(leftServingTypes) > 0 {
 		scw.sourceShards = os.Left
 		scw.destinationShards = os.Right
@@ -517,6 +530,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	}
 
 	// read the vschema if needed
+	// @bramos: look at keyspaces/viflmerge/VSchema for stuff
 	var keyspaceSchema *vindexes.KeyspaceSchema
 	if *useV3ReshardingMode {
 		kschema, err := scw.wr.TopoServer().GetVSchema(ctx, scw.keyspace)
@@ -539,18 +553,11 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	for shardIndex := range scw.sourceShards {
 		sema := sync2.NewSemaphore(scw.sourceReaderCount, 0)
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
-			var keyResolver keyspaceIDResolver
-			if *useV3ReshardingMode {
-				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
-				if err != nil {
-					return vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
-				}
-			} else {
-				keyResolver, err = newV2Resolver(scw.keyspaceInfo, td)
-				if err != nil {
-					return vterrors.Wrapf(err, "cannot resolve sharding keys for keyspace %v", scw.keyspace)
-				}
+			keyResolver, err := newKeyspaceIDResolver(scw, keyspaceSchema, td, *useV3ReshardingMode, true)
+			if err != nil {
+				return err
 			}
+
 			rowSplitter := NewRowSplitter(scw.destinationShards, keyResolver)
 
 			chunks, err := generateChunks(ctx, scw.wr, scw.sourceTablets[shardIndex], td, scw.sourceReaderCount, defaultMinRowsPerChunk)
