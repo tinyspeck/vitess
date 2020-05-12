@@ -62,6 +62,7 @@ var (
 	_                  = flag.Bool("disable_local_gateway", false, "deprecated: if specified, this process will not route any queries to local tablets in the local cell")
 	maxMemoryRows      = flag.Int("max_memory_rows", 300000, "Maximum number of rows that will be held in memory for intermediate results as well as the final result.")
 	warnMemoryRows     = flag.Int("warn_memory_rows", 30000, "Warning threshold for in-memory results. A row count higher than this amount will cause the VtGateWarnings.ResultsExceeded counter to be incremented.")
+	maxPayloadSize     = flag.Int("max_payload_size", 0, "The threshold for query payloads in bytes. A payload greater than this threshold will result in a failure to handle the query.")
 )
 
 func getTxMode() vtgatepb.TransactionMode {

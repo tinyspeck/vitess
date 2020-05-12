@@ -1417,6 +1417,9 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 	if err != nil {
 		return nil, err
 	}
+	if err = validatePayloadSize(sql); err != nil {
+		return nil, err
+	}
 	if !e.normalize {
 		plan, err := planbuilder.BuildFromStmt(sql, stmt, vcursor, false, false)
 		if err != nil {
@@ -1537,6 +1540,19 @@ func buildVarCharRow(values ...string) []sqltypes.Value {
 		row[i] = sqltypes.NewVarChar(v)
 	}
 	return row
+}
+
+// validatePayloadSize validates whether a query payload is above the
+// configured MaxPayloadSize threshold
+func validatePayloadSize(query string) error {
+	// If maxPayloadSize is the default value of 0, return early.
+	if *maxPayloadSize == 0 {
+		return nil
+	}
+	if len(query) > *maxPayloadSize {
+		return vterrors.New(vtrpcpb.Code_FAILED_PRECONDITION, "query payload size above threshold")
+	}
+	return nil
 }
 
 // Prepare executes a prepare statements.
