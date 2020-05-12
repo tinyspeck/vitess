@@ -550,9 +550,13 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	// Now for each table, read data chunks and send them to all
 	// insertChannels
 	sourceWaitGroup := sync.WaitGroup{}
+	tablesToReplicate := make([]string, len(sourceSchemaDefinition.TableDefinitions))
+
 	for shardIndex := range scw.sourceShards {
 		sema := sync2.NewSemaphore(scw.sourceReaderCount, 0)
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
+			tablesToReplicate = append(tablesToReplicate, td.GetName())
+
 			keyResolver, err := newKeyspaceIDResolver(scw, keyspaceSchema, td, *useV3ReshardingMode, true)
 			if err != nil {
 				return err
@@ -635,7 +639,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 				bls := &binlogdatapb.BinlogSource{
 					Keyspace: src.Keyspace(),
 					Shard:    src.ShardName(),
-					KeyRange: kr,
+					Tables:   tablesToReplicate,
 				}
 				qr, err := exc.vreplicationExec(ctx, binlogplayer.CreateVReplication("LegacySplitClone", bls, sourcePositions[shardIndex], scw.maxTPS, throttler.ReplicationLagModuleDisabled, time.Now().Unix(), dbName))
 				if err != nil {
