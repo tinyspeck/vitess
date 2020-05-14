@@ -28,7 +28,6 @@ import (
 	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/mysqlctl"
-	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/vttablet/queryservice"
 	"vitess.io/vitess/go/vt/vttablet/tabletconn"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/connpool"
@@ -214,7 +213,7 @@ func (vsClient *MySQLVStreamerClient) VStream(ctx context.Context, startPos stri
 	if !vsClient.isOpen {
 		return errors.New("can't VStream without opening client")
 	}
-	streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, startPos, filter, &vindexes.KeyspaceSchema{}, send)
+	streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, startPos, filter, send)
 	return streamer.Stream()
 }
 
@@ -232,7 +231,7 @@ func (vsClient *MySQLVStreamerClient) VStreamRows(ctx context.Context, query str
 		row = r.Rows[0]
 	}
 
-	streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, query, row, &vindexes.KeyspaceSchema{}, send)
+	streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, query, row, send)
 	return streamer.Stream()
 }
 
