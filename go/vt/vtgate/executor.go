@@ -1417,8 +1417,9 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 	if err != nil {
 		return nil, err
 	}
-	if err = validatePayloadSize(sql); err != nil {
-		return nil, err
+
+	if !isValidPayloadSize(sql) && !sqlparser.MaxPayloadSizeOverrideDirective(statement) {
+		return nil, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "query payload size above threshold")
 	}
 	if !e.normalize {
 		plan, err := planbuilder.BuildFromStmt(sql, stmt, vcursor, false, false)
@@ -1542,17 +1543,19 @@ func buildVarCharRow(values ...string) []sqltypes.Value {
 	return row
 }
 
-// validatePayloadSize validates whether a query payload is above the
-// configured MaxPayloadSize threshold
-func validatePayloadSize(query string) error {
-	// If maxPayloadSize is the default value of 0, return early.
-	if *maxPayloadSize == 0 {
-		return nil
+// isValidPayloadSize validates whether a query payload is above the
+// configured MaxPayloadSize threshold. The PayloadSizeExceeded will increment
+// if the payload size exceeds the warnPayloadSize.
+
+func isValidPayloadSize(query string) bool {
+	payloadSize := len(query)
+	if *maxPayloadSize > 0 && payloadSize > *maxPayloadSize {
+		return false
 	}
-	if len(query) > *maxPayloadSize {
-		return vterrors.New(vtrpcpb.Code_FAILED_PRECONDITION, "query payload size above threshold")
+	if *warnPayloadSize > 0 && payloadSize > *warnPayloadSize {
+		warnings.Add("PayloadSizeExceeded", 1)
 	}
-	return nil
+	return true
 }
 
 // Prepare executes a prepare statements.
