@@ -1418,7 +1418,7 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 		return nil, err
 	}
 
-	if !isValidPayloadSize(sql) && !sqlparser.MaxPayloadSizeOverrideDirective(statement) {
+	if !isValidPayloadSize(sql) && !sqlparser.MaxPayloadSizeOverrideDirective(stmt) {
 		return nil, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "query payload size above threshold")
 	}
 	if !e.normalize {
