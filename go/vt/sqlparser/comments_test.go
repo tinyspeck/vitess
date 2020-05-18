@@ -452,3 +452,30 @@ func TestSkipQueryPlanCacheDirective(t *testing.T) {
 		t.Errorf("d.SkipQueryPlanCacheDirective(stmt) should be true")
 	}
 }
+
+func TestMaxPayloadSizeOverrideDirective(t *testing.T) {
+	stmt, _ := Parse("insert /*vt+ MAX_PAYLOAD_SIZE_OVERRIDE=1 */ into user(id) values (1), (2)")
+	if !MaxPayloadSizeOverrideDirective(stmt) {
+		t.Errorf("d.MaxPayloadSizeOverrideDirective(stmt) should be true")
+	}
+
+	stmt, _ = Parse("insert into user(id) values (1), (2)")
+	if MaxPayloadSizeOverrideDirective(stmt) {
+		t.Errorf("d.MaxPayloadSizeOverrideDirective(stmt) should be false")
+	}
+
+	stmt, _ = Parse("update /*vt+ MAX_PAYLOAD_SIZE_OVERRIDE=1 */ users set name=1")
+	if !MaxPayloadSizeOverrideDirective(stmt) {
+		t.Errorf("d.MaxPayloadSizeOverrideDirective(stmt) should be true")
+	}
+
+	stmt, _ = Parse("select /*vt+ MAX_PAYLOAD_SIZE_OVERRIDE=1 */ * from users")
+	if !MaxPayloadSizeOverrideDirective(stmt) {
+		t.Errorf("d.MaxPayloadSizeOverrideDirective(stmt) should be true")
+	}
+
+	stmt, _ = Parse("delete /*vt+ MAX_PAYLOAD_SIZE_OVERRIDE=1 */ from users")
+	if !MaxPayloadSizeOverrideDirective(stmt) {
+		t.Errorf("d.MaxPayloadSizeOverrideDirective(stmt) should be true")
+	}
+}

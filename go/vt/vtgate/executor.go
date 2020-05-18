@@ -1418,9 +1418,6 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 		return nil, err
 	}
 
-	if !isValidPayloadSize(sql) && !sqlparser.MaxPayloadSizeOverrideDirective(stmt) {
-		return nil, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "query payload size above threshold")
-	}
 	if !e.normalize {
 		plan, err := planbuilder.BuildFromStmt(sql, stmt, vcursor, false, false)
 		if err != nil {
@@ -1452,6 +1449,9 @@ func (e *Executor) getPlan(vcursor *vcursorImpl, sql string, comments sqlparser.
 	plan, err := planbuilder.BuildFromStmt(normalized, rewrittenStatement, vcursor, result.NeedLastInsertID, result.NeedDatabase)
 	if err != nil {
 		return nil, err
+	}
+	if !isValidPayloadSize(sql) && !sqlparser.MaxPayloadSizeOverrideDirective(rewrittenStatement) {
+		return nil, vterrors.New(vtrpcpb.Code_RESOURCE_EXHAUSTED, "query payload size above threshold")
 	}
 	if !skipQueryPlanCache && !sqlparser.SkipQueryPlanCacheDirective(rewrittenStatement) {
 		e.plans.Set(planKey, plan)

@@ -339,5 +339,4 @@ func MaxPayloadSizeOverrideDirective(stmt Statement) bool {
 	default:
 		return false
 	}
-	return false
 }
