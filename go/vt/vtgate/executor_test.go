@@ -35,6 +35,7 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/google/go-cmp/cmp"
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/callerid"
@@ -1231,29 +1232,11 @@ func TestExecutorComment(t *testing.T) {
 func TestExecutorOther(t *testing.T) {
 	executor, sbc1, sbc2, sbclookup := createExecutorEnv()
 
-	stmts := []string{
-		"show other",
-		"analyze",
-		"describe",
-		"explain",
-		"repair",
-		"optimize",
+	type cnts struct {
+		Sbc1Cnt      int64
+		Sbc2Cnt      int64
+		SbcLookupCnt int64
 	}
-	wantCount := []int64{0, 0, 0}
-	for _, stmt := range stmts {
-		_, err := executor.Execute(context.Background(), "TestExecute", NewSafeSession(&vtgatepb.Session{TargetString: KsTestUnsharded}), stmt, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		gotCount := []int64{
-			sbc1.ExecCount.Get(),
-			sbc2.ExecCount.Get(),
-			sbclookup.ExecCount.Get(),
-		}
-		wantCount[2]++
-		if !reflect.DeepEqual(gotCount, wantCount) {
-			t.Errorf("Exec %s: %v, want %v", stmt, gotCount, wantCount)
-		}
 
 	tcs := []struct {
 		targetStr string
@@ -1304,17 +1287,39 @@ func TestExecutorOther(t *testing.T) {
 		},
 	}
 
-	_, err := executor.Execute(context.Background(), "TestExecute", NewSafeSession(&vtgatepb.Session{}), "analyze", nil)
-	want := errNoKeyspace.Error()
-	if err == nil || err.Error() != want {
-		t.Errorf("show vschema tables: %v, want %v", err, want)
+	stmts := []string{
+		"show tables",
+		"analyze table t1",
+		"describe select * from t1",
+		"explain select * from t1",
+		"repair table t1",
+		"optimize table t1",
 	}
 
-	// Can't target a range with handle other
-	_, err = executor.Execute(context.Background(), "TestExecute", NewSafeSession(&vtgatepb.Session{TargetString: "TestExecutor[-]"}), "analyze", nil)
-	want = "Destination can only be a single shard for statement: analyze, got: DestinationExactKeyRange(-)"
-	if err == nil || err.Error() != want {
-		t.Errorf("analyze: got %v, want %v", err, want)
+	for _, stmt := range stmts {
+		for _, tc := range tcs {
+			sbc1.ExecCount.Set(0)
+			sbc2.ExecCount.Set(0)
+			sbclookup.ExecCount.Set(0)
+
+			_, err := executor.Execute(context.Background(), "TestExecute", NewSafeSession(&vtgatepb.Session{TargetString: tc.targetStr}), stmt, nil)
+			if tc.hasNoKeyspaceErr {
+				assert.Error(t, err, errNoKeyspace)
+			} else if tc.hasDestinationShardErr {
+				assert.Errorf(t, err, "Destination can only be a single shard for statement: %s, got: DestinationExactKeyRange(-)", stmt)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			diff := cmp.Diff(tc.wantCnts, cnts{
+				Sbc1Cnt:      sbc1.ExecCount.Get(),
+				Sbc2Cnt:      sbc2.ExecCount.Get(),
+				SbcLookupCnt: sbclookup.ExecCount.Get(),
+			})
+			if diff != "" {
+				t.Errorf("stmt: %s\ntc: %+v\n-want,+got:\n%s", stmt, tc, diff)
+			}
+		}
 	}
 }
 
