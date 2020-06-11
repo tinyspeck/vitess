@@ -41,10 +41,12 @@ import (
 	"vitess.io/vitess/go/vt/topo/topoproto"
 	"vitess.io/vitess/go/vt/topotools"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 	"vitess.io/vitess/go/vt/worker/events"
 	"vitess.io/vitess/go/vt/wrangler"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
+	querypb "vitess.io/vitess/go/vt/proto/query"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 )
@@ -518,6 +520,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 	// read the vschema if needed
 	var keyspaceSchema *vindexes.KeyspaceSchema
+	var session *vtgateconn.VTGateSession
 	if *useV3ReshardingMode {
 		kschema, err := scw.wr.TopoServer().GetVSchema(ctx, scw.keyspace)
 		if err != nil {
@@ -531,6 +534,19 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		if err != nil {
 			return vterrors.Wrapf(err, "cannot build vschema for keyspace %v", scw.keyspace)
 		}
+
+		// @bramos starts building wild shit
+		// cheating
+		server := "vtgate-loadtest-dev-iad-0rr2:15999"
+		vtgateConn, err := vtgateconn.Dial(ctx, server)
+		if err != nil {
+			return fmt.Errorf("error connecting to vtgate '%v': %v", server, err)
+		}
+		// we're cheating hard here
+		targetString := "mainteam@REPLICA"
+
+		session = vtgateConn.Session(targetString, &querypb.ExecuteOptions{})
+		defer vtgateConn.Close()
 	}
 
 	// Now for each table, read data chunks and send them to all
@@ -541,7 +557,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
 			var keyResolver keyspaceIDResolver
 			if *useV3ReshardingMode {
-				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
+				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td, session)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
 				}

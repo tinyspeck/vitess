@@ -17,6 +17,8 @@ limitations under the License.
 package worker
 
 import (
+	"golang.org/x/net/context"
+
 	"vitess.io/vitess/go/vt/proto/vtrpc"
 	"vitess.io/vitess/go/vt/vterrors"
 
@@ -26,9 +28,12 @@ import (
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 
+	querypb "vitess.io/vitess/go/vt/proto/query"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
 )
 
 // This file defines the interface and implementations of sharding key resolvers.
@@ -94,10 +99,29 @@ func (r *v2Resolver) keyspaceID(row []sqltypes.Value) ([]byte, error) {
 type v3Resolver struct {
 	shardingColumnIndex int
 	vindex              vindexes.SingleColumn
+	vcursor             *jankyVCursorImpl
+}
+
+type jankyVCursorImpl struct {
+	session *vtgateconn.VTGateSession
+}
+
+// Implements VCursor#Execute
+func (jvci *jankyVCursorImpl) Execute(method string, query string, bindVars map[string]*querypb.BindVariable, isDML bool, co vtgatepb.CommitOrder) (*sqltypes.Result, error) {
+	return jvci.session.Execute(context.Background(), query, bindVars)
+}
+
+// Implements VCursor#ExecuteKeyspaceID
+func (jvci *jankyVCursorImpl) ExecuteKeyspaceID(keyspace string, ksid []byte, query string, bindVars map[string]*querypb.BindVariable, isDML, autocommit bool) (*sqltypes.Result, error) {
+	return nil, nil
 }
 
 // newV3ResolverFromTableDefinition returns a keyspaceIDResolver for a v3 table.
-func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, td *tabletmanagerdatapb.TableDefinition) (keyspaceIDResolver, error) {
+func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, td *tabletmanagerdatapb.TableDefinition, session *vtgateconn.VTGateSession) (keyspaceIDResolver, error) {
+	if session == nil {
+		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "session cannot be nil")
+	}
+
 	if td.Type != tmutils.TableBaseTable {
 		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "a keyspaceID resolver can only be created for a base table, got %v", td.Type)
 	}
@@ -120,7 +144,8 @@ func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, t
 	return &v3Resolver{
 		shardingColumnIndex: columnIndex,
 		// Only SingleColumn vindexes are returned by FindVindexForSharding.
-		vindex: colVindex.Vindex.(vindexes.SingleColumn),
+		vindex:  colVindex.Vindex.(vindexes.SingleColumn),
+		vcursor: &jankyVCursorImpl{session: session},
 	}, nil
 }
 
@@ -158,7 +183,7 @@ func newV3ResolverFromColumnList(keyspaceSchema *vindexes.KeyspaceSchema, name s
 // keyspaceID implements the keyspaceIDResolver interface.
 func (r *v3Resolver) keyspaceID(row []sqltypes.Value) ([]byte, error) {
 	v := row[r.shardingColumnIndex]
-	destinations, err := r.vindex.Map(nil, []sqltypes.Value{v})
+	destinations, err := r.vindex.Map(r.vcursor, []sqltypes.Value{v})
 	if err != nil {
 		return nil, err
 	}
