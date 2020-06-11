@@ -1348,7 +1348,7 @@ func (scw *SplitCloneWorker) createKeyResolver(td *tabletmanagerdatapb.TableDefi
 	}
 
 	if *useV3ReshardingMode {
-		return newV3ResolverFromTableDefinition(scw.keyspaceSchema, td)
+		return newV3ResolverFromTableDefinition(scw.keyspaceSchema, td, nil)
 	}
 	return newV2Resolver(scw.destinationKeyspaceInfo, td)
 }
