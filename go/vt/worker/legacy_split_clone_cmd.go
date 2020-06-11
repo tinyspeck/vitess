@@ -93,6 +93,7 @@ func commandLegacySplitClone(wi *Instance, wr *wrangler.Wrangler, subFlags *flag
 	destinationPackCount := subFlags.Int("destination_pack_count", defaultDestinationPackCount, "number of packets to pack in one destination insert")
 	destinationWriterCount := subFlags.Int("destination_writer_count", defaultDestinationWriterCount, "number of concurrent RPCs to execute on the destination")
 	minHealthyRdonlyTablets := subFlags.Int("min_healthy_rdonly_tablets", defaultMinHealthyTablets, "minimum number of healthy RDONLY tablets before taking out one")
+	vcursorServerAddr := subFlags.String("vcursor_server", "", "vcursor host and grpc port")
 	maxTPS := subFlags.Int64("max_tps", defaultMaxTPS, "if non-zero, limit copy to maximum number of (write) transactions/second on the destination (unlimited by default)")
 	if err := subFlags.Parse(args); err != nil {
 		return nil, err
@@ -110,7 +111,19 @@ func commandLegacySplitClone(wi *Instance, wr *wrangler.Wrangler, subFlags *flag
 	if *excludeTables != "" {
 		excludeTableArray = strings.Split(*excludeTables, ",")
 	}
-	worker, err := NewLegacySplitCloneWorker(wr, wi.cell, keyspace, shard, excludeTableArray, *sourceReaderCount, *destinationPackCount, *destinationWriterCount, *minHealthyRdonlyTablets, *maxTPS)
+	worker, err := NewLegacySplitCloneWorker(
+		wr,
+		wi.cell,
+		keyspace,
+		shard,
+		excludeTableArray,
+		*sourceReaderCount,
+		*destinationPackCount,
+		*destinationWriterCount,
+		*minHealthyRdonlyTablets,
+		*maxTPS,
+		*vcursorServerAddr,
+	)
 	if err != nil {
 		return nil, vterrors.Wrap(err, "cannot create split clone worker")
 	}
@@ -183,7 +196,7 @@ func interactiveLegacySplitClone(ctx context.Context, wi *Instance, wr *wrangler
 	}
 
 	// start the clone job
-	wrk, err := NewLegacySplitCloneWorker(wr, wi.cell, keyspace, shard, excludeTableArray, int(sourceReaderCount), int(destinationPackCount), int(destinationWriterCount), int(minHealthyRdonlyTablets), maxTPS)
+	wrk, err := NewLegacySplitCloneWorker(wr, wi.cell, keyspace, shard, excludeTableArray, int(sourceReaderCount), int(destinationPackCount), int(destinationWriterCount), int(minHealthyRdonlyTablets), maxTPS, "")
 	if err != nil {
 		return nil, nil, nil, vterrors.Wrap(err, "cannot create worker")
 	}

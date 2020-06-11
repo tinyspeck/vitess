@@ -66,7 +66,9 @@ type LegacySplitCloneWorker struct {
 	destinationWriterCount  int
 	minHealthyRdonlyTablets int
 	maxTPS                  int64
-	cleaner                 *wrangler.Cleaner
+	vcursorServerAddr       string
+
+	cleaner *wrangler.Cleaner
 
 	// populated during WorkerStateInit, read-only after that
 	keyspaceInfo      *topo.KeyspaceInfo
@@ -101,7 +103,14 @@ type LegacySplitCloneWorker struct {
 }
 
 // NewLegacySplitCloneWorker returns a new LegacySplitCloneWorker object.
-func NewLegacySplitCloneWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, excludeTables []string, sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int, maxTPS int64) (Worker, error) {
+func NewLegacySplitCloneWorker(
+	wr *wrangler.Wrangler,
+	cell, keyspace, shard string,
+	excludeTables []string,
+	sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int,
+	maxTPS int64,
+	vcursorServerAddr string,
+) (Worker, error) {
 	if maxTPS != throttler.MaxRateModuleDisabled {
 		wr.Logger().Infof("throttling enabled and set to a max of %v transactions/second", maxTPS)
 	}
@@ -119,6 +128,7 @@ func NewLegacySplitCloneWorker(wr *wrangler.Wrangler, cell, keyspace, shard stri
 		destinationPackCount:    destinationPackCount,
 		destinationWriterCount:  destinationWriterCount,
 		minHealthyRdonlyTablets: minHealthyRdonlyTablets,
+		vcursorServerAddr:       vcursorServerAddr,
 		maxTPS:                  maxTPS,
 		cleaner:                 &wrangler.Cleaner{},
 
@@ -537,10 +547,9 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 		// @bramos starts building wild shit
 		// cheating
-		server := "vtgate-loadtest-dev-iad-0rr2:15999"
-		vtgateConn, err := vtgateconn.Dial(ctx, server)
+		vtgateConn, err := vtgateconn.Dial(ctx, scw.vcursorServerAddr)
 		if err != nil {
-			return fmt.Errorf("error connecting to vtgate '%v': %v", server, err)
+			return fmt.Errorf("error connecting to vtgate '%v': %v", scw.vcursorServerAddr, err)
 		}
 		// we're cheating hard here
 		targetString := "mainteam@REPLICA"
