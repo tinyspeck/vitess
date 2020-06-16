@@ -150,7 +150,7 @@ func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, t
 }
 
 // newV3ResolverFromColumnList returns a keyspaceIDResolver for a v3 table.
-func newV3ResolverFromColumnList(keyspaceSchema *vindexes.KeyspaceSchema, name string, columns []string) (keyspaceIDResolver, error) {
+func newV3ResolverFromColumnList(keyspaceSchema *vindexes.KeyspaceSchema, name string, columns []string, session *vtgateconn.VTGateSession) (keyspaceIDResolver, error) {
 	tableSchema, ok := keyspaceSchema.Tables[name]
 	if !ok {
 		return nil, vterrors.Errorf(vtrpc.Code_FAILED_PRECONDITION, "no vschema definition for table %v", name)
@@ -176,7 +176,8 @@ func newV3ResolverFromColumnList(keyspaceSchema *vindexes.KeyspaceSchema, name s
 	return &v3Resolver{
 		shardingColumnIndex: columnIndex,
 		// Only SingleColumn vindexes are returned by FindVindexForSharding.
-		vindex: colVindex.Vindex.(vindexes.SingleColumn),
+		vindex:  colVindex.Vindex.(vindexes.SingleColumn),
+		vcursor: &jankyVCursorImpl{session: session},
 	}, nil
 }
 

@@ -42,6 +42,7 @@ import (
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topo/topoproto"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 	"vitess.io/vitess/go/vt/vttablet/queryservice"
 	"vitess.io/vitess/go/vt/vttablet/tabletconn"
 
@@ -286,10 +287,21 @@ func CreateTargetFrom(tablet *topodatapb.Tablet) *query.Target {
 // If keyspaceSchema is passed in, we go into v3 mode, and we ask for all
 // source data, and filter here. Otherwise we stick with v2 mode, where we can
 // ask the source tablet to do the filtering.
-func TableScanByKeyRange(ctx context.Context, log logutil.Logger, ts *topo.Server, tabletAlias *topodatapb.TabletAlias, td *tabletmanagerdatapb.TableDefinition, keyRange *topodatapb.KeyRange, keyspaceSchema *vindexes.KeyspaceSchema, shardingColumnName string, shardingColumnType topodatapb.KeyspaceIdType) (*QueryResultReader, error) {
+func TableScanByKeyRange(
+	ctx context.Context,
+	log logutil.Logger,
+	ts *topo.Server,
+	tabletAlias *topodatapb.TabletAlias,
+	td *tabletmanagerdatapb.TableDefinition,
+	keyRange *topodatapb.KeyRange,
+	keyspaceSchema *vindexes.KeyspaceSchema,
+	shardingColumnName string,
+	shardingColumnType topodatapb.KeyspaceIdType,
+	session *vtgateconn.VTGateSession,
+) (*QueryResultReader, error) {
 	if keyspaceSchema != nil {
 		// switch to v3 mode.
-		keyResolver, err := newV3ResolverFromColumnList(keyspaceSchema, td.Name, orderedColumns(td))
+		keyResolver, err := newV3ResolverFromColumnList(keyspaceSchema, td.Name, orderedColumns(td), session)
 		if err != nil {
 			return nil, vterrors.Wrapf(err, "cannot resolve v3 sharding keys for table %v", td.Name)
 		}
