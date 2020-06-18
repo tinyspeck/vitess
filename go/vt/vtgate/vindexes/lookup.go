@@ -17,11 +17,15 @@ limitations under the License.
 package vindexes
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
+
+	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
 )
@@ -239,7 +243,24 @@ func (lu *LookupUnique) Map(vcursor VCursor, ids []sqltypes.Value) ([]key.Destin
 		case 0:
 			out = append(out, key.DestinationNone{})
 		case 1:
-			out = append(out, key.DestinationKeyspaceID(result.Rows[0][0].ToBytes()))
+			value := result.Rows[0][0]
+			valueBytes := value.ToBytes()
+
+			// @bramos: this is a nasty hack that we're using to treat integer based keyspace ids
+			// as little endian integers instead of mysql's protocol version of it that we get
+			// back after a lookup
+			if value.Type() == querypb.Type_UINT32 {
+				remadeVs, err := strconv.ParseInt(string(valueBytes), 0, 64)
+				if err != nil {
+					return nil, fmt.Errorf("Lookup.Map: couldn't parse bytes: %v", err)
+				}
+				bs := make([]byte, 8)
+				binary.LittleEndian.PutUint64(bs, uint64(remadeVs))
+
+				out = append(out, key.DestinationKeyspaceID(bs))
+			} else {
+				out = append(out, key.DestinationKeyspaceID(valueBytes))
+			}
 		default:
 			return nil, fmt.Errorf("Lookup.Map: unexpected multiple results from vindex %s: %v", lu.lkp.Table, ids[i])
 		}
