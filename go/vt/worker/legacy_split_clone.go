@@ -561,9 +561,12 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 	// Now for each table, read data chunks and send them to all
 	// insertChannels
 	sourceWaitGroup := sync.WaitGroup{}
+	tablesToReplicate := make(map[string]bool, len(sourceSchemaDefinition.TableDefinitions))
 	for shardIndex := range scw.sourceShards {
 		sema := sync2.NewSemaphore(scw.sourceReaderCount, 0)
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
+			tablesToReplicate[td.GetName()] = true
+
 			var keyResolver keyspaceIDResolver
 			if *useV3ReshardingMode {
 				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td, session)
@@ -639,6 +642,11 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		sourcePositions[shardIndex] = status.Position
 	}
 
+	tablesToReplicateSlice := make([]string, len(tablesToReplicate))
+	for t := range tablesToReplicate {
+		tablesToReplicateSlice = append(tablesToReplicateSlice, t)
+	}
+
 	for _, si := range scw.destinationShards {
 		keyspaceAndShard := topoproto.KeyspaceShardString(si.Keyspace(), si.ShardName())
 		dbName := scw.destinationDbNames[keyspaceAndShard]
@@ -653,9 +661,22 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 				bls := &binlogdatapb.BinlogSource{
 					Keyspace: src.Keyspace(),
 					Shard:    src.ShardName(),
-					KeyRange: kr,
+					// @bramos: this is meant for a merge so we want to unconditionally replicate
+					// the table to the destination shard
+					Tables: tablesToReplicateSlice,
 				}
-				qr, err := exc.vreplicationExec(ctx, binlogplayer.CreateVReplication("LegacySplitClone", bls, sourcePositions[shardIndex], scw.maxTPS, throttler.ReplicationLagModuleDisabled, time.Now().Unix(), dbName))
+				qr, err := exc.vreplicationExec(
+					ctx,
+					binlogplayer.CreateVReplication(
+						"LegacySplitClone",
+						bls,
+						sourcePositions[shardIndex],
+						scw.maxTPS,
+						throttler.ReplicationLagModuleDisabled,
+						time.Now().Unix(),
+						dbName,
+					),
+				)
 				if err != nil {
 					processError("vreplication queries failed: %v", err)
 					break
