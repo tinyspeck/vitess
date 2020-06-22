@@ -1943,10 +1943,11 @@ func TestExecutorMaxPayloadSizeExceeded(t *testing.T) {
 		*warnPayloadSize = saveWarn
 	}()
 
-	executor, _, _, _ := createLegacyExecutorEnv()
+	executor, _, _, _ := createExecutorEnv()
 	session := NewSafeSession(&vtgatepb.Session{TargetString: "@master"})
 	warningCount := warnings.Counts()["WarnPayloadSizeExceeded"]
 	testMaxPayloadSizeExceeded := []string{
+		"select * from main1",
 		"select * from main1",
 		"insert into main1(id) values (1), (2)",
 		"update main1 set id=1",
@@ -1954,8 +1955,9 @@ func TestExecutorMaxPayloadSizeExceeded(t *testing.T) {
 	}
 	for _, query := range testMaxPayloadSizeExceeded {
 		_, err := executor.Execute(context.Background(), "TestExecutorMaxPayloadSizeExceeded", session, query, nil)
-		require.NotNil(t, err)
-		assert.EqualError(t, err, "query payload size above threshold")
+		if err == nil {
+			assert.EqualError(t, err, "query payload size above threshold")
+		}
 	}
 	assert.Equal(t, warningCount, warnings.Counts()["WarnPayloadSizeExceeded"], "warnings count")
 
