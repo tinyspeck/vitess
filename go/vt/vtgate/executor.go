@@ -1125,7 +1125,7 @@ func (e *Executor) StreamExecute(ctx context.Context, method string, safeSession
 		skipQueryPlanCache(safeSession),
 		logStats,
 	)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "query payload size above threshold") {
 		logStats.Error = err
 		return err
 	}
@@ -1508,9 +1508,6 @@ func isValidPayloadSize(query string) bool {
 	if *maxPayloadSize > 0 && payloadSize > *maxPayloadSize {
 		return false
 	}
-	if *warnPayloadSize > 0 && payloadSize > *warnPayloadSize {
-		warnings.Add("WarnPayloadSizeExceeded", 1)
-	}
 	return true
 }
 
@@ -1593,6 +1590,10 @@ func (e *Executor) handlePrepare(ctx context.Context, safeSession *SafeSession, 
 	)
 	execStart := time.Now()
 	logStats.PlanTime = execStart.Sub(logStats.StartTime)
+
+	if *warnPayloadSize > 0 && len(query) > *warnPayloadSize {
+		warnings.Add("WarnPayloadSizeExceeded", 1)
+	}
 
 	if err != nil {
 		logStats.Error = err
