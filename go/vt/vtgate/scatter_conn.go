@@ -28,6 +28,7 @@ import (
 	"vitess.io/vitess/go/stats"
 	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/discovery"
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
@@ -149,6 +150,10 @@ func (stc *ScatterConn) Execute(
 				innerqr, transactionID, err = rs.QueryService.BeginExecute(ctx, rs.Target, query, bindVars, options)
 			default:
 				innerqr, err = rs.QueryService.Execute(ctx, rs.Target, query, bindVars, transactionID, options)
+				log.Infof(
+					"QueryService.Execute target:%s query:%s bindVars:%v innerqr:%v err:%v",
+					rs.Target.String(), query, bindVars, innerqr, err,
+				)
 			}
 			if err != nil {
 				return transactionID, err

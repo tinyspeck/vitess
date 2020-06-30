@@ -17,9 +17,12 @@ limitations under the License.
 package vtgate
 
 import (
+	"strings"
+
 	"golang.org/x/net/context"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
@@ -79,6 +82,12 @@ func (res *Resolver) Execute(
 	autocommit := len(rss) == 1 && canAutocommit && session.AutocommitApproval()
 
 	for {
+		msgs := []string{}
+		for _, rs := range rss {
+			msgs = append(msgs, rs.Target.String())
+		}
+		log.Infof("resolved the following targets: %v", strings.Join(msgs, ", "))
+
 		qr, err := res.scatterConn.Execute(
 			ctx,
 			sql,
@@ -91,6 +100,7 @@ func (res *Resolver) Execute(
 			autocommit,
 		)
 		if isRetryableError(err) {
+			log.Infof("retrying Execute due to %v", err)
 			newRss, err := res.resolver.ResolveDestination(ctx, keyspace, tabletType, destination)
 			if err != nil {
 				return nil, err
@@ -103,6 +113,7 @@ func (res *Resolver) Execute(
 			}
 		}
 		if err != nil {
+			log.Infof("got error in resolver.Execute %v", err)
 			return nil, err
 		}
 		return qr, err
