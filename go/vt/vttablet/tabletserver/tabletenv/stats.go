@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"vitess.io/vitess/go/stats"
+	"vitess.io/vitess/go/vt/log"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 	"vitess.io/vitess/go/vt/servenv"
 )
@@ -47,6 +48,7 @@ type Stats struct {
 
 // NewStats instantiates a new set of stats scoped by exporter.
 func NewStats(exporter *servenv.Exporter) *Stats {
+	log.Infof("tabletstats exporter %v", exporter)
 	stats := &Stats{
 		MySQLTimings: exporter.NewTimings("Mysql", "MySQl query time", "operation"),
 		QueryTimings: exporter.NewTimings("Queries", "MySQL query timings", "plan_type"),

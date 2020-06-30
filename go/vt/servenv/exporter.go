@@ -183,7 +183,7 @@ func (e *Exporter) NewCountersFuncWithMultiLabels(name, help string, labels []st
 	// If e.name is empty, it's a pass-through.
 	// If name is empty, it's an unexported var.
 	if e.name == "" || name == "" {
-		return stats.NewCountersFuncWithMultiLabels(name, help, labels, f)
+		return stats.NewCountersFuncWithMultiLabels("", help, labels, f)
 	}
 	lvar := stats.NewCountersFuncWithMultiLabels("", help, labels, f)
 	_ = e.createCountsTracker(name, help, labels, lvar, replaceOnDup, typeCounter)
@@ -221,7 +221,7 @@ func (e *Exporter) createCountsTracker(name, help string, labels []string, lvar 
 // NewGaugesFuncWithMultiLabels creates a name-spaced equivalent for stats.NewGaugesFuncWithMultiLabels.
 func (e *Exporter) NewGaugesFuncWithMultiLabels(name, help string, labels []string, f func() map[string]int64) *stats.GaugesFuncWithMultiLabels {
 	if e.name == "" || name == "" {
-		return stats.NewGaugesFuncWithMultiLabels(name, help, labels, f)
+		return stats.NewGaugesFuncWithMultiLabels("", help, labels, f)
 	}
 	lvar := stats.NewGaugesFuncWithMultiLabels("", help, labels, f)
 	_ = e.createCountsTracker(name, help, labels, lvar, replaceOnDup, typeGauge)
@@ -231,7 +231,7 @@ func (e *Exporter) NewGaugesFuncWithMultiLabels(name, help string, labels []stri
 // NewCounter creates a name-spaced equivalent for stats.NewCounter.
 func (e *Exporter) NewCounter(name string, help string) *stats.Counter {
 	if e.name == "" || name == "" {
-		return stats.NewCounter(name, help)
+		return stats.NewCounter("", help)
 	}
 	lvar := stats.NewCounter("", help)
 	if exists := e.createCountTracker(name, help, lvar, reuseOnDup, typeCounter); exists != nil {
@@ -271,7 +271,7 @@ func (e *Exporter) createCountTracker(name, help string, lvar singleCountVar, on
 // NewGauge creates a name-spaced equivalent for stats.NewGauge.
 func (e *Exporter) NewGauge(name string, help string) *stats.Gauge {
 	if e.name == "" || name == "" {
-		return stats.NewGauge(name, help)
+		return stats.NewGauge("", help)
 	}
 	lvar := stats.NewGauge("", help)
 	if exists := e.createCountTracker(name, help, lvar, reuseOnDup, typeCounter); exists != nil {
@@ -283,7 +283,7 @@ func (e *Exporter) NewGauge(name string, help string) *stats.Gauge {
 // NewCounterFunc creates a name-spaced equivalent for stats.NewCounterFunc.
 func (e *Exporter) NewCounterFunc(name string, help string, f func() int64) *stats.CounterFunc {
 	if e.name == "" || name == "" {
-		return stats.NewCounterFunc(name, help, f)
+		return stats.NewCounterFunc("", help, f)
 	}
 	lvar := stats.NewCounterFunc("", help, f)
 	_ = e.createCountTracker(name, help, lvar, replaceOnDup, typeCounter)
@@ -293,7 +293,7 @@ func (e *Exporter) NewCounterFunc(name string, help string, f func() int64) *sta
 // NewGaugeFunc creates a name-spaced equivalent for stats.NewGaugeFunc.
 func (e *Exporter) NewGaugeFunc(name string, help string, f func() int64) *stats.GaugeFunc {
 	if e.name == "" || name == "" {
-		return stats.NewGaugeFunc(name, help, f)
+		return stats.NewGaugeFunc("", help, f)
 	}
 	lvar := stats.NewGaugeFunc("", help, f)
 	_ = e.createCountTracker(name, help, lvar, replaceOnDup, typeGauge)
@@ -303,7 +303,7 @@ func (e *Exporter) NewGaugeFunc(name string, help string, f func() int64) *stats
 // NewCounterDurationFunc creates a name-spaced equivalent for stats.NewCounterDurationFunc.
 func (e *Exporter) NewCounterDurationFunc(name string, help string, f func() time.Duration) *stats.CounterDurationFunc {
 	if e.name == "" || name == "" {
-		return stats.NewCounterDurationFunc(name, help, f)
+		return stats.NewCounterDurationFunc("", help, f)
 	}
 	lvar := stats.NewCounterDurationFunc("", help, f)
 	_ = e.createCountTracker(name, help, lvar, replaceOnDup, typeCounter)
@@ -313,7 +313,7 @@ func (e *Exporter) NewCounterDurationFunc(name string, help string, f func() tim
 // NewGaugeDurationFunc creates a name-spaced equivalent for stats.NewGaugeDurationFunc.
 func (e *Exporter) NewGaugeDurationFunc(name string, help string, f func() time.Duration) *stats.GaugeDurationFunc {
 	if e.name == "" || name == "" {
-		return stats.NewGaugeDurationFunc(name, help, f)
+		return stats.NewGaugeDurationFunc("", help, f)
 	}
 	lvar := stats.NewGaugeDurationFunc("", help, f)
 	_ = e.createCountTracker(name, help, lvar, replaceOnDup, typeGauge)
@@ -324,7 +324,7 @@ func (e *Exporter) NewGaugeDurationFunc(name string, help string, f func() time.
 // Tags are ignored if the exporter is named.
 func (e *Exporter) NewCountersWithSingleLabel(name, help string, label string, tags ...string) *stats.CountersWithSingleLabel {
 	if e.name == "" || name == "" {
-		return stats.NewCountersWithSingleLabel(name, help, label, tags...)
+		return stats.NewCountersWithSingleLabel("", help, label, tags...)
 	}
 	lvar := stats.NewCountersWithSingleLabel("", help, label)
 	if exists := e.createCountsTracker(name, help, []string{label}, lvar, reuseOnDup, typeCounter); exists != nil {
@@ -337,7 +337,7 @@ func (e *Exporter) NewCountersWithSingleLabel(name, help string, label string, t
 // Tags are ignored if the exporter is named.
 func (e *Exporter) NewGaugesWithSingleLabel(name, help string, label string, tags ...string) *stats.GaugesWithSingleLabel {
 	if e.name == "" || name == "" {
-		return stats.NewGaugesWithSingleLabel(name, help, label, tags...)
+		return stats.NewGaugesWithSingleLabel("", help, label, tags...)
 	}
 
 	lvar := stats.NewGaugesWithSingleLabel("", help, label)
@@ -350,7 +350,7 @@ func (e *Exporter) NewGaugesWithSingleLabel(name, help string, label string, tag
 // NewCountersWithMultiLabels creates a name-spaced equivalent for stats.NewCountersWithMultiLabels.
 func (e *Exporter) NewCountersWithMultiLabels(name, help string, labels []string) *stats.CountersWithMultiLabels {
 	if e.name == "" || name == "" {
-		return stats.NewCountersWithMultiLabels(name, help, labels)
+		return stats.NewCountersWithMultiLabels("", help, labels)
 	}
 
 	lvar := stats.NewCountersWithMultiLabels("", help, labels)
@@ -363,7 +363,7 @@ func (e *Exporter) NewCountersWithMultiLabels(name, help string, labels []string
 // NewGaugesWithMultiLabels creates a name-spaced equivalent for stats.NewGaugesWithMultiLabels.
 func (e *Exporter) NewGaugesWithMultiLabels(name, help string, labels []string) *stats.GaugesWithMultiLabels {
 	if e.name == "" || name == "" {
-		return stats.NewGaugesWithMultiLabels(name, help, labels)
+		return stats.NewGaugesWithMultiLabels("", help, labels)
 	}
 
 	lvar := stats.NewGaugesWithMultiLabels("", help, labels)
@@ -429,7 +429,7 @@ func (e *Exporter) NewMultiTimings(name string, help string, labels []string) *M
 // The function currently just returns an unexported variable.
 func (e *Exporter) NewRates(name string, singleCountVar multiCountVar, samples int, interval time.Duration) *stats.Rates {
 	if e.name == "" || name == "" {
-		return stats.NewRates(name, singleCountVar, samples, interval)
+		return stats.NewRates("", singleCountVar, samples, interval)
 	}
 
 	exporterMu.Lock()
@@ -452,7 +452,7 @@ func (e *Exporter) NewRates(name string, singleCountVar multiCountVar, samples i
 // The function currently just returns an unexported variable.
 func (e *Exporter) NewHistogram(name, help string, cutoffs []int64) *stats.Histogram {
 	if e.name == "" || name == "" {
-		return stats.NewHistogram(name, help, cutoffs)
+		return stats.NewHistogram("", help, cutoffs)
 	}
 	hist := stats.NewHistogram("", help, cutoffs)
 	e.addToOtherVars(name, hist)
