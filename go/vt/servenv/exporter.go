@@ -378,7 +378,7 @@ func (e *Exporter) NewGaugesWithMultiLabels(name, help string, labels []string) 
 func (e *Exporter) NewTimings(name string, help string, label string) *TimingsWrapper {
 	if e.name == "" || name == "" {
 		return &TimingsWrapper{
-			timings: stats.NewMultiTimings(name, help, []string{label}),
+			timings: stats.NewMultiTimings("", help, []string{label}),
 		}
 	}
 
@@ -404,7 +404,7 @@ func (e *Exporter) NewTimings(name string, help string, label string) *TimingsWr
 func (e *Exporter) NewMultiTimings(name string, help string, labels []string) *MultiTimingsWrapper {
 	if e.name == "" || name == "" {
 		return &MultiTimingsWrapper{
-			timings: stats.NewMultiTimings(name, help, labels),
+			timings: stats.NewMultiTimings("", help, labels),
 		}
 	}
 
