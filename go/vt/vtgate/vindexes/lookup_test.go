@@ -17,7 +17,9 @@ limitations under the License.
 package vindexes
 
 import (
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -32,6 +34,12 @@ import (
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
 )
+
+func init() {
+	RegisterValueEncoder("encoder_err", func(_ sqltypes.Value) ([]byte, error) {
+		return nil, fmt.Errorf("an error")
+	})
+}
 
 // LookupNonUnique tests are more comprehensive than others.
 // They also test lookupInternal functionality.
@@ -122,6 +130,23 @@ func TestLookupNonUniqueNew(t *testing.T) {
 	}
 }
 
+func TestLookupNonUniqueNewWithEncoders(t *testing.T) {
+	lu, err := CreateVindex("lookup", "lookup", map[string]string{
+		"table":   "t",
+		"from":    "fromc,fromc2",
+		"to":      "toc",
+		"encoder": "numeric_uint64",
+	})
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Failed to construct LookupNonUnique with encoder: %v", err))
+	}
+
+	encoder := lu.(*LookupNonUnique).encoder
+	if encoder == nil {
+		t.Errorf("Expected encoder defined for LookupNonUnique vindex, got none")
+	}
+}
+
 func TestLookupNonUniqueInfo(t *testing.T) {
 	lookupNonUnique := createLookup(t, "lookup", false)
 	assert.Equal(t, 20, lookupNonUnique.Cost())
@@ -180,6 +205,85 @@ func TestLookupNonUniqueMap(t *testing.T) {
 		t.Errorf("lookupNonUnique(query fail) err: %v, want %s", err, wantErr)
 	}
 	vc.mustFail = false
+}
+
+func TestLookupNonUniqueMapWithEncoders(t *testing.T) {
+	vindex, err := CreateVindex("lookup", "lookup", map[string]string{
+		"table":   "t",
+		"from":    "fromc,fromc2",
+		"to":      "toc",
+		"encoder": "numeric_uint64",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lookupNonUnique := vindex.(SingleColumn)
+	vc := &vcursor{numRows: 2}
+	got, err := lookupNonUnique.Map(vc, []sqltypes.Value{sqltypes.NewInt64(1), sqltypes.NewInt64(2)})
+	if err != nil {
+		t.Error(err)
+	}
+
+	k1Bytes, _ := numericUint64(sqltypes.NewUint64(uint64(1)))
+	k2Bytes, _ := numericUint64(sqltypes.NewUint64(uint64(2)))
+
+	want := []key.Destination{
+		key.DestinationKeyspaceIDs([][]byte{
+			k1Bytes,
+			k2Bytes,
+		}),
+		key.DestinationKeyspaceIDs([][]byte{
+			k1Bytes,
+			k2Bytes,
+		}),
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("LookupNonUnique.Map(): mismatch\ngot:  %#v\nwant: %#v", got, want)
+	}
+}
+
+func TestLookupNonUniqueNewHandlesMissingEncoder(t *testing.T) {
+	lu, err := CreateVindex("lookup", "lookup", map[string]string{
+		"table":   "t",
+		"from":    "fromc",
+		"to":      "toc",
+		"encoder": "encoder_bad_name",
+	})
+
+	if err == nil {
+		t.Errorf("expected error when constructing Lookup referencing an unknown encoder")
+	}
+
+	if lu != nil {
+		t.Errorf("Lookup returned, should be nil")
+	}
+}
+
+func TestLookupNonUniqueMapWithErrorEncoder(t *testing.T) {
+	lu, err := CreateVindex("lookup", "lookup", map[string]string{
+		"table":   "t",
+		"from":    "fromc",
+		"to":      "toc",
+		"encoder": "encoder_err",
+	})
+	if err != nil {
+		t.Fatal("Unable to create Lookup vindex")
+	}
+
+	vc := &vcursor{numRows: 1}
+	got, err := lu.(SingleColumn).Map(
+		vc,
+		[]sqltypes.Value{sqltypes.NewUint64(uint64(1))},
+	)
+	if err == nil {
+		t.Errorf("Lookup.Map did return an error, expected an error")
+	}
+
+	if got != nil {
+		t.Errorf("Lookup.Map returned a key.Destination, expected nil")
+	}
 }
 
 func TestLookupNonUniqueMapAutocommit(t *testing.T) {
@@ -560,4 +664,68 @@ func createLookup(t *testing.T, name string, writeOnly bool) SingleColumn {
 		t.Fatal(err)
 	}
 	return l.(SingleColumn)
+}
+
+func TestNumericAsHexString(t *testing.T) {
+	fals := false
+	var cases = []struct {
+		input     sqltypes.Value
+		wantBytes []byte
+		wantErr   error
+		included  *bool // nil | true => true
+	}{
+		{
+			input:     sqltypes.NewVarChar("35"),
+			wantBytes: []byte{0, 0x35},
+		},
+		{
+			input:     sqltypes.NewVarChar("10"),
+			wantBytes: []byte{0, 0x10},
+		},
+		{
+			input:     sqltypes.NewInt64(40),
+			wantBytes: []byte{0, 0x40},
+		},
+		{
+			input:     sqltypes.NewInt64(400),
+			wantBytes: []byte{0x04, 0},
+			included:  &fals,
+		},
+		{
+			input:   sqltypes.NewVarChar("test"),
+			wantErr: fmt.Errorf("encoder could not parse"),
+		},
+		{
+			input:   sqltypes.NewFloat64(float64(1)),
+			wantErr: fmt.Errorf("FLOAT64 unsupported column type"),
+		},
+	}
+
+	s, _ := hex.DecodeString("0001")
+	e, _ := hex.DecodeString("0080")
+	kr := &topodatapb.KeyRange{Start: s, End: e}
+
+	for _, c := range cases {
+		got, err := numericAsHexString(c.input)
+		if !reflect.DeepEqual(err, c.wantErr) {
+			t.Errorf("want: %v, got: %v", c.wantErr, err)
+		}
+
+		if !reflect.DeepEqual(c.wantBytes, got) {
+			t.Errorf("Expected %v to produce %v, got %v", c.input, c.wantBytes, got)
+		}
+
+		if c.wantBytes != nil {
+			included := c.included == nil || *c.included
+			if key.KeyRangeContains(kr, got) != included {
+				not1 := " not"
+				not2 := ""
+				if included {
+					not1 = ""
+					not2 = " not"
+				}
+				t.Errorf("Want %v should%s fall within [0001, 0080) but it did%s", c.input, not1, not2)
+			}
+		}
+	}
 }
