@@ -29,14 +29,20 @@ import (
 	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
 )
 
+type lookupCacheConfig struct {
+	Type      string `json:"type"`
+	ItemCount int    `json:"item_count"`
+}
+
 // lookupInternal implements the functions for the Lookup vindexes.
 type lookupInternal struct {
-	Table         string   `json:"table"`
-	FromColumns   []string `json:"from_columns"`
-	To            string   `json:"to"`
-	Autocommit    bool     `json:"autocommit,omitempty"`
-	Upsert        bool     `json:"upsert,omitempty"`
-	IgnoreNulls   bool     `json:"ignore_nulls,omitempty"`
+	Table         string             `json:"table"`
+	FromColumns   []string           `json:"from_columns"`
+	To            string             `json:"to"`
+	Autocommit    bool               `json:"autocommit,omitempty"`
+	Upsert        bool               `json:"upsert,omitempty"`
+	IgnoreNulls   bool               `json:"ignore_nulls,omitempty"`
+	CacheConfig   *lookupCacheConfig `json:"cache_config,omitempty"`
 	sel, ver, del string
 }
 
