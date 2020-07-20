@@ -124,6 +124,7 @@ type cacheItem struct {
 func (cacheItem) Size() int { return 1 }
 
 // Lookup performs a lookup for the ids.
+// TODO: should the caching bit be an impl wrapper around this instead of baked in?
 func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value) ([]*sqltypes.Result, error) {
 	if vcursor == nil {
 		return nil, fmt.Errorf("cannot perform lookup: no vcursor provided")
@@ -200,9 +201,11 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value) ([]*sql
 		if err != nil {
 			return nil, fmt.Errorf("lookup.Map: %v", err)
 		}
+		// Map<String, Array<Array<sqltypes.Value>>
 		resultMap := make(map[string][][]sqltypes.Value)
 		for _, row := range result.Rows {
-			resultMap[string(row[0].ToString())] = append(resultMap[string(row[0].ToString())], []sqltypes.Value{row[1]})
+			idKey := row[0].ToString()
+			resultMap[idKey] = append(resultMap[idKey], []sqltypes.Value{row[1]})
 		}
 
 		for _, id := range ids {
