@@ -12,9 +12,9 @@ func createLookupInternal(cc *string) *lookupInternal {
 	li := &lookupInternal{}
 
 	params := map[string]string{
-		"table":        "t",
-		"from_columns": "fromc",
-		"to":           "to",
+		"table": "t",
+		"from":  "fromc",
+		"to":    "toc",
 	}
 	if cc != nil {
 		params["cache_config"] = *cc
@@ -85,13 +85,44 @@ func debugDumpCache(c *cache.LRUCache) {
 }
 
 var (
-	liTestK1  = sqltypes.NewUint64(1000)
-	liTestK2  = sqltypes.NewUint64(2000)
-	liTestK3  = sqltypes.NewUint64(3000)
+	// ids we should use to resolve
+	liTestK1 = sqltypes.NewUint64(1000)
+	liTestK2 = sqltypes.NewUint64(2000)
+	liTestK3 = sqltypes.NewUint64(3000)
+
+	// how they'll be stored in cache
 	liTestCK1 = liTestK1.String()
 	liTestCK2 = liTestK2.String()
 	liTestCK3 = liTestK3.String()
+
+	expectedQuery = "select fromc, toc from t where fromc in ::fromc"
 )
+
+func assertQueriesCorrect(t *testing.T, vc *litVCursor, wantCnt int) {
+	matches := 0
+	mismatched := []string{}
+	for _, q := range vc.queries {
+		if q != expectedQuery {
+			mismatched = append(mismatched, q)
+		} else {
+			matches++
+		}
+	}
+
+	if matches != wantCnt {
+		t.Errorf("Expected %v queries, got %v", wantCnt, matches)
+	}
+	for _, q := range mismatched {
+		t.Errorf("Unexpected Query: %v", q)
+	}
+}
+
+func assertQueryBinds(t *testing.T, vc *litVCursor, wantBinds map[string]interface{}) {
+	bound, err := sqltypes.BuildBindVariables(wantBinds)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestLookupInternalLookupWithoutCache(t *testing.T) {
 	li := createLookupInternal(nil)
@@ -144,6 +175,12 @@ func TestLookupInternalLookupWithCache(t *testing.T) {
 
 	assertCacheSized(t, cache, 1)
 	assertCacheHasKeys(t, cache, liTestCK3)
+	assertQueriesCorrect(t, vc, 1)
+
+	for i, q := range vc.queries {
+		fmt.Printf("query: %q\n", q)
+		fmt.Printf("binds: %v\n", vc.bindvars[i])
+	}
 
 	debugDumpCache(cache)
 	debugPrintResults(r, "")
