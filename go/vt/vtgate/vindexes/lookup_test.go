@@ -667,40 +667,42 @@ func createLookup(t *testing.T, name string, writeOnly bool) SingleColumn {
 }
 
 func TestNumericAsHexString(t *testing.T) {
+	fals := false
 	var cases = []struct {
 		input     sqltypes.Value
 		wantBytes []byte
 		wantErr   error
+		included  *bool // nil | true => true
 	}{
 		{
-			input:     sqltypes.NewVarChar("3500"),
-			wantBytes: []byte{0x35, 0x00},
-			wantErr:   nil,
+			input:     sqltypes.NewVarChar("35"),
+			wantBytes: []byte{0, 0x35},
 		},
 		{
-			input:     sqltypes.NewVarChar("905"),
-			wantBytes: []byte{0x09, 0x05},
-			wantErr:   nil,
+			input:     sqltypes.NewVarChar("10"),
+			wantBytes: []byte{0, 0x10},
+		},
+		{
+			input:     sqltypes.NewInt64(40),
+			wantBytes: []byte{0, 0x40},
 		},
 		{
 			input:     sqltypes.NewInt64(400),
-			wantBytes: []byte{0x04, 0x00},
-			wantErr:   nil,
+			wantBytes: []byte{0x04, 0},
+			included:  &fals,
 		},
 		{
-			input:     sqltypes.NewVarChar("test"),
-			wantBytes: nil,
-			wantErr:   fmt.Errorf("encoder could not parse"),
+			input:   sqltypes.NewVarChar("test"),
+			wantErr: fmt.Errorf("encoder could not parse"),
 		},
 		{
-			input:     sqltypes.NewFloat64(float64(1)),
-			wantBytes: nil,
-			wantErr:   fmt.Errorf("FLOAT64 unsupported column type"),
+			input:   sqltypes.NewFloat64(float64(1)),
+			wantErr: fmt.Errorf("FLOAT64 unsupported column type"),
 		},
 	}
 
-	s, _ := hex.DecodeString("")
-	e, _ := hex.DecodeString("80")
+	s, _ := hex.DecodeString("0001")
+	e, _ := hex.DecodeString("0080")
 	kr := &topodatapb.KeyRange{Start: s, End: e}
 
 	for _, c := range cases {
@@ -714,8 +716,15 @@ func TestNumericAsHexString(t *testing.T) {
 		}
 
 		if c.wantBytes != nil {
-			if !key.KeyRangeContains(kr, got) {
-				t.Errorf("Expected %v to fall within `-80`; it did not", c.input)
+			included := c.included == nil || *c.included
+			if key.KeyRangeContains(kr, got) != included {
+				not1 := " not"
+				not2 := ""
+				if included {
+					not1 = ""
+					not2 = " not"
+				}
+				t.Errorf("Want %v should%s fall within [0001, 0080) but it did%s", c.input, not1, not2)
 			}
 		}
 	}

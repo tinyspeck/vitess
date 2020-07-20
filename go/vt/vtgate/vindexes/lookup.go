@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
@@ -385,9 +386,14 @@ func numericAsHexString(input sqltypes.Value) ([]byte, error) {
 		return nil, fmt.Errorf("%v unsupported column type", input.Type())
 	}
 	str := string(input.ToBytes())
-	if len(str)%2 == 1 {
-		str = fmt.Sprintf("0%s", str)
+	if len(str) < 4 {
+		intVal, err := strconv.ParseInt(str, 0, 64)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse input value %v", input.String())
+		}
+		str = fmt.Sprintf("%04d", intVal)
 	}
+
 	bs, err := hex.DecodeString(str)
 	if err != nil {
 		return nil, fmt.Errorf("encoder could not parse")
