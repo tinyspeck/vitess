@@ -185,27 +185,31 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value) ([]*sql
 			}
 		}
 
-		// for integral or binary type, batch query all ids and then map them back to the input order
-		vars, err := sqltypes.BuildBindVariable(filteredIds)
-		if err != nil {
-			return nil, fmt.Errorf("lookup.Map: %v", err)
-		}
-		bindVars := map[string]*querypb.BindVariable{
-			lkp.FromColumns[0]: vars,
-		}
-		co := vtgatepb.CommitOrder_NORMAL
-		if lkp.Autocommit {
-			co = vtgatepb.CommitOrder_AUTOCOMMIT
-		}
-		result, err := vcursor.Execute("VindexLookup", lkp.sel, bindVars, false /* rollbackOnError */, co)
-		if err != nil {
-			return nil, fmt.Errorf("lookup.Map: %v", err)
-		}
-		// Map<String, Array<Array<sqltypes.Value>>
 		resultMap := make(map[string][][]sqltypes.Value)
-		for _, row := range result.Rows {
-			idKey := row[0].ToString()
-			resultMap[idKey] = append(resultMap[idKey], []sqltypes.Value{row[1]})
+
+		if len(filteredIds) > 0 {
+			// for integral or binary type, batch query all ids and then map them back to the input order
+			vars, err := sqltypes.BuildBindVariable(filteredIds)
+			if err != nil {
+				return nil, fmt.Errorf("lookup.Map: %v", err)
+			}
+			bindVars := map[string]*querypb.BindVariable{
+				lkp.FromColumns[0]: vars,
+			}
+			co := vtgatepb.CommitOrder_NORMAL
+			if lkp.Autocommit {
+				co = vtgatepb.CommitOrder_AUTOCOMMIT
+			}
+			result, err := vcursor.Execute("VindexLookup", lkp.sel, bindVars, false /* rollbackOnError */, co)
+			if err != nil {
+				return nil, fmt.Errorf("lookup.Map: %v", err)
+			}
+			// Map<String, Array<Array<sqltypes.Value>>
+
+			for _, row := range result.Rows {
+				idKey := row[0].ToString()
+				resultMap[idKey] = append(resultMap[idKey], []sqltypes.Value{row[1]})
+			}
 		}
 
 		for _, id := range ids {
