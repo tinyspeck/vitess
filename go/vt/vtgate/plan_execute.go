@@ -45,12 +45,7 @@ func (e *Executor) newExecute(ctx context.Context, safeSession *SafeSession, sql
 	}
 
 	query, comments := sqlparser.SplitMarginComments(sql)
-	stmt, err := sqlparser.Parse(query)
-	if err != nil {
-		return 0, nil, err
-	}
-	ignoreMaxMemoryRows := sqlparser.IgnoreMaxMaxMemoryRowsDirective(stmt)
-	vcursor, err := newVCursorImpl(ctx, safeSession, comments, e, logStats, e.vm, e.VSchema(), e.resolver.resolver, ignoreMaxMemoryRows)
+	vcursor, err := newVCursorImpl(ctx, safeSession, comments, e, logStats, e.vm, e.VSchema(), e.resolver.resolver)
 	if err != nil {
 		return 0, nil, err
 	}

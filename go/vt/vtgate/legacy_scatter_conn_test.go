@@ -331,6 +331,39 @@ func TestMaxMemoryRows(t *testing.T) {
 	}
 }
 
+func TestReservedBeginTableDriven(t *testing.T) {
+	type testAction struct {
+		transaction, reserved    bool
+		shards                   []string
+		sbc0Reserve, sbc1Reserve int64
+		sbc0Begin, sbc1Begin     int64
+	}
+	type testCase struct {
+		name    string
+		actions []testAction
+	}
+
+	testCases := []struct {
+		ignoreMaxMemoryRows bool
+		err                 string
+	}{
+		{true, ""},
+		{false, "in-memory row count exceeded allowed limit of 3"},
+	}
+
+	for _, test := range testCases {
+		sbc0.SetResults([]*sqltypes.Result{tworows, tworows})
+		sbc1.SetResults([]*sqltypes.Result{tworows, tworows})
+
+		_, errs := sc.ExecuteMultiShard(ctx, rss, queries, session, false, test.ignoreMaxMemoryRows)
+		if test.ignoreMaxMemoryRows {
+			require.NoError(t, err)
+		} else {
+			assert.EqualError(t, errs[0], test.err)
+		}
+	}
+}
+
 func TestLegaceHealthCheckFailsOnReservedConnections(t *testing.T) {
 	keyspace := "keyspace"
 	createSandbox(keyspace)
