@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"vitess.io/vitess/go/cache"
 	"vitess.io/vitess/go/sqltypes"
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
@@ -38,6 +39,8 @@ type lookupInternal struct {
 	Upsert        bool     `json:"upsert,omitempty"`
 	IgnoreNulls   bool     `json:"ignore_nulls,omitempty"`
 	Encoder       string   `json:"encoder,omitempty"`
+	CacheConfig   string   `json:"cache_config,omitempty"`
+	lookupCache   *cache.LRUCache
 	sel, ver, del string
 }
 
@@ -57,6 +60,12 @@ func (lkp *lookupInternal) Init(lookupQueryParams map[string]string, autocommit,
 	}
 
 	lkp.Encoder = strings.TrimSpace(lookupQueryParams["encoder"])
+
+	lkp.CacheConfig = strings.TrimSpace(lookupQueryParams["cache_config"])
+	if err := lkp.initLookupCache(); err != nil {
+		return fmt.Errorf("Unable to initialize lookup cache (%s): %v", lkp.CacheConfig, err)
+	}
+
 	lkp.Autocommit = autocommit
 	lkp.Upsert = upsert
 
@@ -69,11 +78,55 @@ func (lkp *lookupInternal) Init(lookupQueryParams map[string]string, autocommit,
 	return nil
 }
 
+func (lkp *lookupInternal) initLookupCache() error {
+	if lkp.CacheConfig == "" {
+		return nil
+	}
+
+	components := strings.Split(lkp.CacheConfig, ":")
+	cacheType := strings.TrimSpace(components[0])
+
+	// TODO: if we want to support a pluggable cache deal we would drop that here
+	if cacheType != "lru" {
+		return fmt.Errorf("Unknown cache type %v", cacheType)
+	}
+
+	cacheSize := int64(5000)
+	if len(components) > 2 {
+		return fmt.Errorf("Unexpected lru cache config in %v", lkp.CacheConfig)
+	}
+	if len(components) == 2 {
+		cSzStr := strings.TrimSpace(components[1])
+		cSz, err := strconv.ParseInt(cSzStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Unable to parse cache config as cache size, %v: %v", cSz, err)
+		}
+		cacheSize = cSz
+	}
+
+	lkp.lookupCache = cache.NewLRUCache(cacheSize)
+
+	return nil
+}
+
+func mkCacheKey(v sqltypes.Value) string {
+	return v.String()
+}
+
+type cacheItem struct {
+	content *sqltypes.Result
+}
+
+func (cacheItem) Size() int { return 1 }
+
 // Lookup performs a lookup for the ids.
 func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value, co vtgatepb.CommitOrder) ([]*sqltypes.Result, error) {
 	if vcursor == nil {
 		return nil, fmt.Errorf("cannot perform lookup: no vcursor provided")
 	}
+
+	cache := lkp.lookupCache
+
 	results := make([]*sqltypes.Result, 0, len(ids))
 	if lkp.Autocommit {
 		co = vtgatepb.CommitOrder_AUTOCOMMIT
@@ -81,6 +134,13 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value, co vtga
 	if !ids[0].IsIntegral() && !ids[0].IsBinary() {
 		// for non integral and binary type, fallback to send query per id
 		for _, id := range ids {
+			if cache != nil {
+				k := mkCacheKey(id)
+				if v, ok := cache.Get(k); ok {
+					results = append(results, v.(cacheItem).content)
+					continue
+				}
+			}
 			vars, err := sqltypes.BuildBindVariable([]interface{}{id})
 			if err != nil {
 				return nil, fmt.Errorf("lookup.Map: %v", err)
@@ -97,34 +157,64 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value, co vtga
 			for _, row := range result.Rows {
 				rows = append(rows, []sqltypes.Value{row[1]})
 			}
-			results = append(results, &sqltypes.Result{
-				Rows: rows,
-			})
+			newResult := &sqltypes.Result{Rows: rows}
+			results = append(results, newResult)
+			if cache != nil {
+				cache.Set(mkCacheKey(id), cacheItem{newResult})
+			}
 		}
 	} else {
-		// for integral or binary type, batch query all ids and then map them back to the input order
-		vars, err := sqltypes.BuildBindVariable(ids)
-		if err != nil {
-			return nil, fmt.Errorf("lookup.Map: %v", err)
+		filteredIds := ids
+		cachedResults := map[string]*sqltypes.Result{}
+
+		if cache != nil {
+			filteredIds = make([]sqltypes.Value, 0, len(ids))
+			for _, id := range ids {
+				key := mkCacheKey(id)
+				if v, ok := cache.Get(key); !ok {
+					filteredIds = append(filteredIds, id)
+				} else {
+					cachedResults[key] = v.(cacheItem).content
+				}
+			}
 		}
-		bindVars := map[string]*querypb.BindVariable{
-			lkp.FromColumns[0]: vars,
-		}
-		result, err := vcursor.Execute("VindexLookup", lkp.sel, bindVars, false /* rollbackOnError */, co)
-		if err != nil {
-			return nil, fmt.Errorf("lookup.Map: %v", err)
-		}
+
 		resultMap := make(map[string][][]sqltypes.Value)
-		for _, row := range result.Rows {
-			resultMap[row[0].ToString()] = append(resultMap[row[0].ToString()], []sqltypes.Value{row[1]})
+
+		if len(filteredIds) > 0 {
+			// for integral or binary type, batch query all ids and then map them back to the input order
+			vars, err := sqltypes.BuildBindVariable(filteredIds)
+			if err != nil {
+				return nil, fmt.Errorf("lookup.Map: %v", err)
+			}
+			bindVars := map[string]*querypb.BindVariable{
+				lkp.FromColumns[0]: vars,
+			}
+			result, err := vcursor.Execute("VindexLookup", lkp.sel, bindVars, false /* rollbackOnError */, co)
+			if err != nil {
+				return nil, fmt.Errorf("lookup.Map: %v", err)
+			}
+
+			for _, row := range result.Rows {
+				idKey := row[0].ToString()
+				resultMap[idKey] = append(resultMap[idKey], []sqltypes.Value{row[1]})
+			}
 		}
 
 		for _, id := range ids {
-			results = append(results, &sqltypes.Result{
-				Rows: resultMap[id.ToString()],
-			})
+			var newResult *sqltypes.Result
+			if v, wasCached := cachedResults[mkCacheKey(id)]; wasCached {
+				newResult = v
+			} else {
+				newResult = &sqltypes.Result{Rows: resultMap[id.ToString()]}
+				if cache != nil {
+					cache.Set(mkCacheKey(id), cacheItem{newResult})
+				}
+			}
+			results = append(results, newResult)
 		}
 	}
+
 	return results, nil
 }
 

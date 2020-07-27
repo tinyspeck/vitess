@@ -28,6 +28,7 @@ import (
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
+	"vitess.io/vitess/go/vt/vtgate/evalengine"
 )
 
 var (
@@ -355,9 +356,7 @@ func (lu *LookupUnique) MarshalJSON() ([]byte, error) {
 }
 
 func numericUint64(input sqltypes.Value) ([]byte, error) {
-	// This will need to be switched to evalengine.ToUint64 if upstream is pulled in
-	// i.e. > 6.0
-	v, err := sqltypes.ToUint64(input)
+	v, err := evalengine.ToUint64(input)
 	if err != nil {
 		return nil, fmt.Errorf("numericUint64: couldn't parse bytes: %v", err)
 	}
