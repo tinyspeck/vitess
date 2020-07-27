@@ -333,8 +333,11 @@ var (
 )
 
 func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
-	li := createLookupInternal(strPtr("lru"))
 	uncachedLI := createLookupInternal(nil)
+	if uncachedLI == nil || uncachedLI.lookupCache != nil {
+		t.Fatal("Expected uncached lookupInternal but failed to create one")
+	}
+	li := createLookupInternal(strPtr("lru"))
 	if li == nil {
 		t.Fatal("Unable to create a new lookupInternal")
 	}
@@ -347,9 +350,7 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 
 	cachedVC1 := newLitVCursor(
 		execResult{
-			newVCResult(
-				vcRow{liTestK4, "value-k4"},
-			),
+			newVCResult(vcRow{liTestK4, "value-k4"}),
 			nil,
 		},
 		execResult{
@@ -360,18 +361,6 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 			nil,
 		},
 	)
-	cachedVC2 := newLitVCursor(
-		execResult{
-			newVCResult(
-				vcRow{liTestK4, "value-k5.a"},
-				vcRow{liTestK4, "value-k5.b"},
-			),
-			nil,
-		},
-	)
-
-	// assert cache is empty
-	assertCacheSized(t, cache, 0)
 
 	// prime the cache with some values
 	_, err := li.Lookup(cachedVC1, []sqltypes.Value{liTestK4, liTestK6})
@@ -388,8 +377,18 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 		binds{"fromc": []sqltypes.Value{liTestK6}},
 	})
 
+	cachedVC2 := newLitVCursor(
+		execResult{
+			newVCResult(
+				vcRow{liTestK5, "value-k5.a"},
+				vcRow{liTestK5, "value-k5.b"},
+			),
+			nil,
+		},
+	)
+
 	// make a second query; use a new vcursor so we can track things independently
-	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK5, liTestK4, liTestK6})
+	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK4, liTestK5, liTestK6})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,19 +417,20 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 		},
 		execResult{
 			newVCResult(
-				vcRow{liTestK5, "value-k6.a"},
-				vcRow{liTestK5, "value-k6.b"},
+				vcRow{liTestK6, "value-k6.a"},
+				vcRow{liTestK6, "value-k6.b"},
 			),
 			nil,
 		},
 	)
-	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK4, liTestK5})
+	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK4, liTestK6})
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertQueriesCorrect(t, uncachedVC, 2)
 	assertQueryBinds(t, uncachedVC, []binds{
 		binds{"fromc": []sqltypes.Value{liTestK4}},
-		binds{"fromc": []sqltypes.Value{liTestK5}},
+		binds{"fromc": []sqltypes.Value{liTestK6}},
 	})
 
 	if !reflect.DeepEqual(r, rUncached) {
