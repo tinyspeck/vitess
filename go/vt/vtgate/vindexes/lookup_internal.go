@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	cacheimpl "vitess.io/vitess/go/cache"
 	"vitess.io/vitess/go/sqltypes"
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
@@ -31,12 +32,15 @@ import (
 
 // lookupInternal implements the functions for the Lookup vindexes.
 type lookupInternal struct {
-	Table         string   `json:"table"`
-	FromColumns   []string `json:"from_columns"`
-	To            string   `json:"to"`
-	Autocommit    bool     `json:"autocommit,omitempty"`
-	Upsert        bool     `json:"upsert,omitempty"`
-	Encoder       string   `json:"encoder,omitempty"`
+	Table       string   `json:"table"`
+	FromColumns []string `json:"from_columns"`
+	To          string   `json:"to"`
+	Autocommit  bool     `json:"autocommit,omitempty"`
+	Upsert      bool     `json:"upsert,omitempty"`
+	Encoder     string   `json:"encoder,omitempty"`
+	CacheConfig string   `json:"cache_config,omitempty"`
+	lookupCache *cacheimpl.LRUCache
+
 	sel, ver, del string
 }
 
@@ -52,6 +56,10 @@ func (lkp *lookupInternal) Init(lookupQueryParams map[string]string, autocommit,
 	lkp.Encoder = strings.TrimSpace(lookupQueryParams["encoder"])
 	lkp.Autocommit = autocommit
 	lkp.Upsert = upsert
+	lkp.CacheConfig = strings.TrimSpace(lookupQueryParams["cache_config"])
+	if err := lkp.initLookupCache(); err != nil {
+		return fmt.Errorf("Unable to initialize lookup cache (%s): %v", lkp.CacheConfig, err)
+	}
 
 	// TODO @rafael: update sel and ver to support multi column vindexes. This will be done
 	// as part of face 2 of https://github.com/vitessio/vitess/issues/3481
@@ -62,13 +70,60 @@ func (lkp *lookupInternal) Init(lookupQueryParams map[string]string, autocommit,
 	return nil
 }
 
+func (lkp *lookupInternal) initLookupCache() error {
+	if lkp.CacheConfig == "" {
+		return nil
+	}
+
+	components := strings.Split(lkp.CacheConfig, ":")
+	cacheType := strings.TrimSpace(components[0])
+
+	// TODO: if we want to support a pluggable cache deal we would stub that in
+	// here
+	if cacheType != "lru" {
+		return fmt.Errorf("Unknown cache type %v", cacheType)
+	}
+
+	cacheSize := int64(5000)
+	if len(components) > 2 {
+		return fmt.Errorf("Unexpected lru cache config in %v", lkp.CacheConfig)
+	}
+	if len(components) == 2 {
+		cSzStr := strings.TrimSpace(components[1])
+		cSz, err := strconv.ParseInt(cSzStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Unable to parse cache config as cache size, %v: %v", cSz, err)
+		}
+		cacheSize = cSz
+	}
+
+	lkp.lookupCache = cacheimpl.NewLRUCache(cacheSize)
+
+	return nil
+}
+
+func mkCacheKey(v sqltypes.Value) string { return v.String() }
+
+type cacheItem struct{ content *sqltypes.Result }
+
+func (cacheItem) Size() int { return 1 }
+
 // Lookup performs a lookup for the ids.
 func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value) ([]*sqltypes.Result, error) {
 	if vcursor == nil {
 		return nil, fmt.Errorf("cannot perform lookup: no vcursor provided")
 	}
+	cache := lkp.lookupCache
+
 	results := make([]*sqltypes.Result, 0, len(ids))
 	for _, id := range ids {
+		if cache != nil {
+			k := mkCacheKey(id)
+			if v, ok := cache.Get(k); ok {
+				results = append(results, v.(cacheItem).content)
+				continue
+			}
+		}
 		bindVars := map[string]*querypb.BindVariable{
 			lkp.FromColumns[0]: sqltypes.ValueBindVariable(id),
 		}
@@ -82,7 +137,16 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value) ([]*sql
 		if err != nil {
 			return nil, fmt.Errorf("lookup.Map: %v", err)
 		}
-		results = append(results, result)
+		// results = append(results, result)
+		rows := make([][]sqltypes.Value, 0, len(result.Rows))
+		for _, row := range result.Rows {
+			rows = append(rows, []sqltypes.Value{row[0]})
+		}
+		newResult := &sqltypes.Result{Rows: rows}
+		results = append(results, newResult)
+		if cache != nil {
+			cache.Set(mkCacheKey(id), cacheItem{newResult})
+		}
 	}
 	return results, nil
 }
