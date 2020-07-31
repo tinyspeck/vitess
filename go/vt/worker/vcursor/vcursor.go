@@ -32,7 +32,9 @@ import (
 // CleanupFunc provides a way for clients to cleanup resources associated with VCursors
 type CleanupFunc func()
 
-// NewVCursor returns stuff.
+// NewVCursor returns a vindexes.VCursor implementation backed by a grpc vtgateconn, as
+// well as a CleanupFunc that is used to release any resources related to this connection
+// once its no longer needed.
 func NewVCursor(
 	ctx context.Context,
 	hostPortString, targetString string,
