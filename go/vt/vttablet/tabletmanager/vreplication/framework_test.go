@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
@@ -89,8 +91,9 @@ func TestMain(m *testing.M) {
 
 		// engines cannot be initialized in testenv because it introduces
 		// circular dependencies.
-		streamerEngine = vstreamer.NewEngine(env.TabletEnv, env.SrvTopo, env.SchemaEngine)
-		streamerEngine.Open(env.KeyspaceName, env.Cells[0])
+		streamerEngine = vstreamer.NewEngine(env.TabletEnv, env.SrvTopo, env.SchemaEngine, env.Cells[0])
+		streamerEngine.InitDBConfig(env.KeyspaceName)
+		streamerEngine.Open()
 		defer streamerEngine.Close()
 
 		if err := env.Mysqld.ExecuteSuperQuery(context.Background(), fmt.Sprintf("create database %s", vrepldb)); err != nil {
@@ -108,10 +111,7 @@ func TestMain(m *testing.M) {
 			"extb": env.Dbcfgs,
 		}
 		playerEngine = NewTestEngine(env.TopoServ, env.Cells[0], env.Mysqld, realDBClientFactory, vrepldb, externalConfig)
-		if err := playerEngine.Open(context.Background()); err != nil {
-			fmt.Fprintf(os.Stderr, "%v", err)
-			return 1
-		}
+		playerEngine.Open(context.Background())
 		defer playerEngine.Close()
 
 		if err := env.Mysqld.ExecuteSuperQueryList(context.Background(), binlogplayer.CreateVReplicationTable()); err != nil {
@@ -569,4 +569,24 @@ func customExpectData(t *testing.T, table string, values [][]string, exec func(c
 			}
 		}
 	}
+}
+
+func validateQueryCountStat(t *testing.T, phase string, want int64) {
+	var count int64
+	for _, ct := range globalStats.status().Controllers {
+		for ph, cnt := range ct.QueryCounts {
+			if ph == phase {
+				count += cnt
+			}
+		}
+	}
+	require.Equal(t, want, count, "QueryCount stat is incorrect")
+}
+
+func validateCopyRowCountStat(t *testing.T, want int64) {
+	var count int64
+	for _, ct := range globalStats.status().Controllers {
+		count += ct.CopyRowCount
+	}
+	require.Equal(t, want, count, "CopyRowCount stat is incorrect")
 }

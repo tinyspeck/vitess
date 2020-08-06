@@ -107,7 +107,7 @@ func NewTxEngine(env tabletenv.Env) *TxEngine {
 	config := env.Config()
 	te := &TxEngine{
 		env:                 env,
-		shutdownGracePeriod: time.Duration(config.ShutdownGracePeriodSeconds * 1e9),
+		shutdownGracePeriod: config.GracePeriods.TransactionShutdownSeconds.Get(),
 		reservedConnStats:   env.Exporter().NewTimings("ReservedConnections", "Reserved connections stats", "operation"),
 	}
 	limiter := txlimiter.New(env)
@@ -124,7 +124,7 @@ func NewTxEngine(env tabletenv.Env) *TxEngine {
 		}
 	}
 	te.coordinatorAddress = config.TwoPCCoordinatorAddress
-	te.abandonAge = time.Duration(config.TwoPCAbandonAge * 1e9)
+	te.abandonAge = config.TwoPCAbandonAge.Get()
 	te.ticks = timer.NewTimer(te.abandonAge / 2)
 
 	// Set the prepared pool capacity to something lower than
@@ -154,6 +154,7 @@ func NewTxEngine(env tabletenv.Env) *TxEngine {
 func (te *TxEngine) AcceptReadWrite() error {
 	te.beginRequests.Wait()
 	te.stateLock.Lock()
+	log.Info("TxEngine: AcceptReadWrite")
 
 	switch te.state {
 	case AcceptingReadAndWrite:
@@ -190,6 +191,7 @@ func (te *TxEngine) AcceptReadWrite() error {
 // If the engine is currently accepting full read and write transactions, they need to
 // be rolled back.
 func (te *TxEngine) AcceptReadOnly() error {
+	log.Info("TxEngine: AcceptReadOnly")
 	te.beginRequests.Wait()
 	te.stateLock.Lock()
 	switch te.state {
@@ -337,15 +339,6 @@ func (te *TxEngine) transitionTo(nextState txEngineState) error {
 	return nil
 }
 
-// Init must be called once when vttablet starts for setting
-// up the metadata tables.
-func (te *TxEngine) Init() error {
-	if te.twopcEnabled {
-		return te.twoPC.Init(te.env.Config().DB.DbaWithDB())
-	}
-	return nil
-}
-
 // open opens the TxEngine. If 2pc is enabled, it restores
 // all previously prepared transactions from the redo log.
 // this should only be called when the state is already locked
@@ -353,11 +346,14 @@ func (te *TxEngine) open() {
 	te.txPool.Open(te.env.Config().DB.AppWithDB(), te.env.Config().DB.DbaWithDB(), te.env.Config().DB.AppDebugWithDB())
 
 	if te.twopcEnabled && te.state == AcceptingReadAndWrite {
-		te.twoPC.Open(te.env.Config().DB)
+		// If there are errors, we choose to raise an alert and
+		// continue anyway. Serving traffic is considered more important
+		// than blocking everything for the sake of a few transactions.
+		if err := te.twoPC.Open(te.env.Config().DB); err != nil {
+			te.env.Stats().InternalErrors.Add("TwopcOpen", 1)
+			log.Errorf("Could not open TwoPC engine: %v", err)
+		}
 		if err := te.prepareFromRedo(); err != nil {
-			// If this operation fails, we choose to raise an alert and
-			// continue anyway. Serving traffic is considered more important
-			// than blocking everything for the sake of a few transactions.
 			te.env.Stats().InternalErrors.Add("TwopcResurrection", 1)
 			log.Errorf("Could not prepare transactions: %v", err)
 		}
@@ -372,6 +368,7 @@ func (te *TxEngine) Close() {
 	defer te.stateLock.Unlock()
 	te.shutdown(false)
 	te.state = NotServing
+	log.Info("TxEngine: closed")
 }
 
 // Close closes the TxEngine. If the immediate flag is on,

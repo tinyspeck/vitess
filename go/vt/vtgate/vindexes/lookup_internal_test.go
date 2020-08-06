@@ -8,6 +8,7 @@ import (
 	"vitess.io/vitess/go/cache"
 	"vitess.io/vitess/go/sqltypes"
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
 )
 
 func createLookupInternal(cc *string) *lookupInternal {
@@ -166,7 +167,7 @@ func TestLookupInternalLookupBatchWithoutCache(t *testing.T) {
 			nil,
 		},
 	)
-	r, err := li.Lookup(vc, []sqltypes.Value{liTestK3})
+	r, err := li.Lookup(vc, []sqltypes.Value{liTestK3}, vtgatepb.CommitOrder_NORMAL)
 	assertNil(t, err)
 
 	got := map[string]int{}
@@ -209,7 +210,7 @@ func TestLookupInternalLookupBatchWithCache(t *testing.T) {
 		)
 	}
 	vc := mkVC()
-	r, err := li.Lookup(vc, []sqltypes.Value{liTestK3})
+	r, err := li.Lookup(vc, []sqltypes.Value{liTestK3}, vtgatepb.CommitOrder_NORMAL)
 	assertNil(t, err)
 
 	assertCacheSized(t, cache, 1)
@@ -221,7 +222,7 @@ func TestLookupInternalLookupBatchWithCache(t *testing.T) {
 
 	nocacheli := createLookupInternal(nil)
 	// we can reuse our vcursor here because the initial call didn't hit cache
-	rUncached, _ := nocacheli.Lookup(mkVC(), []sqltypes.Value{liTestK3})
+	rUncached, _ := nocacheli.Lookup(mkVC(), []sqltypes.Value{liTestK3}, vtgatepb.CommitOrder_NORMAL)
 
 	if !reflect.DeepEqual(r, rUncached) {
 		t.Errorf("Expected cached & uncached results to match:\ncached: %#v\nuncached:  %#v", r, rUncached)
@@ -265,7 +266,7 @@ func TestLookupInternalLookupBatchWithCacheUsed(t *testing.T) {
 		},
 	)
 	// prime the cache with some values
-	_, err := li.Lookup(cachedVC1, []sqltypes.Value{liTestK2, liTestK3})
+	_, err := li.Lookup(cachedVC1, []sqltypes.Value{liTestK2, liTestK3}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +280,7 @@ func TestLookupInternalLookupBatchWithCacheUsed(t *testing.T) {
 	})
 
 	// make a second query; use a new vcursor so we can track things independently
-	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK2, liTestK1, liTestK3})
+	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK2, liTestK1, liTestK3}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +294,7 @@ func TestLookupInternalLookupBatchWithCacheUsed(t *testing.T) {
 	})
 
 	unusedVC := newLitVCursor()
-	r, err = li.Lookup(unusedVC, []sqltypes.Value{liTestK1, liTestK3})
+	r, err = li.Lookup(unusedVC, []sqltypes.Value{liTestK1, liTestK3}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +311,7 @@ func TestLookupInternalLookupBatchWithCacheUsed(t *testing.T) {
 			nil,
 		},
 	)
-	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK1, liTestK3})
+	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK1, liTestK3}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,7 +364,7 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 	)
 
 	// prime the cache with some values
-	_, err := li.Lookup(cachedVC1, []sqltypes.Value{liTestK4, liTestK6})
+	_, err := li.Lookup(cachedVC1, []sqltypes.Value{liTestK4, liTestK6}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +389,7 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 	)
 
 	// make a second query; use a new vcursor so we can track things independently
-	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK4, liTestK5, liTestK6})
+	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK4, liTestK5, liTestK6}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,7 +403,7 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 	})
 
 	unusedVC := newLitVCursor()
-	r, err = li.Lookup(unusedVC, []sqltypes.Value{liTestK4, liTestK6})
+	r, err = li.Lookup(unusedVC, []sqltypes.Value{liTestK4, liTestK6}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +424,7 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 			nil,
 		},
 	)
-	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK4, liTestK6})
+	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK4, liTestK6}, vtgatepb.CommitOrder_NORMAL)
 	if err != nil {
 		t.Fatal(err)
 	}
