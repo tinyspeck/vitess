@@ -442,3 +442,125 @@ func TestLookupInternalLookupUnbatchedWithCache(t *testing.T) {
 		debugPrintResults(rUncached, "  ")
 	}
 }
+
+func TestLookupInternalLookupUnpatchedWithCachConfigAndEvictions(t *testing.T) {
+	uncachedLI := createLookupInternal(nil)
+	if uncachedLI == nil || uncachedLI.lookupCache != nil {
+		t.Fatal("Expected uncached lookupInternal but failed to create one")
+	}
+	li := createLookupInternal(strPtr("lru:1"))
+	if li == nil {
+		t.Fatal("Unable to create a new lookupInternal")
+	}
+
+	cache := li.lookupCache
+	if cache == nil {
+		t.Errorf("Expected lookupInternal to have a cache; got nil")
+	}
+	assertCacheEmpty(t, cache)
+
+	cachedVC1 := newLitVCursor(
+		execResult{
+			newVCResult(vcRow{liTestK4, "value-k4"}),
+			nil,
+		},
+	)
+
+	// prime the cache with some values
+	_, err := li.Lookup(cachedVC1, []sqltypes.Value{liTestK4}, vtgatepb.CommitOrder_NORMAL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// assert cache is in expected state
+	assertCacheSized(t, cache, 1)
+	assertCacheHasKeys(t, cache, liTestCK4)
+	assertQueriesCorrect(t, cachedVC1, 1)
+	assertQueryBinds(t, cachedVC1, []binds{
+		binds{"fromc": []sqltypes.Value{liTestK4}},
+	})
+
+	cachedVC2 := newLitVCursor(
+		execResult{
+			newVCResult(
+				vcRow{liTestK5, "value-k5.a"},
+				vcRow{liTestK5, "value-k5.b"},
+			),
+			nil,
+		},
+	)
+
+	// make a second query; use a new vcursor so we can track things independently
+	r, err := li.Lookup(cachedVC2, []sqltypes.Value{liTestK5}, vtgatepb.CommitOrder_NORMAL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify cache was updated
+	assertCacheSized(t, cache, 1)
+	assertCacheHasKeys(t, cache, liTestCK5)
+	assertQueriesCorrect(t, cachedVC2, 1)
+	assertQueryBinds(t, cachedVC2, []binds{
+		binds{"fromc": []sqltypes.Value{liTestK5}},
+	})
+
+	cachedVC3 := newLitVCursor(
+		execResult{
+			newVCResult(vcRow{liTestK4, "value-k4"}),
+			nil,
+		},
+		execResult{
+			newVCResult(
+				vcRow{liTestK5, "value-k6.a"},
+				vcRow{liTestK5, "value-k6.b"},
+			),
+			nil,
+		},
+	)
+	r, err = li.Lookup(cachedVC3, []sqltypes.Value{liTestK4, liTestK6}, vtgatepb.CommitOrder_NORMAL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// assert that there is now one entry back in the cache
+	assertCacheSized(t, cache, 1)
+	// it should be the most recent query
+	assertCacheHasKeys(t, cache, liTestCK6)
+	assertQueriesCorrect(t, cachedVC3, 2)
+	assertQueryBinds(t, cachedVC3, []binds{
+		binds{"fromc": []sqltypes.Value{liTestK4}},
+		binds{"fromc": []sqltypes.Value{liTestK6}},
+	})
+
+	uncachedVC := newLitVCursor(
+		execResult{
+			newVCResult(vcRow{liTestK4, "value-k4"}),
+			nil,
+		},
+		execResult{
+			newVCResult(
+				vcRow{liTestK5, "value-k6.a"},
+				vcRow{liTestK5, "value-k6.b"},
+			),
+			nil,
+		},
+	)
+
+	rUncached, err := uncachedLI.Lookup(uncachedVC, []sqltypes.Value{liTestK4, liTestK6}, vtgatepb.CommitOrder_NORMAL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertQueriesCorrect(t, uncachedVC, 2)
+	assertQueryBinds(t, uncachedVC, []binds{
+		binds{"fromc": []sqltypes.Value{liTestK4}},
+		binds{"fromc": []sqltypes.Value{liTestK6}},
+	})
+
+	if !reflect.DeepEqual(r, rUncached) {
+		t.Errorf("Cached and uncached results differ\ncached: %v\nuncached: %v\n", r, rUncached)
+		fmt.Printf("Cached\n")
+		debugPrintResults(r, "  ")
+		fmt.Printf("\nUncached\n")
+		debugPrintResults(rUncached, "  ")
+	}
+}

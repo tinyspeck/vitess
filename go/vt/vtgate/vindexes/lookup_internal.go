@@ -89,8 +89,7 @@ func (lkp *lookupInternal) initLookupCache() error {
 	components := strings.Split(lkp.CacheConfig, ":")
 	cacheType := strings.TrimSpace(components[0])
 
-	// TODO: if we want to support a pluggable cache deal we would stub that in
-	// here
+	// TODO: if we want to support a pluggable cache deal we would drop that here
 	if cacheType != "lru" {
 		return fmt.Errorf("Unknown cache type %v", cacheType)
 	}
@@ -124,7 +123,6 @@ type cacheItem struct {
 func (cacheItem) Size() int { return 1 }
 
 // Lookup performs a lookup for the ids.
-// TODO: should the caching bit be an impl wrapper around this instead of baked in?
 func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value, co vtgatepb.CommitOrder) ([]*sqltypes.Result, error) {
 	if vcursor == nil {
 		return nil, fmt.Errorf("cannot perform lookup: no vcursor provided")
@@ -182,7 +180,7 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value, co vtga
 					cachedResults[key] = v.(cacheItem).content
 				}
 			}
-    }
+		}
 
 		resultMap := make(map[string][][]sqltypes.Value)
 
@@ -217,7 +215,7 @@ func (lkp *lookupInternal) Lookup(vcursor VCursor, ids []sqltypes.Value, co vtga
 				}
 			}
 			results = append(results, newResult)
-    }
+		}
 	}
 
 	return results, nil
