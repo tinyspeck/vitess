@@ -228,6 +228,7 @@ func (scw *LegacySplitCloneWorker) Run(ctx context.Context) error {
 
 	if err != nil {
 		scw.setErrorState(err)
+		scw.wr.Logger().Errorf2(err, "LegacySplitClone failed")
 		return err
 	}
 	scw.setState(WorkerStateDone)
