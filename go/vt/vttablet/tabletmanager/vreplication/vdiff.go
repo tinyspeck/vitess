@@ -356,8 +356,8 @@ func buildDifferPlan(table *tabletmanagerdatapb.TableDefinition, query string) (
 	td.sourceExpression = sqlparser.String(sourceSelect)
 	td.targetExpression = sqlparser.String(targetSelect)
 
-	td.sourcePrimitive = newMergeSorter(td.comparePKs)
-	td.targetPrimitive = newMergeSorter(td.comparePKs)
+	td.sourcePrimitive = newMergeSorter(td.sourcePrimitive, td.comparePKs)
+	td.targetPrimitive = newMergeSorter(td.targetPrimitive, td.comparePKs)
 	if len(aggregates) != 0 {
 		td.sourcePrimitive = &engine.OrderedAggregate{
 			Aggregates: aggregates,
@@ -533,8 +533,9 @@ func (pe *primitiveExecutor) drain(ctx context.Context) (int, error) {
 //-----------------------------------------------------------------
 // mergeSorter
 
-func newMergeSorter(comparePKs []int) *engine.MergeSort {
-	prims := make([]engine.StreamExecutor, 0, 0)
+func newMergeSorter(participant engine.Primitive, comparePKs []int) *engine.MergeSort {
+	prims := make([]engine.StreamExecutor, 0, 1)
+	prims = append(prims, participant)
 	ob := make([]engine.OrderbyParams, 0, len(comparePKs))
 	for _, cpk := range comparePKs {
 		ob = append(ob, engine.OrderbyParams{Col: cpk})
