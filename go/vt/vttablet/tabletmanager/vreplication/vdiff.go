@@ -161,7 +161,7 @@ func (df *vdiff) VDiff(ctx context.Context, filteredReplicationWaitTime time.Dur
 		return vterrors.Wrap(err, "GetSchema")
 	}
 
-	df.differs, err = buildVDiffPlan(ctx, df.source.Filter, schm)
+	df.differs, err = buildVDiffPlan(ctx, df, schm)
 	if err != nil {
 		return err
 	}
@@ -220,10 +220,10 @@ func VDiffStatus() *DatabaseReport {
 	return currentDatabaseReport
 }
 
-func buildVDiffPlan(ctx context.Context, filter *binlogdatapb.Filter, schm *tabletmanagerdatapb.SchemaDefinition) (map[string]*tableDiffer, error) {
+func buildVDiffPlan(ctx context.Context, df *vdiff, schm *tabletmanagerdatapb.SchemaDefinition) (map[string]*tableDiffer, error) {
 	differs := make(map[string]*tableDiffer)
 	for _, table := range schm.TableDefinitions {
-		rule, err := MatchTable(table.Name, filter)
+		rule, err := MatchTable(table.Name, df.source.Filter)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +236,7 @@ func buildVDiffPlan(ctx context.Context, filter *binlogdatapb.Filter, schm *tabl
 			buf.Myprintf("select * from %v", sqlparser.NewTableIdent(table.Name))
 			query = buf.String()
 		}
-		differs[table.Name], err = buildDifferPlan(table, query)
+		differs[table.Name], err = buildDifferPlan(df, table, query)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func buildVDiffPlan(ctx context.Context, filter *binlogdatapb.Filter, schm *tabl
 	return differs, nil
 }
 
-func buildDifferPlan(table *tabletmanagerdatapb.TableDefinition, query string) (*tableDiffer, error) {
+func buildDifferPlan(df *vdiff, table *tabletmanagerdatapb.TableDefinition, query string) (*tableDiffer, error) {
 	statement, err := sqlparser.Parse(query)
 	if err != nil {
 		return nil, err
@@ -356,8 +356,8 @@ func buildDifferPlan(table *tabletmanagerdatapb.TableDefinition, query string) (
 	td.sourceExpression = sqlparser.String(sourceSelect)
 	td.targetExpression = sqlparser.String(targetSelect)
 
-	td.sourcePrimitive = newMergeSorter(td.sourcePrimitive, td.comparePKs)
-	td.targetPrimitive = newMergeSorter(td.targetPrimitive, td.comparePKs)
+	td.sourcePrimitive = newMergeSorter(df.sourceDf, td.comparePKs)
+	td.targetPrimitive = newMergeSorter(df.targetDf, td.comparePKs)
 	if len(aggregates) != 0 {
 		td.sourcePrimitive = &engine.OrderedAggregate{
 			Aggregates: aggregates,
@@ -533,7 +533,7 @@ func (pe *primitiveExecutor) drain(ctx context.Context) (int, error) {
 //-----------------------------------------------------------------
 // mergeSorter
 
-func newMergeSorter(participant engine.Primitive, comparePKs []int) *engine.MergeSort {
+func newMergeSorter(participant *dfParams, comparePKs []int) *engine.MergeSort {
 	prims := make([]engine.StreamExecutor, 0, 1)
 	prims = append(prims, participant)
 	ob := make([]engine.OrderbyParams, 0, len(comparePKs))
@@ -544,6 +544,15 @@ func newMergeSorter(participant engine.Primitive, comparePKs []int) *engine.Merg
 		Primitives: prims,
 		OrderBy:    ob,
 	}
+}
+
+func (dp *dfParams) StreamExecute(vcursor engine.VCursor, bindVars map[string]*querypb.BindVariable, wantfields bool, callback func(*sqltypes.Result) error) error {
+	for result := range dp.result {
+		if err := callback(result); err != nil {
+			return err
+		}
+	}
+	return dp.err
 }
 
 //-----------------------------------------------------------------
