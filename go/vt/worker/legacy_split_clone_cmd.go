@@ -94,12 +94,25 @@ func commandLegacySplitClone(wi *Instance, wr *wrangler.Wrangler, subFlags *flag
 	destinationWriterCount := subFlags.Int("destination_writer_count", defaultDestinationWriterCount, "number of concurrent RPCs to execute on the destination")
 	minHealthyRdonlyTablets := subFlags.Int("min_healthy_rdonly_tablets", defaultMinHealthyTablets, "minimum number of healthy RDONLY tablets before taking out one")
 	maxTPS := subFlags.Int64("max_tps", defaultMaxTPS, "if non-zero, limit copy to maximum number of (write) transactions/second on the destination (unlimited by default)")
+	vcursorServerAddr := subFlags.String("vcursor_server_addr", "", "[Required] vcursor host and grpc port of the form $host:$port")
+	vcursorTargetString := subFlags.String("vcursor_target", "mainteam@REPLICA", "vcursor keyspace/tablet type to use for vindex lookups")
+
 	if err := subFlags.Parse(args); err != nil {
 		return nil, err
 	}
 	if subFlags.NArg() != 1 {
 		subFlags.Usage()
 		return nil, fmt.Errorf("command LegacySplitClone requires <keyspace/shard>")
+	}
+
+	if *vcursorServerAddr == "" {
+		subFlags.Usage()
+		return nil, fmt.Errorf("vcursor_server_addr required when merging shards")
+	}
+
+	if len(strings.Split(*vcursorServerAddr, ":")) != 2 {
+		subFlags.Usage()
+		return nil, fmt.Errorf("Invalid vcursor_server_addr: %s", *vcursorServerAddr)
 	}
 
 	keyspace, shard, err := topoproto.ParseKeyspaceShard(subFlags.Arg(0))
@@ -110,7 +123,20 @@ func commandLegacySplitClone(wi *Instance, wr *wrangler.Wrangler, subFlags *flag
 	if *excludeTables != "" {
 		excludeTableArray = strings.Split(*excludeTables, ",")
 	}
-	worker, err := NewLegacySplitCloneWorker(wr, wi.cell, keyspace, shard, excludeTableArray, *sourceReaderCount, *destinationPackCount, *destinationWriterCount, *minHealthyRdonlyTablets, *maxTPS)
+	worker, err := NewLegacySplitCloneWorker(
+		wr,
+		wi.cell,
+		keyspace,
+		shard,
+		excludeTableArray,
+		*sourceReaderCount,
+		*destinationPackCount,
+		*destinationWriterCount,
+		*minHealthyRdonlyTablets,
+		*maxTPS,
+		*vcursorServerAddr,
+		*vcursorTargetString,
+	)
 	if err != nil {
 		return nil, vterrors.Wrap(err, "cannot create split clone worker")
 	}
@@ -183,7 +209,20 @@ func interactiveLegacySplitClone(ctx context.Context, wi *Instance, wr *wrangler
 	}
 
 	// start the clone job
-	wrk, err := NewLegacySplitCloneWorker(wr, wi.cell, keyspace, shard, excludeTableArray, int(sourceReaderCount), int(destinationPackCount), int(destinationWriterCount), int(minHealthyRdonlyTablets), maxTPS)
+	wrk, err := NewLegacySplitCloneWorker(
+		wr,
+		wi.cell,
+		keyspace,
+		shard,
+		excludeTableArray,
+		int(sourceReaderCount),
+		int(destinationPackCount),
+		int(destinationWriterCount),
+		int(minHealthyRdonlyTablets),
+		maxTPS,
+		"", // @bramos: We're not supporting interactive legacy split clones at this time.
+		"", // @bramos: We're not supporting interactive legacy split clones at this time.
+	)
 	if err != nil {
 		return nil, nil, nil, vterrors.Wrap(err, "cannot create worker")
 	}
