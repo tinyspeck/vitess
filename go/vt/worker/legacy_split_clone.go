@@ -64,6 +64,8 @@ type LegacySplitCloneWorker struct {
 	destinationWriterCount  int
 	minHealthyRdonlyTablets int
 	maxTPS                  int64
+	vcursorServerAddr       string
+	vcursorTargetString     string
 	cleaner                 *wrangler.Cleaner
 
 	// populated during WorkerStateInit, read-only after that
@@ -99,7 +101,14 @@ type LegacySplitCloneWorker struct {
 }
 
 // NewLegacySplitCloneWorker returns a new LegacySplitCloneWorker object.
-func NewLegacySplitCloneWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, excludeTables []string, sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int, maxTPS int64) (Worker, error) {
+func NewLegacySplitCloneWorker(
+	wr *wrangler.Wrangler,
+	cell, keyspace, shard string,
+	excludeTables []string,
+	sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int,
+	maxTPS int64,
+	vcursorServerAddr, vcursorTargetString string,
+) (Worker, error) {
 	if maxTPS != throttler.MaxRateModuleDisabled {
 		wr.Logger().Infof("throttling enabled and set to a max of %v transactions/second", maxTPS)
 	}
@@ -118,6 +127,8 @@ func NewLegacySplitCloneWorker(wr *wrangler.Wrangler, cell, keyspace, shard stri
 		destinationWriterCount:  destinationWriterCount,
 		minHealthyRdonlyTablets: minHealthyRdonlyTablets,
 		maxTPS:                  maxTPS,
+		vcursorServerAddr:       vcursorServerAddr,
+		vcursorTargetString:     vcursorTargetString,
 		cleaner:                 &wrangler.Cleaner{},
 
 		destinationDbNames:    make(map[string]string),
