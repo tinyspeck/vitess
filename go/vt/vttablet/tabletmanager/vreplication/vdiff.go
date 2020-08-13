@@ -36,6 +36,7 @@ import (
 	"vitess.io/vitess/go/vt/topo/topoproto"
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/engine"
+	"vitess.io/vitess/go/vt/vtgate/evalengine"
 	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
@@ -532,39 +533,16 @@ func (pe *primitiveExecutor) drain(ctx context.Context) (int, error) {
 //-----------------------------------------------------------------
 // mergeSorter
 
-var _ engine.Primitive = (*mergeSorter)(nil)
-
-// mergeSorter performs a merge-sorted read from the participants.
-type mergeSorter struct {
-	engine.Primitive
-	orderBy []engine.OrderbyParams
-}
-
-func newMergeSorter(comparePKs []int) *mergeSorter {
+func newMergeSorter(comparePKs []int) *engine.MergeSort {
+	prims := make([]engine.StreamExecutor, 0, 0)
 	ob := make([]engine.OrderbyParams, 0, len(comparePKs))
-	for _, col := range comparePKs {
-		ob = append(ob, engine.OrderbyParams{Col: col})
+	for _, cpk := range comparePKs {
+		ob = append(ob, engine.OrderbyParams{Col: cpk})
 	}
-	return &mergeSorter{
-		orderBy: ob,
+	return &engine.MergeSort{
+		Primitives: prims,
+		OrderBy:    ob,
 	}
-}
-
-func (ms *mergeSorter) StreamExecute(vcursor engine.VCursor, bindVars map[string]*querypb.BindVariable, wantields bool, callback func(*sqltypes.Result) error) error {
-	// TODO: I don't really need to do a merge sort here, is a single stream, but I'm lazy and don't want to think.
-	_, ok := vcursor.(*resultReader)
-	if !ok {
-		return fmt.Errorf("internal error: vcursor is not a resultReader: %T", vcursor)
-	}
-	rss := make([]*srvtopo.ResolvedShard, 0, 1)
-	bvs := make([]map[string]*querypb.BindVariable, 0, 1)
-	rss = append(rss, &srvtopo.ResolvedShard{
-		Target: &querypb.Target{
-			Shard: "-",
-		},
-	})
-	bvs = append(bvs, bindVars)
-	return engine.MergeSort(vcursor, "", ms.orderBy, rss, bvs, callback)
 }
 
 //-----------------------------------------------------------------
@@ -714,7 +692,7 @@ func (td *tableDiffer) compare(sourceRow, targetRow []sqltypes.Value, cols []int
 		if col == -1 {
 			continue
 		}
-		c, err := sqltypes.NullsafeCompare(sourceRow[col], targetRow[col])
+		c, err := evalengine.NullsafeCompare(sourceRow[col], targetRow[col])
 		if err != nil {
 			return 0, 0, err
 		}
@@ -748,10 +726,6 @@ func removeExprKeyrange(node sqlparser.Expr) sqlparser.Expr {
 		return &sqlparser.AndExpr{
 			Left:  removeExprKeyrange(node.Left),
 			Right: removeExprKeyrange(node.Right),
-		}
-	case *sqlparser.ParenExpr:
-		return &sqlparser.ParenExpr{
-			Expr: removeExprKeyrange(node.Expr),
 		}
 	}
 	return node

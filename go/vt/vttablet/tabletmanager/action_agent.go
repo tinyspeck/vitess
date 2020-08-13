@@ -326,7 +326,7 @@ func NewActionAgent(
 	agent.VREngine = vreplication.NewEngine(ts, tabletAlias.GetCell(), agent.Tablet(), mysqld, func() binlogplayer.DBClient {
 		return binlogplayer.NewDBClient(agent.DBConfigs.FilteredWithDB())
 	},
-		agent.DBConfigs.FilteredWithDB().DbName,
+		agent.DBConfigs.FilteredWithDB().DBName(),
 	)
 	servenv.OnTerm(agent.VREngine.Close)
 

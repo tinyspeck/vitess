@@ -85,8 +85,8 @@ type MySQLVStreamerClient struct {
 
 	isOpen bool
 
-	sourceConnParams dbconfigs.Connector
-	sourceSe         *schema.Engine
+	sourceCp dbconfigs.Connector
+	sourceSe *schema.Engine
 }
 
 // NewTabletVStreamerClient creates a new TabletVStreamerClient
@@ -187,7 +187,7 @@ func (vsClient *MySQLVStreamerClient) Open(ctx context.Context) (err error) {
 
 	config := tabletenv.NewDefaultConfig()
 	vsClient.sourceSe = schema.NewEngine(tabletenv.NewTestEnv(config, nil, "VStreamerClientTest"))
-	vsClient.sourceSe.InitDBConfig(vsClient.sourceConnParams)
+	vsClient.sourceSe.InitDBConfig(vsClient.sourceCp)
 	err = vsClient.sourceSe.Open()
 	if err != nil {
 		return err
@@ -253,7 +253,7 @@ func (vsClient *MySQLVStreamerClient) WaitForPosition(ctx context.Context, pos s
 	}
 
 	// Get a connection.
-	params, err := dbconfigs.WithCredentials(vsClient.sourceCp)
+	params, err := vsClient.sourceCp.MysqlParams()
 	if err != nil {
 		return err
 	}
