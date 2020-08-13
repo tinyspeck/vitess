@@ -23,9 +23,12 @@ import (
 
 	"golang.org/x/net/context"
 
+	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/grpcclient"
+	"vitess.io/vitess/go/vt/mysqlctl"
+	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/vttablet/queryservice"
 	"vitess.io/vitess/go/vt/vttablet/tabletconn"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/schema"
@@ -55,6 +58,12 @@ type VStreamerClient interface {
 
 	// VStreamRows streams rows of a table from the specified starting point.
 	VStreamRows(ctx context.Context, query string, lastpk *querypb.QueryResult, send func(*binlogdatapb.VStreamRowsResponse) error) error
+
+	// VStreamResults streams results along with the gtid of the snapshot.
+	VStreamResults(ctx context.Context, query string, send func(*binlogdatapb.VStreamResultsResponse) error) error
+
+	// WaitForPosition ...
+	WaitForPosition(ctx context.Context, pos string) error
 }
 
 // TabletVStreamerClient a vstream client backed by vttablet
@@ -65,6 +74,7 @@ type TabletVStreamerClient struct {
 	isOpen bool
 
 	tablet         *topodatapb.Tablet
+	mysqld         mysqlctl.MysqlDaemon
 	target         *querypb.Target
 	tsQueryService queryservice.QueryService
 }
@@ -77,13 +87,16 @@ type MySQLVStreamerClient struct {
 	isOpen bool
 
 	sourceConnParams dbconfigs.Connector
-	sourceSe         *schema.Engine
+	// TODO(@setassociative, merge resolution)
+	// sourceCp *mysql.ConnParams
+	sourceSe *schema.Engine
 }
 
 // NewTabletVStreamerClient creates a new TabletVStreamerClient
-func NewTabletVStreamerClient(tablet *topodatapb.Tablet) *TabletVStreamerClient {
+func NewTabletVStreamerClient(tablet *topodatapb.Tablet, mysqld mysqlctl.MysqlDaemon) *TabletVStreamerClient {
 	return &TabletVStreamerClient{
 		tablet: tablet,
+		mysqld: mysqld,
 		target: &querypb.Target{
 			Keyspace:   tablet.Keyspace,
 			Shard:      tablet.Shard,
@@ -132,6 +145,24 @@ func (vsClient *TabletVStreamerClient) VStreamRows(ctx context.Context, query st
 	return vsClient.tsQueryService.VStreamRows(ctx, vsClient.target, query, lastpk, send)
 }
 
+// VStreamResults part of the VStreamerClient interface
+func (vsClient *TabletVStreamerClient) VStreamResults(ctx context.Context, query string, send func(*binlogdatapb.VStreamResultsResponse) error) error {
+	if !vsClient.isOpen {
+		return errors.New("can't VStreamRows without opening client")
+	}
+	vsClient.target.TabletType = topodatapb.TabletType_MASTER
+	return vsClient.tsQueryService.VStreamResults(ctx, vsClient.target, query, send)
+}
+
+// WaitForPosition ...
+func (vsClient *TabletVStreamerClient) WaitForPosition(ctx context.Context, pos string) error {
+	targetPos, err := mysql.DecodePosition(pos)
+	if err != nil {
+		return err
+	}
+	return vsClient.mysqld.WaitMasterPos(ctx, targetPos)
+}
+
 // NewMySQLVStreamerClient is a vstream client that allows you to stream directly from MySQL.
 // In order to achieve this, the following creates a vstreamer Engine with a dummy in memorytopo.
 func NewMySQLVStreamerClient() *MySQLVStreamerClient {
@@ -141,6 +172,8 @@ func NewMySQLVStreamerClient() *MySQLVStreamerClient {
 	// TODO: For now external mysql streams can only be used with ExternalReplWithDB creds.
 	// In the future we will support multiple users.
 	vsClient := &MySQLVStreamerClient{
+		// TODO(@setassociative, merge resolution)
+		// sourceCp: dbcfgs.ExternalReplWithDB(),
 		sourceConnParams: dbcfgs.ExternalReplWithDB(),
 	}
 	return vsClient
@@ -159,7 +192,11 @@ func (vsClient *MySQLVStreamerClient) Open(ctx context.Context) (err error) {
 
 	config := tabletenv.NewDefaultConfig()
 	vsClient.sourceSe = schema.NewEngine(tabletenv.NewTestEnv(config, nil, "VStreamerClientTest"))
+	// TODO(@setassociative, merge resolution):
+	// vsClient.sourceSe = schema.NewEngine(checker{}, tabletenv.DefaultQsConfig)
+	// vsClient.sourceSe.InitDBConfig(vsClient.sourceCp)
 	vsClient.sourceSe.InitDBConfig(vsClient.sourceConnParams)
+
 	err = vsClient.sourceSe.Open()
 	if err != nil {
 		return err
@@ -185,7 +222,9 @@ func (vsClient *MySQLVStreamerClient) VStream(ctx context.Context, startPos stri
 	if !vsClient.isOpen {
 		return errors.New("can't VStream without opening client")
 	}
-	streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceConnParams, vsClient.sourceSe, startPos, filter, send)
+	// TODO(@setassociative, merge resolution)
+	// streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, startPos, filter, send)
+	streamer := vstreamer.NewVStreamer(ctx, vsClient.sourceConnParams, vsClient.sourceSe, startPos, filter, &vindexes.KeyspaceSchema{}, send)
 	return streamer.Stream()
 }
 
@@ -202,8 +241,123 @@ func (vsClient *MySQLVStreamerClient) VStreamRows(ctx context.Context, query str
 		}
 		row = r.Rows[0]
 	}
-	streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceConnParams, vsClient.sourceSe, query, row, send)
+
+	// TODO(@setassociative, merge resolution)
+	// streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceCp, vsClient.sourceSe, query, row, send)
+	streamer := vstreamer.NewRowStreamer(ctx, vsClient.sourceConnParams, vsClient.sourceSe, query, row, &vindexes.KeyspaceSchema{}, send)
 	return streamer.Stream()
+}
+
+// VStreamResults part of the VStreamerClient interface
+func (vsClient *MySQLVStreamerClient) VStreamResults(ctx context.Context, query string, send func(*binlogdatapb.VStreamResultsResponse) error) error {
+	if !vsClient.isOpen {
+		return errors.New("can't VStreamRows without opening client")
+	}
+
+	// TODO(@setassociative, merge resolution)
+	// streamer := vstreamer.NewResultStreamer(ctx, vsClient.sourceCp, query, send)
+	streamer := vstreamer.NewResultStreamer(ctx, vsClient.sourceConnParams, query, send)
+	return streamer.Stream()
+}
+
+// WaitForPosition returns the master position
+func (vsClient *MySQLVStreamerClient) WaitForPosition(ctx context.Context, pos string) error {
+	targetPos, err := mysql.DecodePosition(pos)
+	if err != nil {
+		return err
+	}
+
+	// Get a connection.
+	// TODO(@setassociative, merge resolution)
+	// params, err := dbconfigs.WithCredentials(vsClient.sourceCp)
+	params, err := dbconfigs.WithCredentials(vsClient.sourceConnParams)
+	if err != nil {
+		return err
+	}
+	conn, err := mysql.Connect(ctx, params)
+	if err != nil {
+		return fmt.Errorf("error in connecting to mysql db, err %v", err)
+	}
+
+	defer conn.Close()
+
+	// If we are the master, WaitUntilPositionCommand will fail.
+	// But position is most likely reached. So, check the position
+	// first.
+	mpos, err := conn.MasterPosition()
+	if err != nil {
+		return fmt.Errorf("WaitMasterPos: MasterPosition failed: %v", err)
+	}
+	if mpos.AtLeast(targetPos) {
+		return nil
+	}
+
+	// Find the query to run, run it.
+	query, err := conn.WaitUntilPositionCommand(ctx, targetPos)
+	if err != nil {
+		return err
+	}
+	qr, err := executeFetchContext(ctx, conn, query, 1, true)
+	if err != nil {
+		return fmt.Errorf("WaitUntilPositionCommand(%v) failed: %v", query, err)
+	}
+	if len(qr.Rows) != 1 || len(qr.Rows[0]) != 1 {
+		return fmt.Errorf("unexpected result format from WaitUntilPositionCommand(%v): %#v", query, qr)
+	}
+	result := qr.Rows[0][0]
+	if result.IsNull() {
+		return fmt.Errorf("WaitUntilPositionCommand(%v) failed: replication is probably stopped", query)
+	}
+	if result.ToString() == "-1" {
+		return fmt.Errorf("timed out waiting for position %v", targetPos)
+	}
+	return nil
+}
+
+func executeFetchContext(ctx context.Context, conn *mysql.Conn, query string, maxrows int, wantfields bool) (*sqltypes.Result, error) {
+	// Fast fail if context is done.
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	// Execute asynchronously so we can select on both it and the context.
+	var qr *sqltypes.Result
+	var executeErr error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		qr, executeErr = conn.ExecuteFetch(query, maxrows, wantfields)
+	}()
+
+	// Wait for either the query or the context to be done.
+	select {
+	case <-done:
+		return qr, executeErr
+	case <-ctx.Done():
+		// If both are done already, we may end up here anyway because select
+		// chooses among multiple ready channels pseudorandomly.
+		// Check the done channel and prefer that one if it's ready.
+		select {
+		case <-done:
+			return qr, executeErr
+		default:
+		}
+
+		// Wait for the conn.ExecuteFetch() call to return.
+		<-done
+		// Close the connection. Upon Recycle() it will be thrown out.
+		conn.Close()
+		// ExecuteFetch() may have succeeded before we tried to kill it.
+		// If ExecuteFetch() had returned because we cancelled it,
+		// then executeErr would be an error like "MySQL has gone away".
+		if executeErr == nil {
+			return qr, executeErr
+		}
+		return nil, ctx.Err()
+	}
 }
 
 // InitVStreamerClient initializes config for vstreamer client

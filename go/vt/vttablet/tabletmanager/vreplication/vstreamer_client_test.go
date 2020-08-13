@@ -275,6 +275,8 @@ func TestNewMySQLVStreamerClient(t *testing.T) {
 			name: "sets conn params for MySQLVStreamerClient ",
 			want: &MySQLVStreamerClient{
 				sourceConnParams: dbcfgs.ExternalReplWithDB(),
+				// TODO(@setassociatiev, merge resolution)
+				// sourceCp: env.Dbcfgs.ExternalReplWithDB(),
 			},
 		},
 	}
@@ -294,6 +296,8 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 	})
 	type fields struct {
 		sourceConnParams dbconfigs.Connector
+		// TODO(@setassociative, merge resolution)
+		// sourceConnParams *mysql.ConnParams
 	}
 	type args struct {
 		ctx context.Context
@@ -327,7 +331,7 @@ func TestMySQLVStreamerClientOpen(t *testing.T) {
 	for _, tcase := range tests {
 		t.Run(tcase.name, func(t *testing.T) {
 			vsClient := &MySQLVStreamerClient{
-				sourceConnParams: tcase.fields.sourceConnParams,
+				sourceCp: tcase.fields.sourceConnParams,
 			}
 
 			err := vsClient.Open(tcase.args.ctx)
@@ -358,6 +362,8 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 	type fields struct {
 		isOpen           bool
 		sourceConnParams dbconfigs.Connector
+		// TODO(@setassociative, merge resolution)
+		// sourceConnParams *mysql.ConnParams
 	}
 	type args struct {
 		ctx context.Context
@@ -383,8 +389,8 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 	for _, tcase := range tests {
 		t.Run(tcase.name, func(t *testing.T) {
 			vsClient := &MySQLVStreamerClient{
-				isOpen:           tcase.fields.isOpen,
-				sourceConnParams: tcase.fields.sourceConnParams,
+				isOpen:   tcase.fields.isOpen,
+				sourceCp: tcase.fields.sourceConnParams,
 			}
 
 			err := vsClient.Open(tcase.args.ctx)
@@ -413,6 +419,8 @@ func TestMySQLVStreamerClientClose(t *testing.T) {
 func TestMySQLVStreamerClientVStream(t *testing.T) {
 	vsClient := &MySQLVStreamerClient{
 		sourceConnParams: dbcfgs.ExternalReplWithDB(),
+		// TODO(@setassociative, merge resolution)
+		// sourceCp: env.Dbcfgs.ExternalReplWithDB(),
 	}
 
 	filter := &binlogdatapb.Filter{
@@ -473,6 +481,8 @@ func TestMySQLVStreamerClientVStream(t *testing.T) {
 func TestMySQLVStreamerClientVStreamRows(t *testing.T) {
 	vsClient := &MySQLVStreamerClient{
 		sourceConnParams: dbcfgs.ExternalReplWithDB(),
+		// TODO(@setassociative, merge resolution)
+		// sourceCp: env.Dbcfgs.ExternalReplWithDB(),
 	}
 
 	eventsChan := make(chan *querypb.Row, 1000)

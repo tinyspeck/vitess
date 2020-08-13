@@ -322,9 +322,10 @@ func NewActionAgent(
 
 	vreplication.InitVStreamerClient(agent.DBConfigs)
 
-	// The db name is set by the Start function called above
 	filteredWithDBParams, _ := agent.DBConfigs.FilteredWithDB().MysqlParams()
-	agent.VREngine = vreplication.NewEngine(ts, tabletAlias.Cell, mysqld, func() binlogplayer.DBClient {
+	// TODO(@setassociative, merge resolution): added filteredWithDBParams; previously set by Start
+	// agent.VREngine = vreplication.NewEngine(ts, tabletAlias.Cell, mysqld, func() binlogplayer.DBClient {
+	agent.VREngine = vreplication.NewEngine(ts, tabletAlias.GetCell(), agent.Tablet(), mysqld, func() binlogplayer.DBClient {
 		return binlogplayer.NewDBClient(agent.DBConfigs.FilteredWithDB())
 	},
 		filteredWithDBParams.DbName,
@@ -418,10 +419,13 @@ func NewTestActionAgent(batchCtx context.Context, ts *topo.Server, tabletAlias *
 		TabletAlias:         tabletAlias,
 		Cnf:                 nil,
 		MysqlDaemon:         mysqlDaemon,
-		VREngine:            vreplication.NewEngine(ts, tabletAlias.Cell, mysqlDaemon, binlogplayer.NewFakeDBClient, ti.DbName()),
-		History:             history.New(historyLength),
-		DemoteMasterType:    demoteMasterTabletType,
-		_healthy:            fmt.Errorf("healthcheck not run yet"),
+		DBConfigs:           &dbconfigs.DBConfigs{},
+		// TODO(@setassociative, merge resolution):
+		// vreplication.NewEngine(ts, tabletAlias.Cell, mysqlDaemon, binlogplayer.NewFakeDBClient, ti.DbName()),
+		VREngine:         vreplication.NewEngine(ts, tabletAlias.GetCell(), nil, mysqlDaemon, binlogplayer.NewFakeDBClient, ti.DbName()),
+		History:          history.New(historyLength),
+		DemoteMasterType: demoteMasterTabletType,
+		_healthy:         fmt.Errorf("healthcheck not run yet"),
 	}
 	if preStart != nil {
 		preStart(agent)
@@ -462,11 +466,14 @@ func NewComboActionAgent(batchCtx context.Context, ts *topo.Server, tabletAlias 
 		TabletAlias:         tabletAlias,
 		Cnf:                 nil,
 		MysqlDaemon:         mysqlDaemon,
-		VREngine:            vreplication.NewEngine(nil, "", nil, nil, ""),
-		gotMysqlPort:        true,
-		History:             history.New(historyLength),
-		DemoteMasterType:    demoteMasterType,
-		_healthy:            fmt.Errorf("healthcheck not run yet"),
+		DBConfigs:           dbcfgs,
+		// TODO(@setassociative, merge resolution):
+		// VREngine:           vreplication.NewEngine(nil, "", nil, nil, ""),
+		VREngine:         vreplication.NewEngine(nil, "", nil, nil, nil, ""),
+		gotMysqlPort:     true,
+		History:          history.New(historyLength),
+		DemoteMasterType: demoteMasterType,
+		_healthy:         fmt.Errorf("healthcheck not run yet"),
 	}
 	agent.registerQueryRuleSources()
 
