@@ -31,6 +31,7 @@ import (
 	"golang.org/x/net/context"
 	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/topo/topoproto"
+	"vitess.io/vitess/go/vt/worker/vcursor"
 	"vitess.io/vitess/go/vt/wrangler"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -87,6 +88,8 @@ func commandSplitDiff(wi *Instance, wr *wrangler.Wrangler, subFlags *flag.FlagSe
 	minHealthyRdonlyTablets := subFlags.Int("min_healthy_rdonly_tablets", defaultMinHealthyTablets, "minimum number of healthy RDONLY tablets before taking out one")
 	destTabletTypeStr := subFlags.String("dest_tablet_type", defaultDestTabletType, "destination tablet type (RDONLY or REPLICA) that will be used to compare the shards")
 	parallelDiffsCount := subFlags.Int("parallel_diffs_count", defaultParallelDiffsCount, "number of tables to diff in parallel")
+	vcursorArgs := vcursor.NewArgs(subFlags)
+
 	if err := subFlags.Parse(args); err != nil {
 		return nil, err
 	}
@@ -94,6 +97,12 @@ func commandSplitDiff(wi *Instance, wr *wrangler.Wrangler, subFlags *flag.FlagSe
 		subFlags.Usage()
 		return nil, vterrors.New(vtrpc.Code_INVALID_ARGUMENT, "command SplitDiff requires <keyspace/shard>")
 	}
+
+	if err := vcursorArgs.Validate(); err != nil {
+		subFlags.Usage()
+		return nil, err
+	}
+
 	keyspace, shard, err := topoproto.ParseKeyspaceShard(subFlags.Arg(0))
 	if err != nil {
 		return nil, err
@@ -108,7 +117,18 @@ func commandSplitDiff(wi *Instance, wr *wrangler.Wrangler, subFlags *flag.FlagSe
 		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "command SplitDiff invalid dest_tablet_type: %v", destTabletType)
 	}
 
-	return NewSplitDiffWorker(wr, wi.cell, keyspace, shard, uint32(*sourceUID), excludeTableArray, *minHealthyRdonlyTablets, *parallelDiffsCount, topodatapb.TabletType(destTabletType)), nil
+	return NewSplitDiffWorker(
+		wr,
+		wi.cell,
+		keyspace,
+		shard,
+		uint32(*sourceUID),
+		excludeTableArray,
+		*minHealthyRdonlyTablets,
+		*parallelDiffsCount,
+		topodatapb.TabletType(destTabletType),
+		vcursorArgs,
+	), nil
 }
 
 // shardsWithSources returns all the shards that have SourceShards set
@@ -226,7 +246,18 @@ func interactiveSplitDiff(ctx context.Context, wi *Instance, wr *wrangler.Wrangl
 
 	// start the diff job
 	// TODO: @rafael - Add option to set destination tablet type in UI form.
-	wrk := NewSplitDiffWorker(wr, wi.cell, keyspace, shard, uint32(sourceUID), excludeTableArray, int(minHealthyRdonlyTablets), int(parallelDiffsCount), topodatapb.TabletType_RDONLY)
+	wrk := NewSplitDiffWorker(
+		wr,
+		wi.cell,
+		keyspace,
+		shard,
+		uint32(sourceUID),
+		excludeTableArray,
+		int(minHealthyRdonlyTablets),
+		int(parallelDiffsCount),
+		topodatapb.TabletType_RDONLY,
+		vcursor.Args{},
+	)
 	return wrk, nil, nil, nil
 }
 

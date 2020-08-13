@@ -34,6 +34,7 @@ import (
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
+	"vitess.io/vitess/go/vt/worker/vcursor"
 	"vitess.io/vitess/go/vt/wrangler"
 
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
@@ -55,6 +56,7 @@ type SplitDiffWorker struct {
 	minHealthyRdonlyTablets int
 	destinationTabletType   topodatapb.TabletType
 	parallelDiffsCount      int
+	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
 
 	// populated during WorkerStateInit, read-only after that
@@ -71,7 +73,15 @@ type SplitDiffWorker struct {
 }
 
 // NewSplitDiffWorker returns a new SplitDiffWorker object.
-func NewSplitDiffWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, sourceUID uint32, excludeTables []string, minHealthyRdonlyTablets, parallelDiffsCount int, tabletType topodatapb.TabletType) Worker {
+func NewSplitDiffWorker(
+	wr *wrangler.Wrangler,
+	cell, keyspace, shard string,
+	sourceUID uint32,
+	excludeTables []string,
+	minHealthyRdonlyTablets, parallelDiffsCount int,
+	tabletType topodatapb.TabletType,
+	vcursorArgs vcursor.Args,
+) Worker {
 	return &SplitDiffWorker{
 		StatusWorker:            NewStatusWorker(),
 		wr:                      wr,
@@ -84,6 +94,7 @@ func NewSplitDiffWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, sou
 		destinationTabletType:   tabletType,
 		parallelDiffsCount:      parallelDiffsCount,
 		cleaner:                 &wrangler.Cleaner{},
+		vcursorArgs:             vcursorArgs,
 	}
 }
 
