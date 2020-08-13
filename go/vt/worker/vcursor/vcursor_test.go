@@ -50,7 +50,10 @@ func getAndAssertNewVCursor(
 	ctx context.Context,
 	hostPortString, targetString string,
 ) (vindexes.VCursor, CleanupFunc) {
-	vcursor, closeFn, err := NewVCursor(ctx, hostPortString, targetString)
+	vcursor, closeFn, err := NewVCursor(
+		ctx,
+		Args{serverAddr: &hostPortString, targetString: &targetString},
+	)
 	assert.Nil(t, err)
 	assert.NotNil(t, vcursor)
 	assert.NotNil(t, closeFn)
@@ -59,7 +62,11 @@ func getAndAssertNewVCursor(
 }
 
 func TestVCursorWithNoDialer(t *testing.T) {
-	_, _, err := NewVCursor(context.Background(), "doesn't matter", "really doesn't matter")
+	random := "string"
+	_, _, err := NewVCursor(
+		context.Background(),
+		Args{serverAddr: &random, targetString: &random},
+	)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "no dialer registered")
 }
@@ -74,7 +81,7 @@ func TestVCursorCloseFn(t *testing.T) {
 	_, closeFn := getAndAssertNewVCursor(
 		t,
 		context.Background(),
-		"255.255.255.255",
+		expectedAddr,
 		"really doesn't matter",
 	)
 
@@ -92,7 +99,7 @@ func TestVCursorExecuteKeyspaceIDReturnsErr(t *testing.T) {
 	vc, _ := getAndAssertNewVCursor(
 		t,
 		context.Background(),
-		"255.255.255.255",
+		expectedAddr,
 		"really doesn't matter",
 	)
 
@@ -118,11 +125,12 @@ func TestVCursorExecute(t *testing.T) {
 	defer ctrl.Finish()
 	mi := vtgateconn.NewMockImpl(ctrl)
 
-	registerGrpcDialer(t, "255.255.255.255", mi)
+	expectedAddr := "255.255.255.255"
+	registerGrpcDialer(t, expectedAddr, mi)
 	vc, _ := getAndAssertNewVCursor(
 		t,
 		context.Background(),
-		"255.255.255.255",
+		expectedAddr,
 		"really doesn't matter",
 	)
 

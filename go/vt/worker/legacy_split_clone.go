@@ -42,6 +42,7 @@ import (
 	"vitess.io/vitess/go/vt/topotools"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/worker/events"
+	"vitess.io/vitess/go/vt/worker/vcursor"
 	"vitess.io/vitess/go/vt/wrangler"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
@@ -64,8 +65,7 @@ type LegacySplitCloneWorker struct {
 	destinationWriterCount  int
 	minHealthyRdonlyTablets int
 	maxTPS                  int64
-	vcursorServerAddr       string
-	vcursorTargetString     string
+	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
 
 	// populated during WorkerStateInit, read-only after that
@@ -107,7 +107,7 @@ func NewLegacySplitCloneWorker(
 	excludeTables []string,
 	sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int,
 	maxTPS int64,
-	vcursorServerAddr, vcursorTargetString string,
+	vcursorArgs vcursor.Args,
 ) (Worker, error) {
 	if maxTPS != throttler.MaxRateModuleDisabled {
 		wr.Logger().Infof("throttling enabled and set to a max of %v transactions/second", maxTPS)
@@ -115,6 +115,10 @@ func NewLegacySplitCloneWorker(
 	if maxTPS != throttler.MaxRateModuleDisabled && maxTPS < int64(destinationWriterCount) {
 		return nil, fmt.Errorf("-max_tps must be >= -destination_writer_count: %v >= %v", maxTPS, destinationWriterCount)
 	}
+	if err := vcursorArgs.Validate(); err != nil {
+		return nil, err
+	}
+
 	return &LegacySplitCloneWorker{
 		StatusWorker:            NewStatusWorker(),
 		wr:                      wr,
@@ -127,8 +131,7 @@ func NewLegacySplitCloneWorker(
 		destinationWriterCount:  destinationWriterCount,
 		minHealthyRdonlyTablets: minHealthyRdonlyTablets,
 		maxTPS:                  maxTPS,
-		vcursorServerAddr:       vcursorServerAddr,
-		vcursorTargetString:     vcursorTargetString,
+		vcursorArgs:             vcursorArgs,
 		cleaner:                 &wrangler.Cleaner{},
 
 		destinationDbNames:    make(map[string]string),
