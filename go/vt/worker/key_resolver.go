@@ -17,6 +17,8 @@ limitations under the License.
 package worker
 
 import (
+	"fmt"
+
 	"vitess.io/vitess/go/vt/proto/vtrpc"
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/evalengine"
@@ -95,10 +97,15 @@ func (r *v2Resolver) keyspaceID(row []sqltypes.Value) ([]byte, error) {
 type v3Resolver struct {
 	shardingColumnIndex int
 	vindex              vindexes.SingleColumn
+	vcursor             vindexes.VCursor
 }
 
 // newV3ResolverFromTableDefinition returns a keyspaceIDResolver for a v3 table.
-func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, td *tabletmanagerdatapb.TableDefinition) (keyspaceIDResolver, error) {
+func newV3ResolverFromTableDefinition(
+	keyspaceSchema *vindexes.KeyspaceSchema,
+	td *tabletmanagerdatapb.TableDefinition,
+	vcursor vindexes.VCursor,
+) (keyspaceIDResolver, error) {
 	if td.Type != tmutils.TableBaseTable {
 		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "a keyspaceID resolver can only be created for a base table, got %v", td.Type)
 	}
@@ -118,15 +125,25 @@ func newV3ResolverFromTableDefinition(keyspaceSchema *vindexes.KeyspaceSchema, t
 		return nil, vterrors.Errorf(vtrpc.Code_FAILED_PRECONDITION, "table %v has a Vindex on unknown column %v", td.Name, colVindex.Columns[0])
 	}
 
+	if vcursor == nil {
+		return nil, fmt.Errorf("Can't have nil vcursor for v3 mode operations")
+	}
+
 	return &v3Resolver{
 		shardingColumnIndex: columnIndex,
 		// Only SingleColumn vindexes are returned by FindVindexForSharding.
-		vindex: colVindex.Vindex.(vindexes.SingleColumn),
+		vindex:  colVindex.Vindex.(vindexes.SingleColumn),
+		vcursor: vcursor,
 	}, nil
 }
 
 // newV3ResolverFromColumnList returns a keyspaceIDResolver for a v3 table.
-func newV3ResolverFromColumnList(keyspaceSchema *vindexes.KeyspaceSchema, name string, columns []string) (keyspaceIDResolver, error) {
+func newV3ResolverFromColumnList(
+	keyspaceSchema *vindexes.KeyspaceSchema,
+	name string,
+	columns []string,
+	vcursor vindexes.VCursor,
+) (keyspaceIDResolver, error) {
 	tableSchema, ok := keyspaceSchema.Tables[name]
 	if !ok {
 		return nil, vterrors.Errorf(vtrpc.Code_FAILED_PRECONDITION, "no vschema definition for table %v", name)
@@ -149,17 +166,22 @@ func newV3ResolverFromColumnList(keyspaceSchema *vindexes.KeyspaceSchema, name s
 		return nil, vterrors.Errorf(vtrpc.Code_FAILED_PRECONDITION, "table %v has a Vindex on unknown column %v", name, colVindex.Columns[0])
 	}
 
+	if vcursor == nil {
+		return nil, fmt.Errorf("Can't have nil vcursor for v3 mode operations")
+	}
+
 	return &v3Resolver{
 		shardingColumnIndex: columnIndex,
 		// Only SingleColumn vindexes are returned by FindVindexForSharding.
-		vindex: colVindex.Vindex.(vindexes.SingleColumn),
+		vindex:  colVindex.Vindex.(vindexes.SingleColumn),
+		vcursor: vcursor,
 	}, nil
 }
 
 // keyspaceID implements the keyspaceIDResolver interface.
 func (r *v3Resolver) keyspaceID(row []sqltypes.Value) ([]byte, error) {
 	v := row[r.shardingColumnIndex]
-	destinations, err := r.vindex.Map(nil, []sqltypes.Value{v})
+	destinations, err := r.vindex.Map(r.vcursor, []sqltypes.Value{v})
 	if err != nil {
 		return nil, err
 	}
