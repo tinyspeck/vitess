@@ -271,9 +271,10 @@ func (lu *LookupUnique) String() string {
 	return lu.name
 }
 
-// Cost returns the cost of this vindex as 10.
+// Cost returns the cost of this vindex as 1
 func (lu *LookupUnique) Cost() int {
-	return 10
+	// Hardcoding to 1 so we vtworkers don't ignore this vindex
+	return 1
 }
 
 // IsUnique returns true since the Vindex is unique.
