@@ -17,6 +17,7 @@ limitations under the License.
 package worker
 
 import (
+	"fmt"
 	"html/template"
 	"sort"
 	"sync"
@@ -451,6 +452,7 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 
 	// read the vschema if needed
 	var keyspaceSchema *vindexes.KeyspaceSchema
+	var vc vindexes.VCursor
 	if *useV3ReshardingMode {
 		kschema, err := sdw.wr.TopoServer().GetVSchema(ctx, sdw.keyspace)
 		if err != nil {
@@ -464,6 +466,14 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 		if err != nil {
 			return vterrors.Wrapf(err, "cannot build vschema for keyspace %v", sdw.keyspace)
 		}
+
+		_vc, cleanupVCursor, err := vcursor.NewVCursor(ctx, sdw.vcursorArgs)
+		if err != nil {
+			return fmt.Errorf("could not create vcursor: %v", err)
+		}
+
+		vc = _vc
+		defer cleanupVCursor()
 	}
 
 	// Compute the overlap keyrange. Later, we'll compare it with
@@ -510,7 +520,22 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 			if key.KeyRangeEqual(overlap, sdw.sourceShard.KeyRange) {
 				sourceQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.sourceAlias, tableDefinition)
 			} else {
-				sourceQueryResultReader, err = TableScanByKeyRange(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.sourceAlias, tableDefinition, overlap, keyspaceSchema, sdw.keyspaceInfo.ShardingColumnName, sdw.keyspaceInfo.ShardingColumnType)
+				// @bramos: Since we're creating this branch to solely operate on
+				// merges, we're "guaranteed" to never hit this branch.
+				// TableScanByKeyRange protects against a nil VCursor
+				// so will fail at runtime if anything.
+				sourceQueryResultReader, err = TableScanByKeyRange(
+					ctx,
+					sdw.wr.Logger(),
+					sdw.wr.TopoServer(),
+					sdw.sourceAlias,
+					tableDefinition,
+					overlap,
+					keyspaceSchema,
+					sdw.keyspaceInfo.ShardingColumnName,
+					sdw.keyspaceInfo.ShardingColumnType,
+					nil,
+				)
 			}
 			if err != nil {
 				newErr := vterrors.Wrap(err, "TableScan(ByKeyRange?)(source) failed")
@@ -526,7 +551,18 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 			if key.KeyRangeEqual(overlap, sdw.shardInfo.KeyRange) {
 				destinationQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition)
 			} else {
-				destinationQueryResultReader, err = TableScanByKeyRange(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition, overlap, keyspaceSchema, sdw.keyspaceInfo.ShardingColumnName, sdw.keyspaceInfo.ShardingColumnType)
+				destinationQueryResultReader, err = TableScanByKeyRange(
+					ctx,
+					sdw.wr.Logger(),
+					sdw.wr.TopoServer(),
+					sdw.destinationAlias,
+					tableDefinition,
+					overlap,
+					keyspaceSchema,
+					sdw.keyspaceInfo.ShardingColumnName,
+					sdw.keyspaceInfo.ShardingColumnType,
+					vc,
+				)
 			}
 			if err != nil {
 				newErr := vterrors.Wrap(err, "TableScan(ByKeyRange?)(destination) failed")

@@ -532,6 +532,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 	// read the vschema if needed
 	var keyspaceSchema *vindexes.KeyspaceSchema
+	var vc vindexes.VCursor
 	if *useV3ReshardingMode {
 		kschema, err := scw.wr.TopoServer().GetVSchema(ctx, scw.keyspace)
 		if err != nil {
@@ -545,6 +546,14 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		if err != nil {
 			return vterrors.Wrapf(err, "cannot build vschema for keyspace %v", scw.keyspace)
 		}
+
+		_vc, cleanupVCursor, err := vcursor.NewVCursor(ctx, scw.vcursorArgs)
+		if err != nil {
+			return fmt.Errorf("could not create vcursor: %v", err)
+		}
+
+		vc = _vc
+		defer cleanupVCursor()
 	}
 
 	// Now for each table, read data chunks and send them to all
@@ -555,7 +564,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
 			var keyResolver keyspaceIDResolver
 			if *useV3ReshardingMode {
-				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
+				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td, vc)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
 				}

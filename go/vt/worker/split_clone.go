@@ -1348,7 +1348,9 @@ func (scw *SplitCloneWorker) createKeyResolver(td *tabletmanagerdatapb.TableDefi
 	}
 
 	if *useV3ReshardingMode {
-		return newV3ResolverFromTableDefinition(scw.keyspaceSchema, td)
+		// @bramos: this will surely return an error at runtime which is what we want
+		// since we exclusively use LegacySplitClone
+		return newV3ResolverFromTableDefinition(scw.keyspaceSchema, td, nil)
 	}
 	return newV2Resolver(scw.destinationKeyspaceInfo, td)
 }
