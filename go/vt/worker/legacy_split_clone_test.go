@@ -216,6 +216,7 @@ func (tc *legacySplitCloneTestCase) setUp(v3 bool) {
 		"-source_reader_count", "10",
 		"-destination_pack_count", "4",
 		"-destination_writer_count", "10",
+		"-vcursor_server_addr", "127.0.0.1:8080",
 		"ks/-80"}
 
 	// Start action loop after having registered all RPC services.
