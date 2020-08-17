@@ -633,8 +633,10 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 				bls := &binlogdatapb.BinlogSource{
 					Keyspace: src.Keyspace(),
 					Shard:    src.ShardName(),
-					// @bramos: this is meant for a merge so we want to unconditionally replicate
-					// the table to the destination shard
+					// @bramos: Instead of setting up a keyrange to replicate,
+					// we're taking advantage of the fact that we're merging
+					// to unconditionally replicate the entire shard
+					// KeyRange: kr,
 					Tables: tablesToReplicateSlice,
 				}
 				qr, err := exc.vreplicationExec(
