@@ -45,8 +45,8 @@ func TestExecutorSet(t *testing.T) {
 		out *vtgatepb.Session
 		err string
 	}{{
-		in:  "set autocommit = 1",
-		out: &vtgatepb.Session{Autocommit: true},
+		in:  "set autocommit = 1, client_found_rows = 1",
+		out: &vtgatepb.Session{Autocommit: true, Options: &querypb.ExecuteOptions{ClientFoundRows: true}},
 	}, {
 		in:  "set @@autocommit = true",
 		out: &vtgatepb.Session{Autocommit: true},
@@ -268,6 +268,7 @@ func TestExecutorSet(t *testing.T) {
 
 func TestExecutorSetOp(t *testing.T) {
 	executor, _, _, sbclookup := createLegacyExecutorEnv()
+	*sysVarSetEnabled = true
 
 	sbclookup.SetResults([]*sqltypes.Result{
 		sqltypes.MakeTestResult(sqltypes.MakeTestFields("sql_mode", "varchar"), "STRICT_ALL_TABLES,NO_AUTO_UPDATES"),
