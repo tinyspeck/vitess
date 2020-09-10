@@ -305,7 +305,7 @@ func (tm *TabletManager) Start(tablet *topodatapb.Tablet, healthCheckInterval ti
 		return nil
 	}
 
-	tm.tmState.Open(tm.BatchCtx)
+	tm.tmState.Open()
 	return nil
 }
 
@@ -455,6 +455,7 @@ func (tm *TabletManager) checkMastership(ctx context.Context, si *topo.ShardInfo
 		case topo.IsErrType(err, topo.NoNode):
 			// There's no existing tablet record, so we can assume
 			// no one has left us a message to step down.
+			log.Infof("Shard master alias matches, but there is no existing tablet record. Switching to master with 'Now' as time")
 			tm.tmState.UpdateTablet(func(tablet *topodatapb.Tablet) {
 				tablet.Type = topodatapb.TabletType_MASTER
 				// Update the master term start time (current value is 0) because we
@@ -464,11 +465,18 @@ func (tm *TabletManager) checkMastership(ctx context.Context, si *topo.ShardInfo
 			})
 		case err == nil:
 			if oldTablet.Type == topodatapb.TabletType_MASTER {
+				log.Infof("Shard master alias matches, and existing tablet agrees. Switching to master with tablet's master term start time: %v", oldTablet.MasterTermStartTime)
 				// We're marked as master in the shard record,
 				// and our existing tablet record agrees.
 				tm.tmState.UpdateTablet(func(tablet *topodatapb.Tablet) {
 					tablet.Type = topodatapb.TabletType_MASTER
 					tablet.MasterTermStartTime = oldTablet.MasterTermStartTime
+				})
+			} else {
+				log.Warningf("Shard master alias matches, but existing tablet is not master. Switching from %v to master with the shard's master term start time: %v", oldTablet.Type, si.MasterTermStartTime)
+				tm.tmState.UpdateTablet(func(tablet *topodatapb.Tablet) {
+					tablet.Type = topodatapb.TabletType_MASTER
+					tablet.MasterTermStartTime = si.MasterTermStartTime
 				})
 			}
 		default:
@@ -486,10 +494,13 @@ func (tm *TabletManager) checkMastership(ctx context.Context, si *topo.ShardInfo
 				oldMasterTermStartTime := oldTablet.GetMasterTermStartTime()
 				currentShardTime := si.GetMasterTermStartTime()
 				if oldMasterTermStartTime.After(currentShardTime) {
+					log.Infof("Shard master alias does not match, but the tablet's master term start time is newer. Switching to master with tablet's master term start time: %v", oldTablet.MasterTermStartTime)
 					tm.tmState.UpdateTablet(func(tablet *topodatapb.Tablet) {
 						tablet.Type = topodatapb.TabletType_MASTER
 						tablet.MasterTermStartTime = oldTablet.MasterTermStartTime
 					})
+				} else {
+					log.Infof("Existing tablet type is master, but the shard record has a different master with a newer timestamp. Remaining a replica")
 				}
 			}
 		default:
@@ -588,7 +599,7 @@ func (tm *TabletManager) handleRestore(ctx context.Context) (bool, error) {
 	if *restoreFromBackup {
 		go func() {
 			// Open the state manager after restore is done.
-			defer tm.tmState.Open(ctx)
+			defer tm.tmState.Open()
 
 			// restoreFromBackup will just be a regular action
 			// (same as if it was triggered remotely)
