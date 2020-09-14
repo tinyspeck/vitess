@@ -88,10 +88,10 @@ type discoveryGateway struct {
 }
 
 func createDiscoveryGateway(ctx context.Context, hc discovery.HealthCheck, serv srvtopo.Server, cell string, retryCount int) Gateway {
-	return NewDiscoveryGateway(ctx, hc, serv, cell, retryCount)
+	return newDiscoveryGateway(ctx, hc, serv, cell, retryCount)
 }
 
-func NewDiscoveryGateway(ctx context.Context, hc discovery.HealthCheck, serv srvtopo.Server, cell string, retryCount int) *discoveryGateway {
+func newDiscoveryGateway(ctx context.Context, hc discovery.HealthCheck, serv srvtopo.Server, cell string, retryCount int) *discoveryGateway {
 	var topoServer *topo.Server
 	if serv != nil {
 		var err error

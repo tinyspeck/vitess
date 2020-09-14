@@ -873,7 +873,7 @@ func TestResolveVStreamParams(t *testing.T) {
 }
 
 func newTestVStreamManager(hc discovery.HealthCheck, serv srvtopo.Server, cell string) *vstreamManager {
-	gw := NewDiscoveryGateway(context.Background(), hc, serv, cell, 3)
+	gw := newDiscoveryGateway(context.Background(), hc, serv, cell, 3)
 	srvResolver := srvtopo.NewResolver(serv, gw, cell)
 	return newVStreamManager(srvResolver, serv, cell)
 }

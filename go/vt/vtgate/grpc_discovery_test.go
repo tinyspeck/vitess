@@ -64,7 +64,7 @@ func TestGRPCDiscovery(t *testing.T) {
 	// Wait for the right tablets to be present.
 	hc := discovery.NewHealthCheck(10*time.Second, 2*time.Minute)
 	rs := srvtopo.NewResilientServer(ts, "TestGRPCDiscovery")
-	dg := NewDiscoveryGateway(context.Background(), hc, rs, cell, 2)
+	dg := newDiscoveryGateway(context.Background(), hc, rs, cell, 2)
 	hc.AddTablet(&topodatapb.Tablet{
 		Alias: &topodatapb.TabletAlias{
 			Cell: cell,

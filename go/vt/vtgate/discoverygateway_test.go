@@ -107,7 +107,7 @@ func TestDiscoveryGatewayGetTablets(t *testing.T) {
 	keyspace := "ks"
 	shard := "0"
 	hc := discovery.NewFakeHealthCheck()
-	dg := NewDiscoveryGateway(context.Background(), hc, nil, "local", 2)
+	dg := newDiscoveryGateway(context.Background(), hc, nil, "local", 2)
 
 	// replica should only use local ones
 	hc.Reset()
@@ -215,7 +215,7 @@ func TestDiscoveryGatewayGetTabletsInRegion(t *testing.T) {
 		Cells: []string{"local-west", "local-east"},
 	}
 
-	dg := NewDiscoveryGateway(context.Background(), hc, srvTopo, "local-west", 2)
+	dg := newDiscoveryGateway(context.Background(), hc, srvTopo, "local-west", 2)
 
 	ts.CreateCellsAlias(context.Background(), "local", cellsAlias)
 
@@ -245,7 +245,7 @@ func TestDiscoveryGatewayGetTabletsWithRegion(t *testing.T) {
 		Cells: []string{"local-west", "local-east"},
 	}
 
-	dg := NewDiscoveryGateway(context.Background(), hc, srvTopo, "local", 2)
+	dg := newDiscoveryGateway(context.Background(), hc, srvTopo, "local", 2)
 
 	ts.CreateCellsAlias(context.Background(), "local", cellsAlias)
 
@@ -274,7 +274,7 @@ func testDiscoveryGatewayGeneric(t *testing.T, f func(dg *discoveryGateway, targ
 		TabletType: tabletType,
 	}
 	hc := discovery.NewFakeHealthCheck()
-	dg := NewDiscoveryGateway(context.Background(), hc, nil, "cell", 2)
+	dg := newDiscoveryGateway(context.Background(), hc, nil, "cell", 2)
 
 	// no tablet
 	hc.Reset()
@@ -357,7 +357,7 @@ func testDiscoveryGatewayTransact(t *testing.T, f func(dg *discoveryGateway, tar
 		TabletType: tabletType,
 	}
 	hc := discovery.NewFakeHealthCheck()
-	dg := NewDiscoveryGateway(context.Background(), hc, nil, "cell", 2)
+	dg := newDiscoveryGateway(context.Background(), hc, nil, "cell", 2)
 
 	// retry error - no retry
 	hc.Reset()
