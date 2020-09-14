@@ -204,6 +204,10 @@ func (dg *discoveryGateway) WaitForTablets(ctx context.Context, tabletTypesToWai
 		return err
 	}
 
+	if len(KeyspacesToWatch) == 0 {
+		return dg.tsc.WaitForAllServingTablets(ctx, targets)
+	}
+
 	// Let's remove from the target shards that are not in the keyspaceToWatch list.
 	for i, target := range targets {
 		keepTarget := false
