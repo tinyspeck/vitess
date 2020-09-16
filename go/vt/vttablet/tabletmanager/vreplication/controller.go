@@ -200,7 +200,7 @@ func (ct *controller) runVDiff(ctx context.Context) (err error) {
 		}
 
 		vd := newVDiffer(ct.id, &ct.source, vsClient, ct.blpStats, dbClient, ct.vre, ct.workflow)
-		return vd.VDiff(ctx, 60*time.Second)
+		return vd.VDiff(ctx, 3600*time.Second)
 	}
 	return fmt.Errorf("missing source")
 }
