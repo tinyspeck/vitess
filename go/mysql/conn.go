@@ -44,7 +44,7 @@ var mysqlServerFlushDelay = flag.Duration("mysql_server_flush_delay", 100*time.M
 const (
 	// connBufferSize is how much we buffer for reading and
 	// writing. It is also how much we allocate for ephemeral buffers.
-	connBufferSize = 16 * 1024
+	connBufferSize = 128 * 1024
 
 	// packetHeaderSize is the 4 bytes of header per MySQL packet
 	// sent over
