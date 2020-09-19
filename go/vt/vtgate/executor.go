@@ -949,6 +949,720 @@ func allowTabletFilter(_ *topodatapb.Tablet, _ string, _ int64) bool {
 	return true
 }
 
+func buildTabletFilter(expr sqlparser.Expr) tabletFilter {
+	var (
+		leftFilter  tabletFilter
+		rightFilter tabletFilter
+
+		leftCol  *sqlparser.ColName
+		rightCol *sqlparser.ColName
+
+		leftLit  *sqlparser.Literal
+		rightLit *sqlparser.Literal
+	)
+	log.Infof("building tablet filter for %+v (%T)\n", expr, expr)
+	switch expr := expr.(type) {
+	case *sqlparser.AndExpr:
+		log.Infof("%+v (%T) AND %+v (%T)", expr.Left, expr.Left, expr.Right, expr.Right)
+		switch expr.Left.(type) {
+		case *sqlparser.ColName:
+		case *sqlparser.Literal:
+		default:
+			leftFilter = buildTabletFilter(expr.Left)
+		}
+
+		switch expr.Right.(type) {
+		case *sqlparser.ColName:
+		case *sqlparser.Literal:
+		default:
+			rightFilter = buildTabletFilter(expr.Right)
+		}
+
+		if leftFilter != nil && rightFilter != nil {
+			return func(t *topodatapb.Tablet, s string, i int64) bool {
+				log.Infof("filtering AND expression")
+				return leftFilter(t, s, i) && rightFilter(t, s, i)
+			}
+		}
+
+		if leftFilter != nil || rightFilter != nil {
+			// this is a situation i'm not currently expecting, you would have to write something like:
+			// 		WHERE hostname = 'xxx' AND cell
+			//  	WHERE hostname = 'xxx' AND 5
+			log.Errorf("unexpected query expression %+v\n", expr)
+			return allowTabletFilter
+		}
+	case *sqlparser.OrExpr:
+		switch expr.Left.(type) {
+		case *sqlparser.ColName:
+		case *sqlparser.Literal:
+		default:
+			leftFilter = buildTabletFilter(expr.Left)
+		}
+
+		switch expr.Right.(type) {
+		case *sqlparser.ColName:
+		case *sqlparser.Literal:
+		default:
+			rightFilter = buildTabletFilter(expr.Left)
+		}
+
+		if leftFilter != nil && rightFilter != nil {
+			return func(t *topodatapb.Tablet, s string, i int64) bool {
+				return leftFilter(t, s, i) || rightFilter(t, s, i)
+			}
+		}
+
+		if leftFilter != nil || rightFilter != nil {
+			// this is a situation i'm not currently expecting, you would have to write something like:
+			// 		WHERE hostname = 'xxx' AND cell
+			//  	WHERE hostname = 'xxx' AND 5
+			log.Errorf("unexpected query expression %+v\n", expr)
+			return allowTabletFilter
+		}
+	case *sqlparser.XorExpr:
+		switch expr.Left.(type) {
+		case *sqlparser.ColName:
+		case *sqlparser.Literal:
+		default:
+			leftFilter = buildTabletFilter(expr.Left)
+		}
+
+		switch expr.Right.(type) {
+		case *sqlparser.ColName:
+		case *sqlparser.Literal:
+		default:
+			rightFilter = buildTabletFilter(expr.Left)
+		}
+
+		if leftFilter != nil && rightFilter != nil {
+			return func(t *topodatapb.Tablet, s string, i int64) bool {
+				l := leftFilter(t, s, i)
+				r := rightFilter(t, s, i)
+				return (l && !r) || (!l && r)
+			}
+		}
+
+		if leftFilter != nil || rightFilter != nil {
+			// this is a situation i'm not currently expecting, you would have to write something like:
+			// 		WHERE hostname = 'xxx' XOR cell
+			//  	WHERE hostname = 'xxx' XOR 5
+			log.Errorf("unexpected query expression %+v\n", expr)
+			return allowTabletFilter
+		}
+	case *sqlparser.NotExpr:
+		filter := buildTabletFilter(expr.Expr)
+		return func(t *topodatapb.Tablet, s string, i int64) bool {
+			return !filter(t, s, i)
+		}
+	case *sqlparser.ComparisonExpr:
+		log.Infof("checking LHS of comparison: %+v (%T)\n", expr.Left, expr.Left)
+		switch expr := expr.Left.(type) {
+		case *sqlparser.ColName:
+			leftCol = expr
+		case *sqlparser.Literal:
+			leftLit = expr
+		default:
+		}
+
+		log.Infof("checking RHS of comparison: %+v (%T)\n", expr.Right, expr.Right)
+		switch expr := expr.Right.(type) {
+		case *sqlparser.ColName:
+			rightCol = expr
+		case *sqlparser.Literal:
+			rightLit = expr
+		default:
+		}
+
+		if leftFilter != nil || rightFilter != nil {
+			log.Infof("one of LHS / RHS was a compound expression, which is unsupported")
+			return allowTabletFilter
+			// unsupported path
+		}
+
+		return buildTabletFilterFromComparison(leftCol, rightCol, leftLit, rightLit, expr.Operator)
+	default:
+	}
+
+	return allowTabletFilter
+}
+
+func buildTabletFilterFromComparison(lcol, rcol *sqlparser.ColName, llit, rlit *sqlparser.Literal, op string) tabletFilter {
+	log.Infof("buildTabletFilterFromComparison() %+v %+v %+v %+v %s", lcol, rcol, llit, rlit, op)
+
+	if lcol != nil {
+		if rcol != nil {
+			return allowTabletFilter
+		}
+
+		if rlit != nil {
+			log.Infof("parsing LHS(col) <> RHS(lit)")
+			switch lcol.Name.Lowered() {
+			case "cell":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Alias.Cell == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Alias.Cell < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Alias.Cell > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Alias.Cell <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Alias.Cell >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Alias.Cell != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "keyspace":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Keyspace == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Keyspace < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Keyspace > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Keyspace <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Keyspace >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Keyspace != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "shard":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Shard == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Shard < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Shard > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Shard <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Shard >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Shard != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "tablet_type":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						log.Infof("%s == %s", t.Type.String(), string(rlit.Val))
+						return t.Type.String() == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Type.String() < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Type.String() > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Type.String() <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Type.String() >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Type.String() != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "state":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						log.Infof("%s = %s", s, string(rlit.Val))
+						return s == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return s < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return s > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return s <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return s >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return s != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "alias":
+				log.Infof("LHS(col): alias")
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						log.Infof("%s = %s", topoproto.TabletAliasString(t.Alias), string(rlit.Val))
+						return topoproto.TabletAliasString(t.Alias) == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return topoproto.TabletAliasString(t.Alias) < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return topoproto.TabletAliasString(t.Alias) > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return topoproto.TabletAliasString(t.Alias) <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return topoproto.TabletAliasString(t.Alias) >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return topoproto.TabletAliasString(t.Alias) != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "hostname":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Hostname == string(rlit.Val)
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Hostname < string(rlit.Val)
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Hostname > string(rlit.Val)
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Hostname <= string(rlit.Val)
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Hostname >= string(rlit.Val)
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						return t.Hostname != string(rlit.Val)
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			case "master_term_start_time":
+				switch op {
+				case sqlparser.EqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+						if err != nil {
+							return false
+						}
+
+						return i == mtst
+					}
+				case sqlparser.LessThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+						if err != nil {
+							return false
+						}
+
+						return i < mtst
+					}
+				case sqlparser.GreaterThanStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+						if err != nil {
+							return false
+						}
+
+						return i > mtst
+					}
+				case sqlparser.LessEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+						if err != nil {
+							return false
+						}
+
+						return i <= mtst
+					}
+				case sqlparser.GreaterEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+						if err != nil {
+							return false
+						}
+
+						return i >= mtst
+					}
+				case sqlparser.NotEqualStr:
+					return func(t *topodatapb.Tablet, s string, i int64) bool {
+						mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+						if err != nil {
+							return false
+						}
+
+						return i != mtst
+					}
+				case sqlparser.NullSafeEqualStr:
+					// unsupported
+					break
+				}
+			default:
+				return allowTabletFilter
+			}
+		}
+
+		return allowTabletFilter
+	}
+
+	if rcol != nil {
+		if llit == nil {
+			return allowTabletFilter
+		}
+
+		switch rcol.Name.Lowered() {
+		case "cell":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == t.Alias.Cell
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < t.Alias.Cell
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > t.Alias.Cell
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= t.Alias.Cell
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= t.Alias.Cell
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != t.Alias.Cell
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+			}
+		case "keyspace":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == t.Keyspace
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < t.Keyspace
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > t.Keyspace
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= t.Keyspace
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= t.Keyspace
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != t.Keyspace
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		case "shard":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == t.Shard
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < t.Shard
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > t.Shard
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= t.Shard
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= t.Shard
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != t.Shard
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		case "tablet_type":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == t.Type.String()
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < t.Type.String()
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > t.Type.String()
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= t.Type.String()
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= t.Type.String()
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != t.Type.String()
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		case "state":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == s
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < s
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > s
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= s
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= s
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != s
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		case "alias":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == topoproto.TabletAliasString(t.Alias)
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < topoproto.TabletAliasString(t.Alias)
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > topoproto.TabletAliasString(t.Alias)
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= topoproto.TabletAliasString(t.Alias)
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= topoproto.TabletAliasString(t.Alias)
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != topoproto.TabletAliasString(t.Alias)
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		case "hostname":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) == t.Hostname
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) < t.Hostname
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) > t.Hostname
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) <= t.Hostname
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) >= t.Hostname
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					return string(llit.Val) != t.Hostname
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		case "master_term_start_time":
+			switch op {
+			case sqlparser.EqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+					if err != nil {
+						return false
+					}
+
+					return mtst == i
+				}
+			case sqlparser.LessThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+					if err != nil {
+						return false
+					}
+
+					return mtst < i
+				}
+			case sqlparser.GreaterThanStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+					if err != nil {
+						return false
+					}
+
+					return mtst > i
+				}
+			case sqlparser.LessEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+					if err != nil {
+						return false
+					}
+
+					return mtst <= i
+				}
+			case sqlparser.GreaterEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+					if err != nil {
+						return false
+					}
+
+					return mtst >= i
+				}
+			case sqlparser.NotEqualStr:
+				return func(t *topodatapb.Tablet, s string, i int64) bool {
+					mtst, err := strconv.ParseInt(string(rlit.Val), 10, 64)
+					if err != nil {
+						return false
+					}
+
+					return mtst != i
+				}
+			case sqlparser.NullSafeEqualStr:
+				// unsupported
+				break
+			}
+		default:
+			return allowTabletFilter
+		}
+	}
+
+	return allowTabletFilter
+}
+
 func (e *Executor) showTablets(show *sqlparser.Show) (*sqltypes.Result, error) {
 	getTabletFilters := func(show *sqlparser.Show) []tabletFilter {
 		filters := []tabletFilter{}
@@ -971,6 +1685,8 @@ func (e *Executor) showTablets(show *sqlparser.Show) (*sqltypes.Result, error) {
 
 		if filter.Filter != nil {
 			log.Infof("have show tablets where clause: %+v. not doing anything with it (for now)\n", filter.Filter)
+
+			filters = append(filters, buildTabletFilter(filter.Filter))
 		}
 
 		return filters
