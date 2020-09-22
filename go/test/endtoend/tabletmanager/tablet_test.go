@@ -26,6 +26,33 @@ import (
 	"vitess.io/vitess/go/vt/log"
 )
 
+// TestEnsureDB tests that vttablet creates the db as needed
+func TestEnsureDB(t *testing.T) {
+	defer cluster.PanicHandler(t)
+
+	// Create new tablet
+	tablet := clusterInstance.NewVttabletInstance("replica", 0, "")
+	tablet.MysqlctlProcess = *cluster.MysqlCtlProcessInstance(tablet.TabletUID, tablet.MySQLPort, clusterInstance.TmpDirectory)
+	err := tablet.MysqlctlProcess.Start()
+	require.NoError(t, err)
+
+	log.Info(fmt.Sprintf("Started vttablet %v", tablet))
+	// Start vttablet process as replica. It won't be able to serve because there's no db.
+	err = clusterInstance.StartVttablet(tablet, "NOT_SERVING", false, cell, "dbtest", hostname, "0")
+	require.NoError(t, err)
+
+	// Make it the master.
+	err = clusterInstance.VtctlclientProcess.ExecuteCommand("TabletExternallyReparented", tablet.Alias)
+	require.NoError(t, err)
+
+	// It goes SERVING because TER calls ChangeTabletType which will also set the database to read-write
+	assert.Equal(t, "SERVING", tablet.VttabletProcess.GetTabletStatus())
+	status := tablet.VttabletProcess.GetStatusDetails()
+	assert.Contains(t, status, "Serving")
+
+	killTablets(t, tablet)
+}
+
 // TestLocalMetadata tests the contents of local_metadata table after vttablet startup
 func TestLocalMetadata(t *testing.T) {
 	defer cluster.PanicHandler(t)
