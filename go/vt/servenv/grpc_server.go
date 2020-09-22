@@ -142,6 +142,7 @@ func createGRPCServer() {
 	log.Infof("Setting grpc max message size to %d", *grpccommon.MaxMessageSize)
 	opts = append(opts, grpc.MaxRecvMsgSize(*grpccommon.MaxMessageSize))
 	opts = append(opts, grpc.MaxSendMsgSize(*grpccommon.MaxMessageSize))
+	opts = append(opts, grpc.MaxConcurrentStreams(math.MaxInt32))
 
 	if *GRPCInitialConnWindowSize != 0 {
 		log.Infof("Setting grpc server initial conn window size to %d", int32(*GRPCInitialConnWindowSize))
