@@ -273,7 +273,7 @@ func (lu *LookupUnique) String() string {
 
 // Cost returns the cost of this vindex as 1
 func (lu *LookupUnique) Cost() int {
-	// Hardcoding to 1 so we vtworkers don't ignore this vindex
+	// Hardcoding to 1 so vtworkers don't ignore this vindex
 	return 1
 }
 
