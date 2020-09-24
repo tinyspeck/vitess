@@ -249,7 +249,7 @@ func (tm *TabletManager) InitMaster(ctx context.Context) (string, error) {
 	// Set the server read-write, from now on we can accept real
 	// client writes. Note that if semi-sync replication is enabled,
 	// we'll still need some replicas to be able to commit transactions.
-	if err := tm.changeTypeLocked(ctx, topodatapb.TabletType_MASTER); err != nil {
+	if err := tm.changeTypeLocked(ctx, topodatapb.TabletType_MASTER, DBActionSetReadWrite); err != nil {
 		return "", err
 	}
 	return mysql.EncodePosition(pos), nil
@@ -279,7 +279,7 @@ func (tm *TabletManager) InitReplica(ctx context.Context, parent *topodatapb.Tab
 	// is used on the old master when using InitShardMaster with
 	// -force, and the new master is different from the old master.
 	if tm.Tablet().Type == topodatapb.TabletType_MASTER {
-		if err := tm.changeTypeLocked(ctx, topodatapb.TabletType_REPLICA); err != nil {
+		if err := tm.changeTypeLocked(ctx, topodatapb.TabletType_REPLICA, DBActionNone); err != nil {
 			return err
 		}
 	}
@@ -518,7 +518,7 @@ func (tm *TabletManager) setMasterLocked(ctx context.Context, parentAlias *topod
 	// unintentionally change the type of RDONLY tablets
 	tablet := tm.Tablet()
 	if tablet.Type == topodatapb.TabletType_MASTER {
-		if err := tm.tmState.ChangeTabletType(ctx, topodatapb.TabletType_REPLICA); err != nil {
+		if err := tm.tmState.ChangeTabletType(ctx, topodatapb.TabletType_REPLICA, DBActionNone); err != nil {
 			return err
 		}
 	}
@@ -620,7 +620,7 @@ func (tm *TabletManager) ReplicaWasRestarted(ctx context.Context, parent *topoda
 	if tablet.Type != topodatapb.TabletType_MASTER {
 		return nil
 	}
-	return tm.tmState.ChangeTabletType(ctx, topodatapb.TabletType_REPLICA)
+	return tm.tmState.ChangeTabletType(ctx, topodatapb.TabletType_REPLICA, DBActionNone)
 }
 
 // StopReplicationAndGetStatus stops MySQL replication, and returns the
@@ -731,7 +731,7 @@ func (tm *TabletManager) PromoteReplica(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	if err := tm.changeTypeLocked(ctx, topodatapb.TabletType_MASTER); err != nil {
+	if err := tm.changeTypeLocked(ctx, topodatapb.TabletType_MASTER, DBActionSetReadWrite); err != nil {
 		return "", err
 	}
 
