@@ -520,11 +520,9 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 			if key.KeyRangeEqual(overlap, sdw.sourceShard.KeyRange) {
 				sourceQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.sourceAlias, tableDefinition)
 			} else {
-				// @bramos: Since we're creating this branch to solely operate on
-				// merges, we're "guaranteed" to never hit this branch.
-				// TableScanByKeyRange protects against a nil VCursor
-				// so will fail at runtime if anything.
-				sourceQueryResultReader, err = TableScanByKeyRange(
+				// @bramos: This is a branch that should never be reached during a merge so going to return error to short circuit
+				err = vterrors.New(vtrpc.Code_UNIMPLEMENTED, "Unsupported non-merging callstack")
+				/** sourceQueryResultReader, err = TableScanByKeyRange(
 					ctx,
 					sdw.wr.Logger(),
 					sdw.wr.TopoServer(),
@@ -535,7 +533,7 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 					sdw.keyspaceInfo.ShardingColumnName,
 					sdw.keyspaceInfo.ShardingColumnType,
 					nil,
-				)
+				)*/
 			}
 			if err != nil {
 				newErr := vterrors.Wrap(err, "TableScan(ByKeyRange?)(source) failed")
@@ -549,7 +547,9 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 			// or a filtered scan.
 			var destinationQueryResultReader *QueryResultReader
 			if key.KeyRangeEqual(overlap, sdw.shardInfo.KeyRange) {
-				destinationQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition)
+				// @bramos: This is a granch that should never be reached during a mege so going to return error to short circuit
+				err = vterrors.New(vtrpc.Code_UNIMPLEMENTED, "Unsupported non-merging callstack")
+				// destinationQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition)
 			} else {
 				destinationQueryResultReader, err = TableScanByKeyRange(
 					ctx,
