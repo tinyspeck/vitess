@@ -20,6 +20,7 @@ package worker
 // primary key columns based on the MySQL collation.
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -52,6 +53,8 @@ const (
 	// legacySplitCloneTestMax is the maximum value of the primary key.
 	legacySplitCloneTestMax int = 200
 )
+
+var errReadOnly = errors.New("the MariaDB server is running with the --read-only option so it cannot execute this statement (errno 1290) during query: ")
 
 type legacySplitCloneTestCase struct {
 	t *testing.T
