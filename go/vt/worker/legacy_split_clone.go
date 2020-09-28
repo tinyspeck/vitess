@@ -548,10 +548,10 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		}
 
 		_vc, cleanupVCursor, err := vcursor.NewVCursor(ctx, scw.vcursorArgs)
-		defer cleanupVCursor()
 		if err != nil {
 			return fmt.Errorf("could not create vcursor: %v", err)
 		}
+		defer cleanupVCursor()
 
 		vc = _vc
 	}
