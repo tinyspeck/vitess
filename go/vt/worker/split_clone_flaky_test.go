@@ -32,7 +32,6 @@ import (
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/mysql/fakesqldb"
 	"vitess.io/vitess/go/sqltypes"
-	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topo/memorytopo"
@@ -518,38 +517,4 @@ var v3Fields = []*querypb.Field{
 		Name: "msg",
 		Type: sqltypes.VarChar,
 	},
-}
-
-func verifyOnlineCounters(inserts, updates, deletes, equal int64) error {
-	rec := concurrency.AllErrorRecorder{}
-	if got, want := statsOnlineInsertsCounters.Counts()["table1"], inserts; got != want {
-		rec.RecordError(fmt.Errorf("wrong online INSERTs count: got = %v, want = %v", got, want))
-	}
-	if got, want := statsOnlineUpdatesCounters.Counts()["table1"], updates; got != want {
-		rec.RecordError(fmt.Errorf("wrong online UPDATEs count: got = %v, want = %v", got, want))
-	}
-	if got, want := statsOnlineDeletesCounters.Counts()["table1"], deletes; got != want {
-		rec.RecordError(fmt.Errorf("wrong online DELETEs count: got = %v, want = %v", got, want))
-	}
-	if got, want := statsOnlineEqualRowsCounters.Counts()["table1"], equal; got != want {
-		rec.RecordError(fmt.Errorf("wrong online equal rows count: got = %v, want = %v", got, want))
-	}
-	return rec.Error()
-}
-
-func verifyOfflineCounters(inserts, updates, deletes, equal int64) error {
-	rec := concurrency.AllErrorRecorder{}
-	if got, want := statsOfflineInsertsCounters.Counts()["table1"], inserts; got != want {
-		rec.RecordError(fmt.Errorf("wrong offline INSERTs count: got = %v, want = %v", got, want))
-	}
-	if got, want := statsOfflineUpdatesCounters.Counts()["table1"], updates; got != want {
-		rec.RecordError(fmt.Errorf("wrong offline UPDATEs count: got = %v, want = %v", got, want))
-	}
-	if got, want := statsOfflineDeletesCounters.Counts()["table1"], deletes; got != want {
-		rec.RecordError(fmt.Errorf("wrong offline DELETEs count: got = %v, want = %v", got, want))
-	}
-	if got, want := statsOfflineEqualRowsCounters.Counts()["table1"], equal; got != want {
-		rec.RecordError(fmt.Errorf("wrong offline equal rows count: got = %v, want = %v", got, want))
-	}
-	return rec.Error()
 }
