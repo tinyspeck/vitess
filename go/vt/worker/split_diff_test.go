@@ -304,6 +304,7 @@ func testSplitDiff(t *testing.T, v3 bool, destinationTabletType topodatapb.Table
 		"SplitDiff",
 		"-exclude_tables", excludedTable,
 		"-dest_tablet_type", tabletTypeName,
+		"-vcursor_server_addr", "localhost:9010",
 		"ks/-40",
 	}
 	// We need to use FakeTabletManagerClient because we don't
