@@ -175,17 +175,6 @@ func (sq *sourceTabletServer) StreamExecute(ctx context.Context, target *querypb
 // TODO(aaijazi): Create a test in which source and destination data does not match
 
 func testSplitDiff(t *testing.T, v3 bool, destinationTabletType topodatapb.TabletType) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mi := vtgateconn.NewMockImpl(ctrl)
-	mi.EXPECT().Close()
-	vtgateconn.RegisterDialer(
-		"grpc",
-		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
-			return mi, nil
-		},
-	)
-
 	delay := discovery.GetTabletPickerRetryDelay()
 	defer func() {
 		discovery.SetTabletPickerRetryDelay(delay)
@@ -333,13 +322,45 @@ func testSplitDiff(t *testing.T, v3 bool, destinationTabletType topodatapb.Table
 }
 
 func TestSplitDiffv2(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
+
 	testSplitDiff(t, false, topodatapb.TabletType_RDONLY)
 }
 
 func TestSplitDiffv3(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	mi.EXPECT().Close()
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
+
 	testSplitDiff(t, true, topodatapb.TabletType_RDONLY)
 }
 
 func TestSplitDiffWithReplica(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	mi.EXPECT().Close()
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
+
 	testSplitDiff(t, true, topodatapb.TabletType_REPLICA)
 }
