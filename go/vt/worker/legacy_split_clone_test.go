@@ -31,12 +31,15 @@ import (
 
 	"golang.org/x/net/context"
 
+	gomock "github.com/golang/mock/gomock"
+
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/mysql/fakesqldb"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topo/memorytopo"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 	"vitess.io/vitess/go/vt/vttablet/grpcqueryservice"
 	"vitess.io/vitess/go/vt/vttablet/queryservice/fakes"
 	"vitess.io/vitess/go/vt/wrangler/testlib"
@@ -483,6 +486,17 @@ func TestLegacySplitCloneV3(t *testing.T) {
 		discovery.SetTabletPickerRetryDelay(delay)
 	}()
 	discovery.SetTabletPickerRetryDelay(5 * time.Millisecond)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	mi.EXPECT().Close()
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
 
 	tc := &legacySplitCloneTestCase{t: t}
 	tc.setUp(true /* v3 */)
