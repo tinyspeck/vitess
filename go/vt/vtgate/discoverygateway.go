@@ -214,8 +214,7 @@ func (dg *DiscoveryGateway) WaitForTablets(ctx context.Context, tabletTypesToWai
 		return err
 	}
 
-	filteredTargets := discovery.FilterTargetsByKeyspaces(discovery.KeyspacesToWatch, targets)
-	return dg.tsc.WaitForAllServingTablets(ctx, filteredTargets)
+	return dg.tsc.WaitForAllServingTablets(ctx, targets)
 }
 
 // Close shuts down underlying connections.
