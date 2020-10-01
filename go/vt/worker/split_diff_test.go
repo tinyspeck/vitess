@@ -26,10 +26,14 @@ import (
 
 	"golang.org/x/net/context"
 
+	gomock "github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo/memorytopo"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 	"vitess.io/vitess/go/vt/vttablet/grpcqueryservice"
 	"vitess.io/vitess/go/vt/vttablet/queryservice/fakes"
 	"vitess.io/vitess/go/vt/wrangler"
@@ -304,25 +308,59 @@ func testSplitDiff(t *testing.T, v3 bool, destinationTabletType topodatapb.Table
 		"SplitDiff",
 		"-exclude_tables", excludedTable,
 		"-dest_tablet_type", tabletTypeName,
+		"-vcursor_server_addr", "localhost:9010",
 		"ks/-40",
 	}
 	// We need to use FakeTabletManagerClient because we don't
 	// have a good way to fake the binlog player yet, which is
 	// necessary for synchronizing replication.
 	wr := wrangler.New(logutil.NewConsoleLogger(), ts, newFakeTMCTopo(ts))
-	if err := runCommand(t, wi, wr, args); err != nil {
+	err := runCommand(t, wi, wr, args)
+	if assert.Error(t, err) && !assert.Contains(t, err.Error(), "Unsupported non-merging callstack") {
 		t.Fatal(err)
 	}
 }
 
 func TestSplitDiffv2(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
+
 	testSplitDiff(t, false, topodatapb.TabletType_RDONLY)
 }
 
 func TestSplitDiffv3(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	mi.EXPECT().Close()
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
+
 	testSplitDiff(t, true, topodatapb.TabletType_RDONLY)
 }
 
 func TestSplitDiffWithReplica(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	mi.EXPECT().Close()
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
+
 	testSplitDiff(t, true, topodatapb.TabletType_REPLICA)
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package worker
 
 import (
+	"fmt"
 	"html/template"
 	"sort"
 	"sync"
@@ -34,6 +35,7 @@ import (
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
+	"vitess.io/vitess/go/vt/worker/vcursor"
 	"vitess.io/vitess/go/vt/wrangler"
 
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
@@ -55,6 +57,7 @@ type SplitDiffWorker struct {
 	minHealthyRdonlyTablets int
 	destinationTabletType   topodatapb.TabletType
 	parallelDiffsCount      int
+	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
 
 	// populated during WorkerStateInit, read-only after that
@@ -71,7 +74,15 @@ type SplitDiffWorker struct {
 }
 
 // NewSplitDiffWorker returns a new SplitDiffWorker object.
-func NewSplitDiffWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, sourceUID uint32, excludeTables []string, minHealthyRdonlyTablets, parallelDiffsCount int, tabletType topodatapb.TabletType) Worker {
+func NewSplitDiffWorker(
+	wr *wrangler.Wrangler,
+	cell, keyspace, shard string,
+	sourceUID uint32,
+	excludeTables []string,
+	minHealthyRdonlyTablets, parallelDiffsCount int,
+	tabletType topodatapb.TabletType,
+	vcursorArgs vcursor.Args,
+) Worker {
 	return &SplitDiffWorker{
 		StatusWorker:            NewStatusWorker(),
 		wr:                      wr,
@@ -84,6 +95,7 @@ func NewSplitDiffWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, sou
 		destinationTabletType:   tabletType,
 		parallelDiffsCount:      parallelDiffsCount,
 		cleaner:                 &wrangler.Cleaner{},
+		vcursorArgs:             vcursorArgs,
 	}
 }
 
@@ -440,6 +452,7 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 
 	// read the vschema if needed
 	var keyspaceSchema *vindexes.KeyspaceSchema
+	var vc vindexes.VCursor
 	if *useV3ReshardingMode {
 		kschema, err := sdw.wr.TopoServer().GetVSchema(ctx, sdw.keyspace)
 		if err != nil {
@@ -453,6 +466,14 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 		if err != nil {
 			return vterrors.Wrapf(err, "cannot build vschema for keyspace %v", sdw.keyspace)
 		}
+
+		_vc, cleanupVCursor, err := vcursor.NewVCursor(ctx, sdw.vcursorArgs)
+		if err != nil {
+			return fmt.Errorf("could not create vcursor: %v", err)
+		}
+
+		vc = _vc
+		defer cleanupVCursor()
 	}
 
 	// Compute the overlap keyrange. Later, we'll compare it with
@@ -499,7 +520,20 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 			if key.KeyRangeEqual(overlap, sdw.sourceShard.KeyRange) {
 				sourceQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.sourceAlias, tableDefinition)
 			} else {
-				sourceQueryResultReader, err = TableScanByKeyRange(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.sourceAlias, tableDefinition, overlap, keyspaceSchema, sdw.keyspaceInfo.ShardingColumnName, sdw.keyspaceInfo.ShardingColumnType)
+				// @bramos: This is a branch that should never be reached during a merge so going to return error to short circuit
+				err = vterrors.New(vtrpc.Code_UNIMPLEMENTED, "Unsupported non-merging callstack")
+				/** sourceQueryResultReader, err = TableScanByKeyRange(
+					ctx,
+					sdw.wr.Logger(),
+					sdw.wr.TopoServer(),
+					sdw.sourceAlias,
+					tableDefinition,
+					overlap,
+					keyspaceSchema,
+					sdw.keyspaceInfo.ShardingColumnName,
+					sdw.keyspaceInfo.ShardingColumnType,
+					nil,
+				)*/
 			}
 			if err != nil {
 				newErr := vterrors.Wrap(err, "TableScan(ByKeyRange?)(source) failed")
@@ -513,9 +547,22 @@ func (sdw *SplitDiffWorker) diff(ctx context.Context) error {
 			// or a filtered scan.
 			var destinationQueryResultReader *QueryResultReader
 			if key.KeyRangeEqual(overlap, sdw.shardInfo.KeyRange) {
-				destinationQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition)
+				// @bramos: This is a granch that should never be reached during a mege so going to return error to short circuit
+				err = vterrors.New(vtrpc.Code_UNIMPLEMENTED, "Unsupported non-merging callstack")
+				// destinationQueryResultReader, err = TableScan(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition)
 			} else {
-				destinationQueryResultReader, err = TableScanByKeyRange(ctx, sdw.wr.Logger(), sdw.wr.TopoServer(), sdw.destinationAlias, tableDefinition, overlap, keyspaceSchema, sdw.keyspaceInfo.ShardingColumnName, sdw.keyspaceInfo.ShardingColumnType)
+				destinationQueryResultReader, err = TableScanByKeyRange(
+					ctx,
+					sdw.wr.Logger(),
+					sdw.wr.TopoServer(),
+					sdw.destinationAlias,
+					tableDefinition,
+					overlap,
+					keyspaceSchema,
+					sdw.keyspaceInfo.ShardingColumnName,
+					sdw.keyspaceInfo.ShardingColumnType,
+					vc,
+				)
 			}
 			if err != nil {
 				newErr := vterrors.Wrap(err, "TableScan(ByKeyRange?)(destination) failed")

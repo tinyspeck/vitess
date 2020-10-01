@@ -1348,7 +1348,10 @@ func (scw *SplitCloneWorker) createKeyResolver(td *tabletmanagerdatapb.TableDefi
 	}
 
 	if *useV3ReshardingMode {
-		return newV3ResolverFromTableDefinition(scw.keyspaceSchema, td)
+		// @bramos: This is a callsite that should never be reached because we don't do SplitClone for merging
+		// but including here for posterity
+		// return newV3ResolverFromTableDefinition(scw.keyspaceSchema, td, nil)
+		return nil, vterrors.New(vtrpc.Code_INVALID_ARGUMENT, "Unsupported non-merging callstack")
 	}
 	return newV2Resolver(scw.destinationKeyspaceInfo, td)
 }

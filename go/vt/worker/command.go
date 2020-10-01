@@ -83,7 +83,19 @@ func AddCommand(groupName string, c Command) {
 func commandWorker(wi *Instance, wr *wrangler.Wrangler, args []string, cell string, runFromCli bool) (Worker, error) {
 	action := args[0]
 
+	blockedCommands := map[string]bool{
+		"verticalsplitclone": true,
+		"splitclone":         true,
+		"verticalsplitdiff":  true,
+		"multisplitdiff":     true,
+	}
+
 	actionLowerCase := strings.ToLower(action)
+
+	if blockedCommands[actionLowerCase] {
+		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "non-merging command unsupported: %v", action)
+	}
+
 	for _, group := range commands {
 		for _, cmd := range group.Commands {
 			if strings.ToLower(cmd.Name) == actionLowerCase {

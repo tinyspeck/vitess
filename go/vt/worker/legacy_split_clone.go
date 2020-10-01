@@ -42,6 +42,7 @@ import (
 	"vitess.io/vitess/go/vt/topotools"
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
 	"vitess.io/vitess/go/vt/worker/events"
+	"vitess.io/vitess/go/vt/worker/vcursor"
 	"vitess.io/vitess/go/vt/wrangler"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
@@ -64,6 +65,7 @@ type LegacySplitCloneWorker struct {
 	destinationWriterCount  int
 	minHealthyRdonlyTablets int
 	maxTPS                  int64
+	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
 
 	// populated during WorkerStateInit, read-only after that
@@ -99,13 +101,24 @@ type LegacySplitCloneWorker struct {
 }
 
 // NewLegacySplitCloneWorker returns a new LegacySplitCloneWorker object.
-func NewLegacySplitCloneWorker(wr *wrangler.Wrangler, cell, keyspace, shard string, excludeTables []string, sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int, maxTPS int64) (Worker, error) {
+func NewLegacySplitCloneWorker(
+	wr *wrangler.Wrangler,
+	cell, keyspace, shard string,
+	excludeTables []string,
+	sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int,
+	maxTPS int64,
+	vcursorArgs vcursor.Args,
+) (Worker, error) {
 	if maxTPS != throttler.MaxRateModuleDisabled {
 		wr.Logger().Infof("throttling enabled and set to a max of %v transactions/second", maxTPS)
 	}
 	if maxTPS != throttler.MaxRateModuleDisabled && maxTPS < int64(destinationWriterCount) {
 		return nil, fmt.Errorf("-max_tps must be >= -destination_writer_count: %v >= %v", maxTPS, destinationWriterCount)
 	}
+	if err := vcursorArgs.Validate(); err != nil {
+		return nil, err
+	}
+
 	return &LegacySplitCloneWorker{
 		StatusWorker:            NewStatusWorker(),
 		wr:                      wr,
@@ -118,6 +131,7 @@ func NewLegacySplitCloneWorker(wr *wrangler.Wrangler, cell, keyspace, shard stri
 		destinationWriterCount:  destinationWriterCount,
 		minHealthyRdonlyTablets: minHealthyRdonlyTablets,
 		maxTPS:                  maxTPS,
+		vcursorArgs:             vcursorArgs,
 		cleaner:                 &wrangler.Cleaner{},
 
 		destinationDbNames:    make(map[string]string),
@@ -518,6 +532,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 	// read the vschema if needed
 	var keyspaceSchema *vindexes.KeyspaceSchema
+	var vc vindexes.VCursor
 	if *useV3ReshardingMode {
 		kschema, err := scw.wr.TopoServer().GetVSchema(ctx, scw.keyspace)
 		if err != nil {
@@ -531,6 +546,14 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		if err != nil {
 			return vterrors.Wrapf(err, "cannot build vschema for keyspace %v", scw.keyspace)
 		}
+
+		_vc, cleanupVCursor, err := vcursor.NewVCursor(ctx, scw.vcursorArgs)
+		if err != nil {
+			return fmt.Errorf("could not create vcursor: %v", err)
+		}
+		defer cleanupVCursor()
+
+		vc = _vc
 	}
 
 	// Now for each table, read data chunks and send them to all
@@ -541,7 +564,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		for tableIndex, td := range sourceSchemaDefinition.TableDefinitions {
 			var keyResolver keyspaceIDResolver
 			if *useV3ReshardingMode {
-				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td)
+				keyResolver, err = newV3ResolverFromTableDefinition(keyspaceSchema, td, vc)
 				if err != nil {
 					return vterrors.Wrapf(err, "cannot resolve v3 sharding keys for keyspace %v", scw.keyspace)
 				}

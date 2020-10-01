@@ -20,6 +20,7 @@ package worker
 // primary key columns based on the MySQL collation.
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,12 +31,15 @@ import (
 
 	"golang.org/x/net/context"
 
+	gomock "github.com/golang/mock/gomock"
+
 	"vitess.io/vitess/go/mysql"
 	"vitess.io/vitess/go/mysql/fakesqldb"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topo/memorytopo"
+	"vitess.io/vitess/go/vt/vtgate/vtgateconn"
 	"vitess.io/vitess/go/vt/vttablet/grpcqueryservice"
 	"vitess.io/vitess/go/vt/vttablet/queryservice/fakes"
 	"vitess.io/vitess/go/vt/wrangler/testlib"
@@ -52,6 +56,8 @@ const (
 	// legacySplitCloneTestMax is the maximum value of the primary key.
 	legacySplitCloneTestMax int = 200
 )
+
+var errReadOnly = errors.New("the MariaDB server is running with the --read-only option so it cannot execute this statement (errno 1290) during query: ")
 
 type legacySplitCloneTestCase struct {
 	t *testing.T
@@ -216,6 +222,7 @@ func (tc *legacySplitCloneTestCase) setUp(v3 bool) {
 		"-source_reader_count", "10",
 		"-destination_pack_count", "4",
 		"-destination_writer_count", "10",
+		"-vcursor_server_addr", "127.0.0.1:8080",
 		"ks/-80"}
 
 	// Start action loop after having registered all RPC services.
@@ -479,6 +486,17 @@ func TestLegacySplitCloneV3(t *testing.T) {
 		discovery.SetTabletPickerRetryDelay(delay)
 	}()
 	discovery.SetTabletPickerRetryDelay(5 * time.Millisecond)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mi := vtgateconn.NewMockImpl(ctrl)
+	mi.EXPECT().Close()
+	vtgateconn.RegisterDialer(
+		"grpc",
+		func(_ context.Context, _ string) (vtgateconn.Impl, error) {
+			return mi, nil
+		},
+	)
 
 	tc := &legacySplitCloneTestCase{t: t}
 	tc.setUp(true /* v3 */)
