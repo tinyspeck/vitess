@@ -97,7 +97,7 @@ func TestLookupUniqueNewHandlesMissingEncoder(t *testing.T) {
 
 func TestLookupUniqueInfo(t *testing.T) {
 	lookupUnique := createLookup(t, "lookup_unique", false)
-	assert.Equal(t, 10, lookupUnique.Cost())
+	assert.Equal(t, 1, lookupUnique.Cost())
 	assert.Equal(t, "lookup_unique", lookupUnique.String())
 	assert.True(t, lookupUnique.IsUnique())
 }
