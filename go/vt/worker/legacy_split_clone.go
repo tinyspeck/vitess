@@ -485,6 +485,8 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 
 		if td.Name != "" {
 			tablesToReplicateMap[td.Name] = true
+		} else {
+			scw.wr.Logger().Infof("Found table definition with empty table name: %+v", td)
 		}
 	}
 
