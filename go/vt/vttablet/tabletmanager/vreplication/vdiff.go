@@ -122,7 +122,7 @@ var currentDatabaseReport *DatabaseReport
 
 // Replicate starts a vreplication stream.
 func (df *vdiff) VDiff(ctx context.Context, filteredReplicationWaitTime time.Duration) error {
-	df.targetVStreamer = NewTabletVStreamerClient(df.vre.tablet, df.vre.mysqld)
+	df.targetVStreamer = newTabletConnector(df.vre.tablet, df.vre.mysqld)
 
 	df.sourceVStreamer.Open(ctx)
 	df.targetVStreamer.Open(ctx)

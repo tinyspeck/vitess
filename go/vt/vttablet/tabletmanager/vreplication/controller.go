@@ -195,10 +195,13 @@ func (ct *controller) runVDiff(ctx context.Context) (err error) {
 	switch {
 	case ct.source.Filter != nil:
 		var vsClient VStreamerClient
-		if ct.source.GetExternalMysql() == "" {
-			vsClient = NewTabletVStreamerClient(tablet, ct.mysqld)
+		if name := ct.source.GetExternalMysql(); name != "" {
+			vsClient, err = ct.vre.ec.Get(name)
+			if err != nil {
+				return err
+			}
 		} else {
-			vsClient = NewMySQLVStreamerClient()
+			vsClient = newTabletConnector(tablet, ct.mysqld)
 		}
 
 		vd := newVDiffer(ct.id, &ct.source, vsClient, ct.blpStats, dbClient, ct.vre, ct.workflow)
@@ -278,7 +281,7 @@ func (ct *controller) runBlp(ctx context.Context) (err error) {
 				return err
 			}
 		} else {
-			vsClient = newTabletConnector(tablet)
+			vsClient = newTabletConnector(tablet, ct.mysqld)
 		}
 		if err := vsClient.Open(ctx); err != nil {
 			return err
