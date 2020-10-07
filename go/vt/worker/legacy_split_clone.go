@@ -655,7 +655,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 			defer destinationWaitGroup.Done()
 			scw.wr.Logger().Infof("Making and populating vreplication table for %v/%v", keyspace, shard)
 
-			tablesToReplicateSlice := make([]string, len(tablesToReplicateMap))
+			tablesToReplicateSlice := make([]string, 0, len(tablesToReplicateMap))
 			for tn := range tablesToReplicateMap {
 				tablesToReplicateSlice = append(tablesToReplicateSlice, tn)
 			}
