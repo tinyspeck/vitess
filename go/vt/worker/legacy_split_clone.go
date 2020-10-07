@@ -477,13 +477,17 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		return fmt.Errorf("no tables matching the table filter in tablet %v", topoproto.TabletAliasString(scw.sourceAliases[0]))
 	}
 
-	tablesToReplicateSlice := make([]string, len(sourceSchemaDefinition.TableDefinitions))
+	tablesToReplicateMap := make(map[string]bool)
 	for _, td := range sourceSchemaDefinition.TableDefinitions {
 		if len(td.Columns) == 0 {
 			return fmt.Errorf("schema for table %v has no columns", td.Name)
 		}
 
-		tablesToReplicateSlice = append(tablesToReplicateSlice, td.Name)
+		if td.Name != "" {
+			tablesToReplicateMap[td.Name] = true
+		} else {
+			scw.wr.Logger().Infof("Found table definition with empty table name: %+v", td)
+		}
 	}
 
 	scw.wr.Logger().Infof("Source tablet 0 has %v tables to copy", len(sourceSchemaDefinition.TableDefinitions))
@@ -650,6 +654,11 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 		go func(keyspace, shard string, kr *topodatapb.KeyRange) {
 			defer destinationWaitGroup.Done()
 			scw.wr.Logger().Infof("Making and populating vreplication table for %v/%v", keyspace, shard)
+
+			tablesToReplicateSlice := make([]string, 0, len(tablesToReplicateMap))
+			for tn := range tablesToReplicateMap {
+				tablesToReplicateSlice = append(tablesToReplicateSlice, tn)
+			}
 
 			exc := newExecutor(scw.wr, scw.tsc, nil, keyspace, shard, 0)
 			for shardIndex, src := range scw.sourceShards {
