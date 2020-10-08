@@ -99,6 +99,9 @@ func main() {
 	if err := tm.Start(tablet, config.Healthcheck.IntervalSeconds.Get()); err != nil {
 		log.Exitf("failed to parse -tablet-path: %v", err)
 	}
+
+	tabletserver.InitAPI(tm.VREngine)
+
 	servenv.OnClose(func() {
 		// Close the tm so that our topo entry gets pruned properly and any
 		// background goroutines that use the topo connection are stopped.
