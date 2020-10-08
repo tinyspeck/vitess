@@ -128,12 +128,13 @@ type journalEvent struct {
 
 // NewEngine creates a new Engine.
 // A nil ts means that the Engine is disabled.
-func NewEngine(config *tabletenv.TabletConfig, ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon) *Engine {
+func NewEngine(config *tabletenv.TabletConfig, tablet *topodatapb.Tablet, ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon) *Engine {
 	vre := &Engine{
 		controllers: make(map[int]*controller),
 		ts:          ts,
 		cell:        cell,
 		mysqld:      mysqld,
+		tablet:      tablet,
 		journaler:   make(map[string]*journalEvent),
 		ec:          newExternalConnector(config.ExternalConnections),
 	}
