@@ -17,6 +17,7 @@ limitations under the License.
 package key
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"strings"
 	"testing"
@@ -576,5 +577,19 @@ func TestIsKeyRange(t *testing.T) {
 
 	for _, tcase := range testcases {
 		assert.Equal(t, IsKeyRange(tcase.in), tcase.out, tcase.in)
+	}
+}
+
+func TestLegacySplitCloneCase(t *testing.T) {
+	kr, err := ParseKeyRangeParts("0003", "0005")
+	if err != nil {
+		t.Errorf("Error trying to parse range: %v", err)
+	}
+
+	vBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(vBytes, 3)
+
+	if !KeyRangeContains(kr, vBytes) {
+		t.Errorf("Something's fucky: [%+v] vs %+v", kr, hex.EncodeToString(vBytes))
 	}
 }

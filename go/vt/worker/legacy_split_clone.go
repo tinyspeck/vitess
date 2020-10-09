@@ -583,7 +583,7 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 					return vterrors.Wrapf(err, "cannot resolve sharding keys for keyspace %v", scw.keyspace)
 				}
 			}
-			rowSplitter := NewRowSplitter(scw.destinationShards, keyResolver)
+			rowSplitter := NewRowSplitter2(scw.destinationShards, keyResolver, scw.wr.Logger())
 
 			chunks, err := generateChunks(ctx, scw.wr, scw.sourceTablets[shardIndex], td, scw.sourceReaderCount, defaultMinRowsPerChunk)
 			if err != nil {
