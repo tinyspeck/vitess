@@ -20,6 +20,9 @@ package worker
 // primary key columns based on the MySQL collation.
 
 import (
+	"encoding/hex"
+	"strings"
+
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/stats"
 	"vitess.io/vitess/go/vt/key"
@@ -27,6 +30,8 @@ import (
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+
+	"vitess.io/vitess/go/vt/logutil"
 )
 
 var (
@@ -47,6 +52,8 @@ var (
 type RowSplitter struct {
 	KeyResolver keyspaceIDResolver
 	KeyRanges   []*topodatapb.KeyRange
+	rowCount    int
+	logger      logutil.Logger
 }
 
 // NewRowSplitter returns a new row splitter for the given shard distribution.
@@ -54,6 +61,22 @@ func NewRowSplitter(shardInfos []*topo.ShardInfo, keyResolver keyspaceIDResolver
 	result := &RowSplitter{
 		KeyResolver: keyResolver,
 		KeyRanges:   make([]*topodatapb.KeyRange, len(shardInfos)),
+		rowCount:    0,
+		logger:      nil,
+	}
+	for i, si := range shardInfos {
+		result.KeyRanges[i] = si.KeyRange
+	}
+	return result
+}
+
+// NewRowSplitter2 returns a new row splitter for the given shard distribution.
+func NewRowSplitter2(shardInfos []*topo.ShardInfo, keyResolver keyspaceIDResolver, logger logutil.Logger) *RowSplitter {
+	result := &RowSplitter{
+		KeyResolver: keyResolver,
+		KeyRanges:   make([]*topodatapb.KeyRange, len(shardInfos)),
+		rowCount:    0,
+		logger:      logger,
 	}
 	for i, si := range shardInfos {
 		result.KeyRanges[i] = si.KeyRange
@@ -70,11 +93,24 @@ func (rs *RowSplitter) StartSplit() [][][]sqltypes.Value {
 func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Value) error {
 	for _, row := range rows {
 		keyResolverRequests.Add(1)
+		rs.rowCount++
+
+		if rs.rowCount%10000 == 0 {
+			strs := []string{}
+			for _, v := range row {
+				strs = append(strs, v.ToString())
+			}
+			rs.logger.Errorf("Mapping %s", strings.Join(strs, ","))
+		}
+
 		k, err := rs.KeyResolver.keyspaceID(row)
 		if err != nil {
 			return err
 		}
 		for i, kr := range rs.KeyRanges {
+			if rs.rowCount%10000 == 0 {
+				rs.logger.Errorf("Comparing %s to range(%s,%s)", hex.EncodeToString(k), hex.EncodeToString(kr.GetStart()), hex.EncodeToString(kr.GetEnd()))
+			}
 			if key.KeyRangeContains(kr, k) {
 				keyResolverInRange.Add(kr.String(), 1)
 				result[i] = append(result[i], row)
