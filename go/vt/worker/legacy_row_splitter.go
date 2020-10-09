@@ -95,7 +95,7 @@ func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Valu
 		keyResolverRequests.Add(1)
 		rs.rowCount++
 
-		if rs.rowCount%10000 == 0 {
+		if rs.rowCount%10000 == 0 && rs.logger != nil {
 			strs := []string{}
 			for _, v := range row {
 				strs = append(strs, v.ToString())
@@ -108,7 +108,7 @@ func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Valu
 			return err
 		}
 		for i, kr := range rs.KeyRanges {
-			if rs.rowCount%10000 == 0 {
+			if rs.rowCount%10000 == 0 && rs.logger != nil {
 				rs.logger.Errorf("Comparing %s to range(%s,%s)", hex.EncodeToString(k), hex.EncodeToString(kr.GetStart()), hex.EncodeToString(kr.GetEnd()))
 			}
 			if key.KeyRangeContains(kr, k) {
