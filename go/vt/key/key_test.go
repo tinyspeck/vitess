@@ -17,6 +17,7 @@ limitations under the License.
 package key
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"strings"
@@ -588,6 +589,14 @@ func TestLegacySplitCloneCase(t *testing.T) {
 
 	vBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(vBytes, 3)
+
+	if !(bytes.Compare(kr.Start, vBytes) <= 0) {
+		t.Errorf("It's the first part: %+v vs %+v", kr.Start, vBytes)
+	}
+
+	if !(bytes.Compare(vBytes, kr.End) < 0) {
+		t.Errorf("It's the second part: %+v vs %+v", vBytes, kr.End)
+	}
 
 	if !KeyRangeContains(kr, vBytes) {
 		t.Errorf("Something's fucky: [%+v] vs %+v", kr, hex.EncodeToString(vBytes))
