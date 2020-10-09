@@ -21,11 +21,25 @@ package worker
 
 import (
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/stats"
 	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/topo"
 
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+)
+
+var (
+	keyResolverRequests = stats.NewCounter(
+		"RowSplitterKeyResolverRequestCount",
+		"How many KeyResolver keyspaceId requests are made",
+	)
+
+	keyResolverInRange = stats.NewCountersWithSingleLabel(
+		"RowSplitterKeyRangeContainsCounters",
+		"Per key range counts of contained rows",
+		"key_range",
+	)
 )
 
 // RowSplitter is a helper class to split rows into multiple
@@ -55,12 +69,14 @@ func (rs *RowSplitter) StartSplit() [][][]sqltypes.Value {
 // Split will split the rows into subset for each distribution
 func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Value) error {
 	for _, row := range rows {
+		keyResolverRequests.Add(1)
 		k, err := rs.KeyResolver.keyspaceID(row)
 		if err != nil {
 			return err
 		}
 		for i, kr := range rs.KeyRanges {
 			if key.KeyRangeContains(kr, k) {
+				keyResolverInRange.Add(kr.String(), 1)
 				result[i] = append(result[i], row)
 				break
 			}
