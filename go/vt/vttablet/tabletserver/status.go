@@ -153,15 +153,66 @@ function drawQPSChart() {
     }
   };
 
-  // If we're accessing status through a proxy that requires a URL prefix,
-  // add the prefix to the vars URL.
-  var vars_url = '/debug/vars';
-  var pos = window.location.pathname.lastIndexOf('/debug/status');
-  if (pos > 0) {
-    vars_url = window.location.pathname.substring(0, pos) + vars_url;
-  }
+  var drawQueryQps = function() {
+    // If we're accessing status through a proxy that requires a URL prefix,
+    // add the prefix to the vars URL.
+    var vars_url = '/debug/query_stats?sort=counts_per_query&limit=5';
+    var pos = window.location.pathname.lastIndexOf('/debug/query_stats');
+    if (pos > 0) {
+      vars_url = window.location.pathname.substring(0, pos) + vars_url;
+    }
+
+
+    $.getJSON(vars_url, function(input_data) {
+      var now = new Date();
+      querySignatures = [];
+      qps = {};
+      if (input_data.length === 0) {
+        querySignatures = ["All"];
+        qps["All"] = [];
+      }
+
+      for (var j = 0; j < input_data.length; j++) {
+        querySignatures.push(input_data[j].QueryHash)
+        qps[input_data[j].QueryHash] = input_data[j].PlanQPS.MySQLTime
+      }
+
+      var planTypes = Object.keys(qps);
+
+      var data = [["Time"].concat(querySignatures)];
+
+      // Create data points, starting with the most recent timestamp.
+      // (On the graph this means going from right to left.)
+      // Time span: 15 minutes in 5 second intervals.
+      for (var i = 0; i < 15*60/5; i++) {
+        var datum = [sampleDate(now, i)];
+        for (var j = 0; j < querySignatures.length; j++) {
+          if (i < qps[querySignatures[j]].length) {
+          	// Rates are ordered from least recent to most recent.
+          	// Therefore, we have to start reading from the end of the array.
+          	var idx = qps[querySignatures[j]].length - i - 1;
+            datum.push(+qps[querySignatures[j]][idx].toFixed(2));
+          } else {
+            // Assume 0.0 QPS for older, non-existent data points.
+            datum.push(0);
+          }
+        }
+        data.push(datum)
+      }
+      chart.draw(google.visualization.arrayToDataTable(data), options);
+    })
+  };
 
   var redraw = function() {
+    // If we're accessing status through a proxy that requires a URL prefix,
+    // add the prefix to the vars URL.
+    var vars_url = '/debug/vars';
+    var pos = window.location.pathname.lastIndexOf('/debug/status');
+    if (pos > 0) {
+      vars_url = window.location.pathname.substring(0, pos) + vars_url;
+    }
+
+
     $.getJSON(vars_url, function(input_data) {
       var now = new Date();
       var qps = input_data.QPS;
@@ -195,10 +246,22 @@ function drawQPSChart() {
     })
   };
 
-  redraw();
+  urlParams = new URLSearchParams(window.location.search);
+  qpsByQuery = urlParams.get('qpsByQuery');
+
+  drawFunction = null;
+
+  if (qpsByQuery != null)  {
+    console.log("This is working");
+    drawFunction = drawQueryQps;
+  } else {
+    drawFunction = redraw;
+  }
+
+  drawFunction();
 
   // redraw every 2.5 seconds.
-  window.setInterval(redraw, 2500);
+  window.setInterval(drawFunction, 2500);
 }
 google.setOnLoadCallback(drawQPSChart);
 </script>

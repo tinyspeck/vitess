@@ -18,9 +18,12 @@ package tabletserver
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -58,12 +61,14 @@ type TabletPlan struct {
 	Rules      *rules.Rules
 	Authorized []*tableacl.ACLResult
 
-	mu         sync.Mutex
-	QueryCount int64
-	Time       time.Duration
-	MysqlTime  time.Duration
-	RowCount   int64
-	ErrorCount int64
+	mu          sync.Mutex
+	QueryCount  int64
+	Time        time.Duration
+	MysqlTime   time.Duration
+	PlanTimings *stats.Timings
+	QPS         *stats.Rates
+	RowCount    int64
+	ErrorCount  int64
 }
 
 // Size allows TabletPlan to be in cache.LRUCache.
@@ -79,17 +84,21 @@ func (ep *TabletPlan) AddStats(queryCount int64, duration, mysqlTime time.Durati
 	ep.MysqlTime += mysqlTime
 	ep.RowCount += rowCount
 	ep.ErrorCount += errorCount
+	ep.PlanTimings.Add("MySQLTime", mysqlTime)
+	ep.PlanTimings.Add("Time", duration)
 	ep.mu.Unlock()
 }
 
 // Stats returns the current stats of TabletPlan.
-func (ep *TabletPlan) Stats() (queryCount int64, duration, mysqlTime time.Duration, rowCount, errorCount int64) {
+func (ep *TabletPlan) Stats() (queryCount int64, duration, mysqlTime time.Duration, rowCount, errorCount int64, planTimings, planQPS json.RawMessage) {
 	ep.mu.Lock()
 	queryCount = ep.QueryCount
 	duration = ep.Time
 	mysqlTime = ep.MysqlTime
 	rowCount = ep.RowCount
 	errorCount = ep.ErrorCount
+	planTimings = json.RawMessage(ep.PlanTimings.String())
+	planQPS = json.RawMessage(ep.QPS.String())
 	ep.mu.Unlock()
 	return
 }
@@ -313,7 +322,11 @@ func (qe *QueryEngine) GetPlan(ctx context.Context, logStats *tabletenv.LogStats
 	if err != nil {
 		return nil, err
 	}
-	plan := &TabletPlan{Plan: splan}
+	plan := &TabletPlan{
+		Plan:        splan,
+		PlanTimings: stats.NewTimings("", "Plan Timings", "Operation"),
+	}
+	plan.QPS = stats.NewRates("", plan.PlanTimings, 15*60/5, 5*time.Second)
 	plan.Rules = qe.queryRuleSources.FilterByPlan(sql, plan.PlanID, plan.TableName().String())
 	plan.buildAuthorized()
 	if plan.PlanID.IsSelect() {
@@ -436,14 +449,33 @@ func (qe *QueryEngine) AddStats(planName, tableName string, queryCount int64, du
 }
 
 type perQueryStats struct {
-	Query      string
-	Table      string
-	Plan       planbuilder.PlanType
-	QueryCount int64
-	Time       time.Duration
-	MysqlTime  time.Duration
-	RowCount   int64
-	ErrorCount int64
+	QueryHash   string
+	Query       string
+	Table       string
+	Plan        planbuilder.PlanType
+	QueryCount  int64
+	Time        time.Duration
+	MysqlTime   time.Duration
+	RowCount    int64
+	ErrorCount  int64
+	PlanTimings json.RawMessage
+	PlanQPS     json.RawMessage
+}
+
+func (pqs *perQueryStats) counts() int64 {
+	return pqs.QueryCount
+}
+
+func (pqs *perQueryStats) timePQ() float64 {
+	return float64(pqs.Time) / (1e9 * float64(pqs.QueryCount))
+}
+
+func (pqs *perQueryStats) rowsPQ() float64 {
+	return float64(pqs.RowCount) / float64(pqs.QueryCount)
+}
+
+func (pqs *perQueryStats) mysqlTimePQ() float64 {
+	return float64(pqs.MysqlTime) / (1e9 * float64(pqs.QueryCount))
 }
 
 func (qe *QueryEngine) handleHTTPQueryPlans(response http.ResponseWriter, request *http.Request) {
@@ -472,21 +504,53 @@ func (qe *QueryEngine) handleHTTPQueryStats(response http.ResponseWriter, reques
 		acl.SendError(response, err)
 		return
 	}
+
+	queryParams := request.URL.Query()
+
+	var sortQp string
+	sorterQp, ok := queryParams["sort"]
+	if !ok || len(sorterQp) == 0 {
+		sortQp = "time_per_query"
+	} else {
+		sortQp = sorterQp[0]
+	}
+
+	sorter := queryzSorter{}
+	sorter.SetLessFn(sortQp)
+
 	keys := qe.plans.Keys()
 	response.Header().Set("Content-Type", "application/json; charset=utf-8")
-	qstats := make([]perQueryStats, 0, len(keys))
 	for _, v := range keys {
 		if plan := qe.peekQuery(v); plan != nil {
-			var pqstats perQueryStats
+			pqstats := &perQueryStats{}
 			pqstats.Query = unicoded(sqlparser.TruncateForUI(v))
+			pqstats.QueryHash = fmt.Sprintf("%x", md5.Sum([]byte(pqstats.Query)))
 			pqstats.Table = plan.TableName().String()
 			pqstats.Plan = plan.PlanID
-			pqstats.QueryCount, pqstats.Time, pqstats.MysqlTime, pqstats.RowCount, pqstats.ErrorCount = plan.Stats()
+			pqstats.QueryCount, pqstats.Time, pqstats.MysqlTime, pqstats.RowCount, pqstats.ErrorCount, pqstats.PlanTimings, pqstats.PlanQPS = plan.Stats()
 
-			qstats = append(qstats, pqstats)
+			sorter.rows = append(sorter.rows, pqstats)
 		}
 	}
-	if b, err := json.MarshalIndent(qstats, "", "  "); err != nil {
+
+	limit := 0
+	limitQp, ok := queryParams["limit"]
+	log.Errorf("This is the limit %v, %v", limitQp, len(limitQp))
+	if ok && len(limitQp) == 1 {
+		limitIntVal, err := strconv.Atoi(limitQp[0])
+		log.Errorf("This is the limit %v, %v", limitQp, err)
+		if err == nil && limitIntVal <= len(keys) {
+			limit = limitIntVal
+			log.Errorf("This is the limit %v", limit)
+		}
+	}
+
+	sort.Sort(&sorter)
+	if limit != 0 {
+		log.Errorf("YeS??")
+		sorter.rows = sorter.rows[0:limit]
+	}
+	if b, err := json.MarshalIndent(sorter.rows, "", "  "); err != nil {
 		response.Write([]byte(err.Error()))
 	} else {
 		response.Write(b)

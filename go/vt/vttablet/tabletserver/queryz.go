@@ -85,6 +85,10 @@ func (qzs *queryzRow) Time() string {
 	return fmt.Sprintf("%.6f", float64(qzs.tm)/1e9)
 }
 
+func (qzs *queryzRow) counts() int64 {
+	return qzs.Count
+}
+
 func (qzs *queryzRow) timePQ() float64 {
 	return float64(qzs.tm) / (1e9 * float64(qzs.Count))
 }
@@ -123,30 +127,37 @@ func (qzs *queryzRow) ErrorsPQ() string {
 }
 
 type queryzSorter struct {
-	rows []*queryzRow
-	less func(row1, row2 *queryzRow) bool
+	rows []queryCacheRow
+	less func(row1, row2 queryCacheRow) bool
+}
+
+type queryCacheRow interface {
+	timePQ() float64
+	rowsPQ() float64
+	mysqlTimePQ() float64
+	counts() int64
 }
 
 func (s *queryzSorter) SetLessFn(sorter string) {
 	switch sorter {
 	case "time_per_query":
-		s.less = func(row1, row2 *queryzRow) bool {
+		s.less = func(row1, row2 queryCacheRow) bool {
 			return row1.timePQ() > row2.timePQ()
 		}
 	case "counts_per_query":
-		s.less = func(row1, row2 *queryzRow) bool {
-			return row1.Count > row2.Count
+		s.less = func(row1, row2 queryCacheRow) bool {
+			return row1.counts() > row2.counts()
 		}
 	case "mysql_time_per_query":
-		s.less = func(row1, row2 *queryzRow) bool {
+		s.less = func(row1, row2 queryCacheRow) bool {
 			return row1.mysqlTimePQ() > row2.mysqlTimePQ()
 		}
 	case "rows_per_query":
-		s.less = func(row1, row2 *queryzRow) bool {
+		s.less = func(row1, row2 queryCacheRow) bool {
 			return row1.rowsPQ() > row2.rowsPQ()
 		}
 	default:
-		s.less = func(row1, row2 *queryzRow) bool {
+		s.less = func(row1, row2 queryCacheRow) bool {
 			return row1.timePQ() > row2.timePQ()
 		}
 	}
@@ -187,9 +198,7 @@ func queryzHandler(qe *QueryEngine, w http.ResponseWriter, r *http.Request) {
 	}
 
 	keys := qe.plans.Keys()
-	sorter := queryzSorter{
-		rows: make([]*queryzRow, 0, len(keys)),
-	}
+	sorter := queryzSorter{}
 	sorter.SetLessFn(sortQp)
 
 	for _, v := range keys {
@@ -202,7 +211,7 @@ func queryzHandler(qe *QueryEngine, w http.ResponseWriter, r *http.Request) {
 			Table: plan.TableName().String(),
 			Plan:  plan.PlanID,
 		}
-		Value.Count, Value.tm, Value.mysqlTime, Value.Rows, Value.Errors = plan.Stats()
+		Value.Count, Value.tm, Value.mysqlTime, Value.Rows, Value.Errors, _, _ = plan.Stats()
 		var timepq time.Duration
 		if Value.Count != 0 {
 			timepq = time.Duration(int64(Value.tm) / Value.Count)
