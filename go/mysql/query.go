@@ -435,6 +435,12 @@ func (c *Conn) ReadQueryResult(maxrows int, wantfields bool) (result *sqltypes.R
 		}
 	}
 
+	// recycle the row buffer whenever done reading all the rows
+	defer func() {
+		c.rowDataBuffer = nil
+		c.rowDataOffset = 0
+	}()
+
 	// read each row until EOF or OK packet.
 	for {
 		data, err := c.readEphemeralPacket()
