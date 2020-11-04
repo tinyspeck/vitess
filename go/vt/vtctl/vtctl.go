@@ -88,6 +88,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -380,6 +381,9 @@ var commands = []commandGroup{
 			{"GenerateShardRanges", commandGenerateShardRanges,
 				"<num shards>",
 				"Generates shard ranges assuming a keyspace with N shards."},
+			{"GetLeader", commandGetLeader,
+				"",
+				"Returns the address of the vtctld leader."},
 			{"Panic", commandPanic,
 				"",
 				"HIDDEN Triggers a panic on the server side, to test the handling."},
@@ -3102,6 +3106,37 @@ func generateShardRanges(shards int) ([]string, error) {
 	}
 
 	return shardRanges, nil
+}
+
+func commandGetLeader(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
+	cells, err := wr.TopoServer().GetCellInfoNames(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(cells) == 0 {
+		panic("no cells")
+	}
+
+	cell := cells[rand.Intn(len(cells))]
+	conn, err := wr.TopoServer().ConnForCell(ctx, cell)
+	if err != nil {
+		return err
+	}
+
+	masterParticipation, err := conn.NewMasterParticipation("vtctld", "TODO")
+	if err != nil {
+		return err
+	}
+	defer masterParticipation.Stop()
+
+	master, err := masterParticipation.GetCurrentMasterID(ctx)
+	if err != nil {
+		return err
+	}
+
+	wr.Logger().Printf("%s\n", master)
+	return nil
 }
 
 func commandPanic(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
