@@ -29,6 +29,7 @@ import (
 	"vitess.io/vitess/go/sync2"
 	"vitess.io/vitess/go/timer"
 	"vitess.io/vitess/go/trace"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/vterrors"
 
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
@@ -206,6 +207,8 @@ func (rp *ResourcePool) get(ctx context.Context) (resource Resource, err error) 
 	// If ctx has already expired, avoid racing with rp's resource channel.
 	select {
 	case <-ctx.Done():
+		deadline, _ := ctx.Deadline()
+		log.Errorf("Context error: %v, %v", deadline, ctx.Err())
 		return nil, ErrCtxTimeout
 	default:
 	}
