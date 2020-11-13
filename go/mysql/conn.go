@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -495,6 +496,7 @@ func (c *Conn) readPacket() ([]byte, error) {
 		if len(next) < MaxPacketSize {
 			break
 		}
+		runtime.Gosched()
 	}
 
 	return data, nil
