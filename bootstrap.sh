@@ -112,28 +112,6 @@ function install_protoc() {
 protoc_ver=3.6.1
 install_dep "protoc" "$protoc_ver" "$VTROOT/dist/vt-protoc-$protoc_ver" install_protoc
 
-
-# Install Zookeeper.
-function install_zookeeper() {
-  local version="$1"
-  local dist="$2"
-
-  zk="zookeeper-$version"
-  wget "https://apache.org/dist/zookeeper/$zk/$zk.tar.gz"
-  tar -xzf "$zk.tar.gz"
-  ant -f "$zk/build.xml" package
-  ant -f "$zk/zookeeper-contrib/zookeeper-contrib-fatjar/build.xml" jar
-  mkdir -p lib
-  cp "$zk/build/zookeeper-contrib/zookeeper-contrib-fatjar/zookeeper-dev-fatjar.jar" "lib/$zk-fatjar.jar"
-  zip -d "lib/$zk-fatjar.jar" 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*SF' || true # needed for >=3.4.10 <3.5
-  rm -rf "$zk" "$zk.tar.gz"
-}
-
-zk_ver=${ZK_VERSION:-3.4.14}
-if [ "$BUILD_JAVA" == 1 ] ; then
-  install_dep "Zookeeper" "$zk_ver" "$VTROOT/dist/vt-zookeeper-$zk_ver" install_zookeeper
-fi
-
 # Download and install etcd, link etcd binary into our root.
 function install_etcd() {
   local version="$1"
