@@ -404,14 +404,12 @@ func (c *Conn) ReadQueryResult(maxrows int, wantfields bool) (result *sqltypes.R
 
 	// read each row until EOF or OK packet.
 	for {
-		data, err := c.readEphemeralPacket()
+		data, err := c.ReadPacket()
 		if err != nil {
 			return nil, false, 0, err
 		}
 
 		if isEOFPacket(data) {
-			defer c.recycleReadPacket()
-
 			// Strip the partial Fields before returning.
 			if !wantfields {
 				result.Fields = nil
@@ -436,14 +434,12 @@ func (c *Conn) ReadQueryResult(maxrows int, wantfields bool) (result *sqltypes.R
 			return result, more, warnings, nil
 
 		} else if isErrorPacket(data) {
-			defer c.recycleReadPacket()
 			// Error packet.
 			return nil, false, 0, ParseErrorPacket(data)
 		}
 
 		// Check we're not over the limit before we add more.
 		if len(result.Rows) == maxrows {
-			c.recycleReadPacket()
 			if err := c.drainResults(); err != nil {
 				return nil, false, 0, err
 			}
@@ -453,11 +449,9 @@ func (c *Conn) ReadQueryResult(maxrows int, wantfields bool) (result *sqltypes.R
 		// Regular row.
 		row, err := c.parseRow(data, result.Fields)
 		if err != nil {
-			c.recycleReadPacket()
 			return nil, false, 0, err
 		}
 		result.Rows = append(result.Rows, row)
-		c.recycleReadPacket()
 	}
 }
 
