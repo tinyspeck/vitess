@@ -190,7 +190,7 @@ type PrepareData struct {
 }
 
 // bufPool is used to allocate and free buffers in an efficient way.
-var bufPool = bucketpool.New(connBufferSize, MaxPacketSize)
+var bufPool = bucketpool.New(connBufferSize, 1024*1024)
 
 // writersPool is used for pooling bufio.Writer objects.
 var writersPool = sync.Pool{New: func() interface{} { return bufio.NewWriterSize(nil, connBufferSize) }}

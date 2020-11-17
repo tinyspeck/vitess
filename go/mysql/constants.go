@@ -19,7 +19,7 @@ package mysql
 const (
 	// MaxPacketSize is the maximum payload length of a packet
 	// the server supports.
-	MaxPacketSize = 1024 * 1024
+	MaxPacketSize = (1 << 24) - 1
 
 	// protocolVersion is the current version of the protocol.
 	// Always 10.
