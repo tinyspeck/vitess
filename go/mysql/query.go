@@ -19,7 +19,6 @@ package mysql
 import (
 	"fmt"
 	"math"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -453,7 +452,6 @@ func (c *Conn) ReadQueryResult(maxrows int, wantfields bool) (result *sqltypes.R
 			return nil, false, 0, err
 		}
 		result.Rows = append(result.Rows, row)
-		runtime.Gosched()
 	}
 }
 
