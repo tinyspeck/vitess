@@ -51,9 +51,8 @@ type Pool struct {
 // Buckets increase with the power of two, i.e with multiplier 2: [2b, 4b, 16b, ... , 1024b]
 // Last pool will always be capped to maxSize.
 func New(minSize, maxSize int) *Pool {
-	var bucketCutoffs = []int64{256, 512, 1024, 1024 * 2, 1024 * 4, 1024 * 16, 1024 * 128, 1024 * 256, 1024 * 512, 1024 * 1024}
-	var bucketLabels []string
-	bucketLabels = make([]string, len(bucketCutoffs)+1)
+	var bucketCutoffs = []int64{1024 * 1024, 1024 * 1024 * 3, 1024 * 1024 * 5, 1024 * 1024 * 10, 1024 * 1024 * 20, 1024 * 1024 * 50, 1024 * 1024 * 1024}
+	bucketLabels := make([]string, len(bucketCutoffs)+1)
 	for i, v := range bucketCutoffs {
 		bucketLabels[i] = fmt.Sprintf("%d", v)
 	}
