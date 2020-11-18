@@ -44,7 +44,7 @@ type Pool struct {
 	minSize            int
 	maxSize            int
 	pools              []*sizedPool
-	allocSizeHistogram *stats.Timings
+	allocSizeHistogram *stats.Histogram
 }
 
 // New returns Pool which has buckets from minSize to maxSize.
@@ -58,7 +58,7 @@ func New(minSize, maxSize int) *Pool {
 		bucketLabels[i] = fmt.Sprintf("%d", v)
 	}
 	bucketLabels[len(bucketLabels)-1] = "inf"
-	metrics := stats.NewTimingsWithBucket("Allocations", "Allocations by Size", bucketCutoffs, bucketLabels, "path")
+	metrics := stats.NewGenericHistogram("Allocations", "Allocations by Size", bucketCutoffs, bucketLabels, "Count", "Size")
 
 	if maxSize < minSize {
 		panic("maxSize can't be less than minSize")
@@ -106,7 +106,7 @@ func (p *Pool) Get(size int) *[]byte {
 }
 
 // GetAllocHist ...
-func (p *Pool) GetAllocHist() *stats.Timings {
+func (p *Pool) GetAllocHist() *stats.Histogram {
 	return p.allocSizeHistogram
 }
 

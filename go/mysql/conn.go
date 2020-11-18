@@ -358,7 +358,7 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
 		return nil, nil
 	}
 
-	bufPool.GetAllocHist().Add("pool_alloc", time.Duration(length))
+	bufPool.GetAllocHist().Add(int64(length))
 	// Use the bufPool.
 	if length < 1024*1024 {
 		c.currentEphemeralBuffer = bufPool.Get(length)
