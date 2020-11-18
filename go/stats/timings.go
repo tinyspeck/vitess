@@ -60,6 +60,24 @@ func NewTimings(name, help, label string, categories ...string) *Timings {
 	return t
 }
 
+// NewTimingsWithBucket ...
+func NewTimingsWithBucket(name, help string, bucketCutoffs []int64, bucketLabels []string, label string, categories ...string) *Timings {
+	t := &Timings{
+		histograms:    make(map[string]*Histogram),
+		help:          help,
+		label:         label,
+		labelCombined: IsDimensionCombined(label),
+	}
+	for _, cat := range categories {
+		t.histograms[cat] = NewGenericHistogram("", "", bucketCutoffs, bucketLabels, "Count", "Time")
+	}
+	if name != "" {
+		publish(name, t)
+	}
+
+	return t
+}
+
 // Add will add a new value to the named histogram.
 func (t *Timings) Add(name string, elapsed time.Duration) {
 	if t.labelCombined {

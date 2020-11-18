@@ -17,8 +17,11 @@ limitations under the License.
 package bucketpool
 
 import (
+	"fmt"
 	"math"
 	"sync"
+
+	"vitess.io/vitess/go/stats"
 )
 
 type sizedPool struct {
@@ -38,15 +41,25 @@ func newSizedPool(size int) *sizedPool {
 // Pool is actually multiple pools which store buffers of specific size.
 // i.e. it can be three pools which return buffers 32K, 64K and 128K.
 type Pool struct {
-	minSize int
-	maxSize int
-	pools   []*sizedPool
+	minSize            int
+	maxSize            int
+	pools              []*sizedPool
+	allocSizeHistogram *stats.Timings
 }
 
 // New returns Pool which has buckets from minSize to maxSize.
 // Buckets increase with the power of two, i.e with multiplier 2: [2b, 4b, 16b, ... , 1024b]
 // Last pool will always be capped to maxSize.
 func New(minSize, maxSize int) *Pool {
+	var bucketCutoffs = []int64{256, 512, 1024, 1024 * 2, 1024 * 4, 1024 * 16, 1024 * 128, 1024 * 256, 1024 * 512, 1024 * 1024}
+	var bucketLabels []string
+	bucketLabels = make([]string, len(bucketCutoffs)+1)
+	for i, v := range bucketCutoffs {
+		bucketLabels[i] = fmt.Sprintf("%d", v)
+	}
+	bucketLabels[len(bucketLabels)-1] = "inf"
+	metrics := stats.NewTimingsWithBucket("Allocations", "Allocations by Size", bucketCutoffs, bucketLabels, "path")
+
 	if maxSize < minSize {
 		panic("maxSize can't be less than minSize")
 	}
@@ -59,9 +72,10 @@ func New(minSize, maxSize int) *Pool {
 	}
 	pools = append(pools, newSizedPool(maxSize))
 	return &Pool{
-		minSize: minSize,
-		maxSize: maxSize,
-		pools:   pools,
+		minSize:            minSize,
+		maxSize:            maxSize,
+		pools:              pools,
+		allocSizeHistogram: metrics,
 	}
 }
 
@@ -89,6 +103,11 @@ func (p *Pool) Get(size int) *[]byte {
 	buf := sp.pool.Get().(*[]byte)
 	*buf = (*buf)[:size]
 	return buf
+}
+
+// GetAllocHist ...
+func (p *Pool) GetAllocHist() *stats.Timings {
+	return p.allocSizeHistogram
 }
 
 // Put returns pointer to slice to some bucket. Discards slice for which there is no bucket
