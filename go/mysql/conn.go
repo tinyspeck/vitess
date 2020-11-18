@@ -189,7 +189,7 @@ type PrepareData struct {
 }
 
 // bufPool is used to allocate and free buffers in an efficient way.
-var bufPool = bucketpool.New(connBufferSize, MaxPacketSize)
+var bufPool = bucketpool.New(connBufferSize, 1024*1024)
 
 // writersPool is used for pooling bufio.Writer objects.
 var writersPool = sync.Pool{New: func() interface{} { return bufio.NewWriterSize(nil, connBufferSize) }}
@@ -359,7 +359,7 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
 	}
 
 	// Use the bufPool.
-	if length < MaxPacketSize {
+	if length < 1024*1024 {
 		c.currentEphemeralBuffer = bufPool.Get(length)
 		if _, err := io.ReadFull(r, *c.currentEphemeralBuffer); err != nil {
 			return nil, vterrors.Wrapf(err, "io.ReadFull(packet body of length %v) failed", length)
