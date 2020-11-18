@@ -360,7 +360,7 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
 	}
 
 	// Use the bufPool.
-	if length < MaxPacketSize {
+	if length < 1024*1024 {
 		c.currentEphemeralBuffer = bufPool.Get(length)
 		if _, err := io.ReadFull(r, *c.currentEphemeralBuffer); err != nil {
 			return nil, vterrors.Wrapf(err, "io.ReadFull(packet body of length %v) failed", length)
