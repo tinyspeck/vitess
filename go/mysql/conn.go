@@ -27,7 +27,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"vitess.io/vitess/go/bucketpool"
@@ -41,8 +40,6 @@ import (
 )
 
 var mysqlServerFlushDelay = flag.Duration("mysql_server_flush_delay", 100*time.Millisecond, "Delay after which buffered response will be flushed to the client.")
-
-var counterLogs uint64
 
 const (
 	// connBufferSize is how much we buffer for reading and
@@ -361,10 +358,6 @@ func (c *Conn) readEphemeralPacket() ([]byte, error) {
 		return nil, nil
 	}
 
-	atomic.AddUint64(&counterLogs, 1)
-	if counterLogs%10000 == 0 {
-		log.Infof("This is the length of the packeg %v and int64(length): %v", length, int64(length))
-	}
 	bufPool.GetAllocHist().Add(int64(length))
 	// Use the bufPool.
 	if length < 1024*1024 {

@@ -51,13 +51,13 @@ type Pool struct {
 // Buckets increase with the power of two, i.e with multiplier 2: [2b, 4b, 16b, ... , 1024b]
 // Last pool will always be capped to maxSize.
 func New(minSize, maxSize int) *Pool {
-	var bucketCutoffs = []int64{1024 * 1024, 1024 * 1024 * 3, 1024 * 1024 * 5, 1024 * 1024 * 10, 1024 * 1024 * 20, 1024 * 1024 * 50, 1024 * 1024 * 1024}
+	var bucketCutoffs = []int64{1, 8, 16, 32, 64, 128, 256, 512, 1024, 1024 * 2, 1024 * 4, 1024 * 8, 1024 * 16, 1024 * 32, 1024 * 128, 1024 * 256, 1024 * 512, 1204 * 1024}
 	bucketLabels := make([]string, len(bucketCutoffs)+1)
 	for i, v := range bucketCutoffs {
 		bucketLabels[i] = fmt.Sprintf("%d", v)
 	}
 	bucketLabels[len(bucketLabels)-1] = "inf"
-	metrics := stats.NewGenericHistogram("Allocations", "Allocations by Size", bucketCutoffs, bucketLabels, "Count", "Size")
+	metrics := stats.NewGenericHistogram("BucketedPoolAllocations", "Allocations by Size", bucketCutoffs, bucketLabels, "AllocationCount", "TotalAllocated")
 
 	if maxSize < minSize {
 		panic("maxSize can't be less than minSize")
