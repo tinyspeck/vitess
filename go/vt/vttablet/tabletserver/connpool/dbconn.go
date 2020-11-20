@@ -151,7 +151,7 @@ func (dbc *DBConn) execOnce(ctx context.Context, query string, maxrows int, want
 	// Uncomment this line for manual testing.
 	// defer time.Sleep(20 * time.Second)
 	result, err := dbc.conn.ExecuteFetch(query, maxrows, wantfields)
-	if err != nil {
+	if err == nil {
 		size := 0
 		for _, rowValues := range result.Rows {
 			for _, val := range rowValues {
