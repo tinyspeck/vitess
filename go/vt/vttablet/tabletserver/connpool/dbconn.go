@@ -100,11 +100,7 @@ func (dbc *DBConn) Exec(ctx context.Context, query string, maxrows int, wantfiel
 		switch {
 		case err == nil:
 			// Success.
-			for _, row := range r.Rows {
-				if binary.Size(row) > 1024*1024*5 {
-					log.Infof("This is the bad query: %v", dbc.current.Get())
-				}
-			}
+
 			return r, nil
 		case !mysql.IsConnErr(err):
 			// Not a connection error. Don't retry.
@@ -155,7 +151,15 @@ func (dbc *DBConn) execOnce(ctx context.Context, query string, maxrows int, want
 	}
 	// Uncomment this line for manual testing.
 	// defer time.Sleep(20 * time.Second)
-	return dbc.conn.ExecuteFetch(query, maxrows, wantfields)
+	result, err := dbc.conn.ExecuteFetch(query, maxrows, wantfields)
+	if err != nil {
+		for _, row := range result.Rows {
+			if binary.Size(row) > 1024*1024*5 {
+				log.Infof("This is the bad query: %v", dbc.current.Get())
+			}
+		}
+	}
+	return result, err
 }
 
 // ExecOnce executes the specified query, but does not retry on connection errors.
