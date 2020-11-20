@@ -99,9 +99,13 @@ func (dbc *DBConn) Exec(ctx context.Context, query string, maxrows int, wantfiel
 		switch {
 		case err == nil:
 			// Success.
-			for _, row := range r.Rows {
-				if len(row) > 1024*1024*5 {
-					log.Infof(dbc.current.Get())
+			for _, rowValues := range r.Rows {
+				size := 0
+				for _, val := range rowValues {
+					size = len(val.Raw())
+				}
+				if size > 1024*1024*5 {
+					log.Infof("This is the bad query: %v", dbc.current.Get())
 				}
 			}
 			return r, nil
