@@ -17,6 +17,7 @@ limitations under the License.
 package connpool
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"sync"
@@ -99,12 +100,8 @@ func (dbc *DBConn) Exec(ctx context.Context, query string, maxrows int, wantfiel
 		switch {
 		case err == nil:
 			// Success.
-			for _, rowValues := range r.Rows {
-				size := 0
-				for _, val := range rowValues {
-					size = len(val.Raw())
-				}
-				if size > 1024*1024*5 {
+			for _, row := range r.Rows {
+				if binary.Size(row) > 1024*1024*5 {
 					log.Infof("This is the bad query: %v", dbc.current.Get())
 				}
 			}
