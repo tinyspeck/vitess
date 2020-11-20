@@ -99,6 +99,11 @@ func (dbc *DBConn) Exec(ctx context.Context, query string, maxrows int, wantfiel
 		switch {
 		case err == nil:
 			// Success.
+			for _, row := range r.Rows {
+				if len(row) > 1024*1024*5 {
+					log.Infof(dbc.current.Get())
+				}
+			}
 			return r, nil
 		case !mysql.IsConnErr(err):
 			// Not a connection error. Don't retry.
