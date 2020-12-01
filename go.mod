@@ -2,6 +2,8 @@ module vitess.io/vitess
 
 go 1.13
 
+replace 	google.golang.org/grpc v1.24.0 => github.com/demmer/grpc-go v1.24.1-0.20201201210016-f1af41328f81
+
 require (
 	cloud.google.com/go v0.45.1
 	github.com/Azure/azure-pipeline-go v0.2.2

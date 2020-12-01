@@ -93,6 +93,10 @@ var (
 	// there are no active streams, server will send GOAWAY and close the connection.
 	GRPCKeepAliveEnforcementPolicyPermitWithoutStream = flag.Bool("grpc_server_keepalive_enforcement_policy_permit_without_stream", false, "gRPC server permit client keepalive pings even when there are no active streams (RPCs)")
 
+	// Experimental option to set a number of worker goroutines used to process incoming streams
+	// https://godoc.org/google.golang.org/grpc#NumStreamWorkers
+	GRPCNumStreamWorkers = flag.Int("grpc_server_num_stream_workers", 0, "gRPC server number of worker goroutines (EXPERIMENTAL)")
+
 	authPlugin Authenticator
 )
 
@@ -151,6 +155,11 @@ func createGRPCServer() {
 	if *GRPCInitialWindowSize != 0 {
 		log.Infof("Setting grpc server initial window size to %d", int32(*GRPCInitialWindowSize))
 		opts = append(opts, grpc.InitialWindowSize(int32(*GRPCInitialWindowSize)))
+	}
+
+	if *GRPCNumStreamWorkers != 0 {
+		log.Infof("Setting grpc number of stream workers to %d", int32(*GRPCNumStreamWorkers))
+		opts = append(opts, grpc.NumStreamWorkers(uint32(*GRPCNumStreamWorkers)))
 	}
 
 	ep := keepalive.EnforcementPolicy{
