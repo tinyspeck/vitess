@@ -1,0 +1,30 @@
+sync:
+  defaults:
+    permissions:
+      defaultFileMode: 644
+      defaultDirectoryMode: 775
+    mode: "two-way-resolved"
+    ignore:
+      vcs: true
+      paths:
+        - "/3rdparty/"
+        - "/bzl/"
+        - "/fonts/"
+        - "/img/"
+        - "/js/bin/"
+        - "/js/brand/"
+        - "/js/calls_help_page/"
+        - "/js/god/"
+        - "/js/modern/"
+        - "/js/inline/"
+        - "/js/polyfills/"
+        - "/js/rollups/"
+        - "/js/tools/"
+        - "/node_modules/"
+        - "/shaders/"
+        - "/slackpress/"
+        - "/spacesuit/"
+        - "/sounds/"
+        - "/webpack/"
+        - "bazel-*"
+        - ".pants.d/"
