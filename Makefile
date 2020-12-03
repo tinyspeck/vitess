@@ -364,3 +364,17 @@ web_build: web_bootstrap
 # Following the local Docker install guide is recommended: https://vitess.io/docs/get-started/local-docker/
 web_start: web_bootstrap
 	cd web/vtctld2 && npm run start
+
+VTADMIN_PROTO_DIR ?= ./proto
+VTADMIN_PROTO_OUT_DIR ?= ./web/vtadmin/src/proto
+vtadmin_web_proto:
+	mkdir -p $(VTADMIN_PROTO_OUT_DIR)
+	protoc -I=$(VTADMIN_PROTO_DIR) vreplication.proto --js_out=import_style=commonjs,binary:$(VTADMIN_PROTO_OUT_DIR) --grpc-web_out=import_style=typescript,mode=grpcwebtext:$(VTADMIN_PROTO_OUT_DIR)
+
+VTADMIN_API_DOCKER_TAG ?= vitess/vtadmin
+vtadmin_api_build:
+	docker build -t $(VTADMIN_API_DOCKER_TAG) -f ./docker/vtadmin/api/Dockerfile .
+
+VTADMIN_WEB_DOCKER_TAG ?= vitess/vtadmin-web
+vtadmin_web_build:
+	docker build -t $(VTADMIN_WEB_DOCKER_TAG) -f ./docker/vtadmin/web/Dockerfile .

@@ -1,0 +1,34 @@
+// This file contains protos for the vtfun-web demo.
+syntax = "proto3";
+option go_package = "vitess.io/vitess/go/vt/proto/vreplication";
+
+package vreplication;
+
+enum VRepStreamState {
+	RUNNING = 0;
+	STOPPED = 1;
+}
+
+// VRepStream represents a single VReplication stream in a multi-cluster Vitess deployment.
+// Concretely, a VRepStream maps to a row in the _vt.vreplication table.
+// based on https://vitess.io/docs/reference/features/vreplication/#vreplicationexec
+message VRepStream {
+	int64 id = 1;
+	string workflow = 2;
+	string source = 3;
+	string pos = 4;
+	string stop_pos = 5;
+	int64 max_tps = 6;
+	int64 max_replication_lag = 7;
+	string cell = 8;
+	repeated string tablet_types = 9;
+	int64 time_updated = 10;
+	int64 transaction_timestamp = 11;
+	VRepStreamState state = 12;
+	string message = 13;
+	string db_name = 14;
+	string cluster = 15;
+	string keyspace = 16;
+	string shard = 17;
+	string tablet_alias = 18;
+}
