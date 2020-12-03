@@ -3,26 +3,26 @@ import { BrowserRouter as Router, Redirect, Switch, Route } from 'react-router-d
 import { WorkflowDetails } from '../routes/WorkflowDetails';
 import { Workflows } from '../routes/Workflows';
 
-import style from './App.module.scss'
+import style from './App.module.scss';
 
 export const App = () => {
-  return (
-    <Router>
-      <div className={style.container}>
-        <header className={style.header}>
-          <h1>VTAdmin</h1>
-        </header>
+    return (
+        <Router>
+            <div className={style.container}>
+                <header className={style.header}>
+                    <h1>VTAdmin</h1>
+                </header>
 
-        <Switch>
-          <Route exact path="/vrep/streams">
-            <Workflows />
-          </Route>
+                <Switch>
+                    <Route exact path="/vrep/streams">
+                        <Workflows />
+                    </Route>
 
-          <Route path="/vrep/streams/:cluster/:id">
-            <WorkflowDetails />
-          </Route>
-        </Switch>
-      </div>
-    </Router>
-  );
-}
+                    <Route path="/vrep/streams/:cluster/:id">
+                        <WorkflowDetails />
+                    </Route>
+                </Switch>
+            </div>
+        </Router>
+    );
+};

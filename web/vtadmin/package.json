@@ -12,6 +12,7 @@
     "@types/react-dom": "^16.9.10",
     "@types/react-router-dom": "^5.1.6",
     "google-protobuf": "^3.14.0",
+    "prettier": "^2.2.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-query": "^2.26.3",
@@ -27,7 +28,9 @@
     "start:prod": "serve -s build -l 80",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "format": "prettier --config \"./.prettiercc\" --check \"src/**/*.{js,jsx,ts,tsx,css,scss}\"",
+    "format:fix": "npm run format -- --write"
   },
   "eslintConfig": {
     "extends": [
