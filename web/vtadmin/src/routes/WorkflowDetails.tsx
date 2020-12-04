@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useQuery } from 'react-query';
 import { Link, useParams } from 'react-router-dom';
+import { useVRepStream } from '../hooks/api';
 
 interface RouteParams {
     cluster: string;
@@ -9,10 +10,7 @@ interface RouteParams {
 
 export const WorkflowDetails = () => {
     const { cluster, id } = useParams<RouteParams>();
-    const streamQuery = useQuery(['stream', { cluster, id }], async (queryKey, { cluster, id }) => {
-        const result = await fetch(`http://localhost:8090/vrep/stream?cluster=${cluster}&id=${id}`);
-        return (await result.json()) as string[];
-    });
+    const streamQuery = useVRepStream({ cluster, id })
     const stream = streamQuery.data;
 
     return (
