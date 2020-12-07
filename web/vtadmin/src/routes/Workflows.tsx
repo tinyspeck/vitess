@@ -9,7 +9,7 @@ export const Workflows = () => {
     const clustersQuery = useClusters();
     const clusters = clustersQuery.data || [];
 
-    const streamQuery = useVRepStreams({ clusters }, { enabled: clusters })
+    const streamQuery = useVRepStreams({ clusters }, { enabled: !!clusters })
     const streams = streamQuery.data || [];
     const isLoading = clustersQuery.isLoading || streamQuery.isLoading;
 

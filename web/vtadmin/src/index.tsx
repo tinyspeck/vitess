@@ -4,15 +4,15 @@ import ReactDOM from 'react-dom';
 import './index.scss';
 import { App } from './components/App';
 import reportWebVitals from './reportWebVitals';
-import { QueryCache, ReactQueryCacheProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from 'react-query';
 
-const queryCache = new QueryCache();
+const queryClient = new QueryClient()
 
 ReactDOM.render(
     <React.StrictMode>
-        <ReactQueryCacheProvider queryCache={queryCache}>
+        <QueryClientProvider client={queryClient}>
             <App />
-        </ReactQueryCacheProvider>
+        </QueryClientProvider>
     </React.StrictMode>,
     document.getElementById('root')
 );
