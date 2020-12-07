@@ -13,7 +13,8 @@ export const Workflows = () => {
 
     const streamQuery = useVRepStreams({ clusters }, { enabled: !!clusters })
     const streams = streamQuery.data || [];
-    const isLoading = clustersQuery.isLoading || streamQuery.anyLoading;
+    const isLoading = clustersQuery.isFetching || streamQuery.anyFetching;
+
 
     let content = <VRepStreamList streams={streams} />
     if (clustersQuery.isError) {
