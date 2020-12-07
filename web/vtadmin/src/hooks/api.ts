@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { QueryObserverResult, useQueries, useQuery } from "react-query";
 
 import { VRepStream } from '../types';
 
@@ -10,26 +10,29 @@ export const useClusters = (config?: any) => {
 	}, config)
 }
 
-type VRepStreamsPayload = VRepStream[]
-export const useVRepStreams = (params: { clusters: string[] }, config?: any) => {
-	return useQuery(
-        ['streams', params],
-        async (context) => {
-			// See https://github.com/tannerlinsley/react-query/discussions/990
-            let result: VRepStream[] = [];
-            for (let i = 0; i < params.clusters.length; i++) {
-                const cluster = params.clusters[i];
-                const cr = await fetch(`http://localhost:8090/vrep/streams?cluster=${cluster}`);
-                const cj = await cr.json();
-                result = result.concat(cj);
-            }
-            return result;
-		},
-		config
-    )
+export const useVRepStreams = (params: { clusters: string[] }, config?: any): { 
+    data: VRepStream[], 
+    anyLoading: boolean,
+    queries: QueryObserverResult<any, any>[],
+} => {
+    const queries = useQueries(params.clusters.map(c => ({
+        queryKey: ['streams', c],
+        queryFn: async () => {
+            const cr = await fetch(`http://localhost:8090/vrep/streams?cluster=${c}`);
+            const cj = await cr.json();
+            return cj as VRepStream[]
+        }
+    })))
+
+    const anyLoading = queries.some(q => q.isLoading)
+    const data = queries.reduce((acc, { data }) => {
+        acc = acc.concat((data as VRepStream[]) || [])
+        return acc
+    }, [] as VRepStream[])
+
+    return { data, anyLoading, queries }
 }
 
-type VRepStreamPayload = VRepStream
 export const useVRepStream = (params: { cluster: string, id: number | string }) => {
 	return useQuery(['stream', params], async (context) => {
         console.log(context)

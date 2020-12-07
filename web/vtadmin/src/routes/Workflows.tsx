@@ -11,7 +11,7 @@ export const Workflows = () => {
 
     const streamQuery = useVRepStreams({ clusters }, { enabled: !!clusters })
     const streams = streamQuery.data || [];
-    const isLoading = clustersQuery.isLoading || streamQuery.isLoading;
+    const isLoading = clustersQuery.isLoading || streamQuery.anyLoading;
 
     return (
         <div>
