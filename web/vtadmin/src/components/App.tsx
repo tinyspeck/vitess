@@ -21,6 +21,8 @@ export const App = () => {
                     <Route path="/vrep/streams/:cluster/:id">
                         <WorkflowDetails />
                     </Route>
+
+                    <Redirect from="/" to="/vrep/streams" exact />
                 </Switch>
             </div>
         </Router>
