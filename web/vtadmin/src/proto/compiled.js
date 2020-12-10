@@ -42,20 +42,20 @@ $root.vreplication = (function() {
          * @property {string|null} [workflow] VRepStream workflow
          * @property {string|null} [source] VRepStream source
          * @property {string|null} [pos] VRepStream pos
-         * @property {string|null} [stopPos] VRepStream stopPos
-         * @property {number|Long|null} [maxTps] VRepStream maxTps
-         * @property {number|Long|null} [maxReplicationLag] VRepStream maxReplicationLag
+         * @property {string|null} [stop_pos] VRepStream stop_pos
+         * @property {number|Long|null} [max_tps] VRepStream max_tps
+         * @property {number|Long|null} [max_replication_lag] VRepStream max_replication_lag
          * @property {string|null} [cell] VRepStream cell
-         * @property {Array.<string>|null} [tabletTypes] VRepStream tabletTypes
-         * @property {number|Long|null} [timeUpdated] VRepStream timeUpdated
-         * @property {number|Long|null} [transactionTimestamp] VRepStream transactionTimestamp
+         * @property {Array.<string>|null} [tablet_types] VRepStream tablet_types
+         * @property {number|Long|null} [time_updated] VRepStream time_updated
+         * @property {number|Long|null} [transaction_timestamp] VRepStream transaction_timestamp
          * @property {vreplication.VRepStreamState|null} [state] VRepStream state
          * @property {string|null} [message] VRepStream message
-         * @property {string|null} [dbName] VRepStream dbName
+         * @property {string|null} [db_name] VRepStream db_name
          * @property {string|null} [cluster] VRepStream cluster
          * @property {string|null} [keyspace] VRepStream keyspace
          * @property {string|null} [shard] VRepStream shard
-         * @property {string|null} [tabletAlias] VRepStream tabletAlias
+         * @property {string|null} [tablet_alias] VRepStream tablet_alias
          */
 
         /**
@@ -67,7 +67,7 @@ $root.vreplication = (function() {
          * @param {vreplication.IVRepStream=} [properties] Properties to set
          */
         function VRepStream(properties) {
-            this.tabletTypes = [];
+            this.tablet_types = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -107,28 +107,28 @@ $root.vreplication = (function() {
         VRepStream.prototype.pos = "";
 
         /**
-         * VRepStream stopPos.
-         * @member {string} stopPos
+         * VRepStream stop_pos.
+         * @member {string} stop_pos
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.stopPos = "";
+        VRepStream.prototype.stop_pos = "";
 
         /**
-         * VRepStream maxTps.
-         * @member {number|Long} maxTps
+         * VRepStream max_tps.
+         * @member {number|Long} max_tps
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.maxTps = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+        VRepStream.prototype.max_tps = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
         /**
-         * VRepStream maxReplicationLag.
-         * @member {number|Long} maxReplicationLag
+         * VRepStream max_replication_lag.
+         * @member {number|Long} max_replication_lag
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.maxReplicationLag = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+        VRepStream.prototype.max_replication_lag = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
         /**
          * VRepStream cell.
@@ -139,28 +139,28 @@ $root.vreplication = (function() {
         VRepStream.prototype.cell = "";
 
         /**
-         * VRepStream tabletTypes.
-         * @member {Array.<string>} tabletTypes
+         * VRepStream tablet_types.
+         * @member {Array.<string>} tablet_types
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.tabletTypes = $util.emptyArray;
+        VRepStream.prototype.tablet_types = $util.emptyArray;
 
         /**
-         * VRepStream timeUpdated.
-         * @member {number|Long} timeUpdated
+         * VRepStream time_updated.
+         * @member {number|Long} time_updated
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.timeUpdated = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+        VRepStream.prototype.time_updated = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
         /**
-         * VRepStream transactionTimestamp.
-         * @member {number|Long} transactionTimestamp
+         * VRepStream transaction_timestamp.
+         * @member {number|Long} transaction_timestamp
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.transactionTimestamp = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+        VRepStream.prototype.transaction_timestamp = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
         /**
          * VRepStream state.
@@ -179,12 +179,12 @@ $root.vreplication = (function() {
         VRepStream.prototype.message = "";
 
         /**
-         * VRepStream dbName.
-         * @member {string} dbName
+         * VRepStream db_name.
+         * @member {string} db_name
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.dbName = "";
+        VRepStream.prototype.db_name = "";
 
         /**
          * VRepStream cluster.
@@ -211,12 +211,12 @@ $root.vreplication = (function() {
         VRepStream.prototype.shard = "";
 
         /**
-         * VRepStream tabletAlias.
-         * @member {string} tabletAlias
+         * VRepStream tablet_alias.
+         * @member {string} tablet_alias
          * @memberof vreplication.VRepStream
          * @instance
          */
-        VRepStream.prototype.tabletAlias = "";
+        VRepStream.prototype.tablet_alias = "";
 
         /**
          * Creates a new VRepStream instance using the specified properties.
@@ -250,35 +250,35 @@ $root.vreplication = (function() {
                 writer.uint32(/* id 3, wireType 2 =*/26).string(message.source);
             if (message.pos != null && Object.hasOwnProperty.call(message, "pos"))
                 writer.uint32(/* id 4, wireType 2 =*/34).string(message.pos);
-            if (message.stopPos != null && Object.hasOwnProperty.call(message, "stopPos"))
-                writer.uint32(/* id 5, wireType 2 =*/42).string(message.stopPos);
-            if (message.maxTps != null && Object.hasOwnProperty.call(message, "maxTps"))
-                writer.uint32(/* id 6, wireType 0 =*/48).int64(message.maxTps);
-            if (message.maxReplicationLag != null && Object.hasOwnProperty.call(message, "maxReplicationLag"))
-                writer.uint32(/* id 7, wireType 0 =*/56).int64(message.maxReplicationLag);
+            if (message.stop_pos != null && Object.hasOwnProperty.call(message, "stop_pos"))
+                writer.uint32(/* id 5, wireType 2 =*/42).string(message.stop_pos);
+            if (message.max_tps != null && Object.hasOwnProperty.call(message, "max_tps"))
+                writer.uint32(/* id 6, wireType 0 =*/48).int64(message.max_tps);
+            if (message.max_replication_lag != null && Object.hasOwnProperty.call(message, "max_replication_lag"))
+                writer.uint32(/* id 7, wireType 0 =*/56).int64(message.max_replication_lag);
             if (message.cell != null && Object.hasOwnProperty.call(message, "cell"))
                 writer.uint32(/* id 8, wireType 2 =*/66).string(message.cell);
-            if (message.tabletTypes != null && message.tabletTypes.length)
-                for (var i = 0; i < message.tabletTypes.length; ++i)
-                    writer.uint32(/* id 9, wireType 2 =*/74).string(message.tabletTypes[i]);
-            if (message.timeUpdated != null && Object.hasOwnProperty.call(message, "timeUpdated"))
-                writer.uint32(/* id 10, wireType 0 =*/80).int64(message.timeUpdated);
-            if (message.transactionTimestamp != null && Object.hasOwnProperty.call(message, "transactionTimestamp"))
-                writer.uint32(/* id 11, wireType 0 =*/88).int64(message.transactionTimestamp);
+            if (message.tablet_types != null && message.tablet_types.length)
+                for (var i = 0; i < message.tablet_types.length; ++i)
+                    writer.uint32(/* id 9, wireType 2 =*/74).string(message.tablet_types[i]);
+            if (message.time_updated != null && Object.hasOwnProperty.call(message, "time_updated"))
+                writer.uint32(/* id 10, wireType 0 =*/80).int64(message.time_updated);
+            if (message.transaction_timestamp != null && Object.hasOwnProperty.call(message, "transaction_timestamp"))
+                writer.uint32(/* id 11, wireType 0 =*/88).int64(message.transaction_timestamp);
             if (message.state != null && Object.hasOwnProperty.call(message, "state"))
                 writer.uint32(/* id 12, wireType 0 =*/96).int32(message.state);
             if (message.message != null && Object.hasOwnProperty.call(message, "message"))
                 writer.uint32(/* id 13, wireType 2 =*/106).string(message.message);
-            if (message.dbName != null && Object.hasOwnProperty.call(message, "dbName"))
-                writer.uint32(/* id 14, wireType 2 =*/114).string(message.dbName);
+            if (message.db_name != null && Object.hasOwnProperty.call(message, "db_name"))
+                writer.uint32(/* id 14, wireType 2 =*/114).string(message.db_name);
             if (message.cluster != null && Object.hasOwnProperty.call(message, "cluster"))
                 writer.uint32(/* id 15, wireType 2 =*/122).string(message.cluster);
             if (message.keyspace != null && Object.hasOwnProperty.call(message, "keyspace"))
                 writer.uint32(/* id 16, wireType 2 =*/130).string(message.keyspace);
             if (message.shard != null && Object.hasOwnProperty.call(message, "shard"))
                 writer.uint32(/* id 17, wireType 2 =*/138).string(message.shard);
-            if (message.tabletAlias != null && Object.hasOwnProperty.call(message, "tabletAlias"))
-                writer.uint32(/* id 18, wireType 2 =*/146).string(message.tabletAlias);
+            if (message.tablet_alias != null && Object.hasOwnProperty.call(message, "tablet_alias"))
+                writer.uint32(/* id 18, wireType 2 =*/146).string(message.tablet_alias);
             return writer;
         };
 
@@ -326,27 +326,27 @@ $root.vreplication = (function() {
                     message.pos = reader.string();
                     break;
                 case 5:
-                    message.stopPos = reader.string();
+                    message.stop_pos = reader.string();
                     break;
                 case 6:
-                    message.maxTps = reader.int64();
+                    message.max_tps = reader.int64();
                     break;
                 case 7:
-                    message.maxReplicationLag = reader.int64();
+                    message.max_replication_lag = reader.int64();
                     break;
                 case 8:
                     message.cell = reader.string();
                     break;
                 case 9:
-                    if (!(message.tabletTypes && message.tabletTypes.length))
-                        message.tabletTypes = [];
-                    message.tabletTypes.push(reader.string());
+                    if (!(message.tablet_types && message.tablet_types.length))
+                        message.tablet_types = [];
+                    message.tablet_types.push(reader.string());
                     break;
                 case 10:
-                    message.timeUpdated = reader.int64();
+                    message.time_updated = reader.int64();
                     break;
                 case 11:
-                    message.transactionTimestamp = reader.int64();
+                    message.transaction_timestamp = reader.int64();
                     break;
                 case 12:
                     message.state = reader.int32();
@@ -355,7 +355,7 @@ $root.vreplication = (function() {
                     message.message = reader.string();
                     break;
                 case 14:
-                    message.dbName = reader.string();
+                    message.db_name = reader.string();
                     break;
                 case 15:
                     message.cluster = reader.string();
@@ -367,7 +367,7 @@ $root.vreplication = (function() {
                     message.shard = reader.string();
                     break;
                 case 18:
-                    message.tabletAlias = reader.string();
+                    message.tablet_alias = reader.string();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -416,31 +416,31 @@ $root.vreplication = (function() {
             if (message.pos != null && message.hasOwnProperty("pos"))
                 if (!$util.isString(message.pos))
                     return "pos: string expected";
-            if (message.stopPos != null && message.hasOwnProperty("stopPos"))
-                if (!$util.isString(message.stopPos))
-                    return "stopPos: string expected";
-            if (message.maxTps != null && message.hasOwnProperty("maxTps"))
-                if (!$util.isInteger(message.maxTps) && !(message.maxTps && $util.isInteger(message.maxTps.low) && $util.isInteger(message.maxTps.high)))
-                    return "maxTps: integer|Long expected";
-            if (message.maxReplicationLag != null && message.hasOwnProperty("maxReplicationLag"))
-                if (!$util.isInteger(message.maxReplicationLag) && !(message.maxReplicationLag && $util.isInteger(message.maxReplicationLag.low) && $util.isInteger(message.maxReplicationLag.high)))
-                    return "maxReplicationLag: integer|Long expected";
+            if (message.stop_pos != null && message.hasOwnProperty("stop_pos"))
+                if (!$util.isString(message.stop_pos))
+                    return "stop_pos: string expected";
+            if (message.max_tps != null && message.hasOwnProperty("max_tps"))
+                if (!$util.isInteger(message.max_tps) && !(message.max_tps && $util.isInteger(message.max_tps.low) && $util.isInteger(message.max_tps.high)))
+                    return "max_tps: integer|Long expected";
+            if (message.max_replication_lag != null && message.hasOwnProperty("max_replication_lag"))
+                if (!$util.isInteger(message.max_replication_lag) && !(message.max_replication_lag && $util.isInteger(message.max_replication_lag.low) && $util.isInteger(message.max_replication_lag.high)))
+                    return "max_replication_lag: integer|Long expected";
             if (message.cell != null && message.hasOwnProperty("cell"))
                 if (!$util.isString(message.cell))
                     return "cell: string expected";
-            if (message.tabletTypes != null && message.hasOwnProperty("tabletTypes")) {
-                if (!Array.isArray(message.tabletTypes))
-                    return "tabletTypes: array expected";
-                for (var i = 0; i < message.tabletTypes.length; ++i)
-                    if (!$util.isString(message.tabletTypes[i]))
-                        return "tabletTypes: string[] expected";
+            if (message.tablet_types != null && message.hasOwnProperty("tablet_types")) {
+                if (!Array.isArray(message.tablet_types))
+                    return "tablet_types: array expected";
+                for (var i = 0; i < message.tablet_types.length; ++i)
+                    if (!$util.isString(message.tablet_types[i]))
+                        return "tablet_types: string[] expected";
             }
-            if (message.timeUpdated != null && message.hasOwnProperty("timeUpdated"))
-                if (!$util.isInteger(message.timeUpdated) && !(message.timeUpdated && $util.isInteger(message.timeUpdated.low) && $util.isInteger(message.timeUpdated.high)))
-                    return "timeUpdated: integer|Long expected";
-            if (message.transactionTimestamp != null && message.hasOwnProperty("transactionTimestamp"))
-                if (!$util.isInteger(message.transactionTimestamp) && !(message.transactionTimestamp && $util.isInteger(message.transactionTimestamp.low) && $util.isInteger(message.transactionTimestamp.high)))
-                    return "transactionTimestamp: integer|Long expected";
+            if (message.time_updated != null && message.hasOwnProperty("time_updated"))
+                if (!$util.isInteger(message.time_updated) && !(message.time_updated && $util.isInteger(message.time_updated.low) && $util.isInteger(message.time_updated.high)))
+                    return "time_updated: integer|Long expected";
+            if (message.transaction_timestamp != null && message.hasOwnProperty("transaction_timestamp"))
+                if (!$util.isInteger(message.transaction_timestamp) && !(message.transaction_timestamp && $util.isInteger(message.transaction_timestamp.low) && $util.isInteger(message.transaction_timestamp.high)))
+                    return "transaction_timestamp: integer|Long expected";
             if (message.state != null && message.hasOwnProperty("state"))
                 switch (message.state) {
                 default:
@@ -452,9 +452,9 @@ $root.vreplication = (function() {
             if (message.message != null && message.hasOwnProperty("message"))
                 if (!$util.isString(message.message))
                     return "message: string expected";
-            if (message.dbName != null && message.hasOwnProperty("dbName"))
-                if (!$util.isString(message.dbName))
-                    return "dbName: string expected";
+            if (message.db_name != null && message.hasOwnProperty("db_name"))
+                if (!$util.isString(message.db_name))
+                    return "db_name: string expected";
             if (message.cluster != null && message.hasOwnProperty("cluster"))
                 if (!$util.isString(message.cluster))
                     return "cluster: string expected";
@@ -464,9 +464,9 @@ $root.vreplication = (function() {
             if (message.shard != null && message.hasOwnProperty("shard"))
                 if (!$util.isString(message.shard))
                     return "shard: string expected";
-            if (message.tabletAlias != null && message.hasOwnProperty("tabletAlias"))
-                if (!$util.isString(message.tabletAlias))
-                    return "tabletAlias: string expected";
+            if (message.tablet_alias != null && message.hasOwnProperty("tablet_alias"))
+                if (!$util.isString(message.tablet_alias))
+                    return "tablet_alias: string expected";
             return null;
         };
 
@@ -497,53 +497,53 @@ $root.vreplication = (function() {
                 message.source = String(object.source);
             if (object.pos != null)
                 message.pos = String(object.pos);
-            if (object.stopPos != null)
-                message.stopPos = String(object.stopPos);
-            if (object.maxTps != null)
+            if (object.stop_pos != null)
+                message.stop_pos = String(object.stop_pos);
+            if (object.max_tps != null)
                 if ($util.Long)
-                    (message.maxTps = $util.Long.fromValue(object.maxTps)).unsigned = false;
-                else if (typeof object.maxTps === "string")
-                    message.maxTps = parseInt(object.maxTps, 10);
-                else if (typeof object.maxTps === "number")
-                    message.maxTps = object.maxTps;
-                else if (typeof object.maxTps === "object")
-                    message.maxTps = new $util.LongBits(object.maxTps.low >>> 0, object.maxTps.high >>> 0).toNumber();
-            if (object.maxReplicationLag != null)
+                    (message.max_tps = $util.Long.fromValue(object.max_tps)).unsigned = false;
+                else if (typeof object.max_tps === "string")
+                    message.max_tps = parseInt(object.max_tps, 10);
+                else if (typeof object.max_tps === "number")
+                    message.max_tps = object.max_tps;
+                else if (typeof object.max_tps === "object")
+                    message.max_tps = new $util.LongBits(object.max_tps.low >>> 0, object.max_tps.high >>> 0).toNumber();
+            if (object.max_replication_lag != null)
                 if ($util.Long)
-                    (message.maxReplicationLag = $util.Long.fromValue(object.maxReplicationLag)).unsigned = false;
-                else if (typeof object.maxReplicationLag === "string")
-                    message.maxReplicationLag = parseInt(object.maxReplicationLag, 10);
-                else if (typeof object.maxReplicationLag === "number")
-                    message.maxReplicationLag = object.maxReplicationLag;
-                else if (typeof object.maxReplicationLag === "object")
-                    message.maxReplicationLag = new $util.LongBits(object.maxReplicationLag.low >>> 0, object.maxReplicationLag.high >>> 0).toNumber();
+                    (message.max_replication_lag = $util.Long.fromValue(object.max_replication_lag)).unsigned = false;
+                else if (typeof object.max_replication_lag === "string")
+                    message.max_replication_lag = parseInt(object.max_replication_lag, 10);
+                else if (typeof object.max_replication_lag === "number")
+                    message.max_replication_lag = object.max_replication_lag;
+                else if (typeof object.max_replication_lag === "object")
+                    message.max_replication_lag = new $util.LongBits(object.max_replication_lag.low >>> 0, object.max_replication_lag.high >>> 0).toNumber();
             if (object.cell != null)
                 message.cell = String(object.cell);
-            if (object.tabletTypes) {
-                if (!Array.isArray(object.tabletTypes))
-                    throw TypeError(".vreplication.VRepStream.tabletTypes: array expected");
-                message.tabletTypes = [];
-                for (var i = 0; i < object.tabletTypes.length; ++i)
-                    message.tabletTypes[i] = String(object.tabletTypes[i]);
+            if (object.tablet_types) {
+                if (!Array.isArray(object.tablet_types))
+                    throw TypeError(".vreplication.VRepStream.tablet_types: array expected");
+                message.tablet_types = [];
+                for (var i = 0; i < object.tablet_types.length; ++i)
+                    message.tablet_types[i] = String(object.tablet_types[i]);
             }
-            if (object.timeUpdated != null)
+            if (object.time_updated != null)
                 if ($util.Long)
-                    (message.timeUpdated = $util.Long.fromValue(object.timeUpdated)).unsigned = false;
-                else if (typeof object.timeUpdated === "string")
-                    message.timeUpdated = parseInt(object.timeUpdated, 10);
-                else if (typeof object.timeUpdated === "number")
-                    message.timeUpdated = object.timeUpdated;
-                else if (typeof object.timeUpdated === "object")
-                    message.timeUpdated = new $util.LongBits(object.timeUpdated.low >>> 0, object.timeUpdated.high >>> 0).toNumber();
-            if (object.transactionTimestamp != null)
+                    (message.time_updated = $util.Long.fromValue(object.time_updated)).unsigned = false;
+                else if (typeof object.time_updated === "string")
+                    message.time_updated = parseInt(object.time_updated, 10);
+                else if (typeof object.time_updated === "number")
+                    message.time_updated = object.time_updated;
+                else if (typeof object.time_updated === "object")
+                    message.time_updated = new $util.LongBits(object.time_updated.low >>> 0, object.time_updated.high >>> 0).toNumber();
+            if (object.transaction_timestamp != null)
                 if ($util.Long)
-                    (message.transactionTimestamp = $util.Long.fromValue(object.transactionTimestamp)).unsigned = false;
-                else if (typeof object.transactionTimestamp === "string")
-                    message.transactionTimestamp = parseInt(object.transactionTimestamp, 10);
-                else if (typeof object.transactionTimestamp === "number")
-                    message.transactionTimestamp = object.transactionTimestamp;
-                else if (typeof object.transactionTimestamp === "object")
-                    message.transactionTimestamp = new $util.LongBits(object.transactionTimestamp.low >>> 0, object.transactionTimestamp.high >>> 0).toNumber();
+                    (message.transaction_timestamp = $util.Long.fromValue(object.transaction_timestamp)).unsigned = false;
+                else if (typeof object.transaction_timestamp === "string")
+                    message.transaction_timestamp = parseInt(object.transaction_timestamp, 10);
+                else if (typeof object.transaction_timestamp === "number")
+                    message.transaction_timestamp = object.transaction_timestamp;
+                else if (typeof object.transaction_timestamp === "object")
+                    message.transaction_timestamp = new $util.LongBits(object.transaction_timestamp.low >>> 0, object.transaction_timestamp.high >>> 0).toNumber();
             switch (object.state) {
             case "RUNNING":
             case 0:
@@ -556,16 +556,16 @@ $root.vreplication = (function() {
             }
             if (object.message != null)
                 message.message = String(object.message);
-            if (object.dbName != null)
-                message.dbName = String(object.dbName);
+            if (object.db_name != null)
+                message.db_name = String(object.db_name);
             if (object.cluster != null)
                 message.cluster = String(object.cluster);
             if (object.keyspace != null)
                 message.keyspace = String(object.keyspace);
             if (object.shard != null)
                 message.shard = String(object.shard);
-            if (object.tabletAlias != null)
-                message.tabletAlias = String(object.tabletAlias);
+            if (object.tablet_alias != null)
+                message.tablet_alias = String(object.tablet_alias);
             return message;
         };
 
@@ -583,7 +583,7 @@ $root.vreplication = (function() {
                 options = {};
             var object = {};
             if (options.arrays || options.defaults)
-                object.tabletTypes = [];
+                object.tablet_types = [];
             if (options.defaults) {
                 if ($util.Long) {
                     var long = new $util.Long(0, 0, false);
@@ -593,35 +593,35 @@ $root.vreplication = (function() {
                 object.workflow = "";
                 object.source = "";
                 object.pos = "";
-                object.stopPos = "";
+                object.stop_pos = "";
                 if ($util.Long) {
                     var long = new $util.Long(0, 0, false);
-                    object.maxTps = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    object.max_tps = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
-                    object.maxTps = options.longs === String ? "0" : 0;
+                    object.max_tps = options.longs === String ? "0" : 0;
                 if ($util.Long) {
                     var long = new $util.Long(0, 0, false);
-                    object.maxReplicationLag = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    object.max_replication_lag = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
-                    object.maxReplicationLag = options.longs === String ? "0" : 0;
+                    object.max_replication_lag = options.longs === String ? "0" : 0;
                 object.cell = "";
                 if ($util.Long) {
                     var long = new $util.Long(0, 0, false);
-                    object.timeUpdated = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    object.time_updated = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
-                    object.timeUpdated = options.longs === String ? "0" : 0;
+                    object.time_updated = options.longs === String ? "0" : 0;
                 if ($util.Long) {
                     var long = new $util.Long(0, 0, false);
-                    object.transactionTimestamp = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    object.transaction_timestamp = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
-                    object.transactionTimestamp = options.longs === String ? "0" : 0;
+                    object.transaction_timestamp = options.longs === String ? "0" : 0;
                 object.state = options.enums === String ? "RUNNING" : 0;
                 object.message = "";
-                object.dbName = "";
+                object.db_name = "";
                 object.cluster = "";
                 object.keyspace = "";
                 object.shard = "";
-                object.tabletAlias = "";
+                object.tablet_alias = "";
             }
             if (message.id != null && message.hasOwnProperty("id"))
                 if (typeof message.id === "number")
@@ -634,49 +634,49 @@ $root.vreplication = (function() {
                 object.source = message.source;
             if (message.pos != null && message.hasOwnProperty("pos"))
                 object.pos = message.pos;
-            if (message.stopPos != null && message.hasOwnProperty("stopPos"))
-                object.stopPos = message.stopPos;
-            if (message.maxTps != null && message.hasOwnProperty("maxTps"))
-                if (typeof message.maxTps === "number")
-                    object.maxTps = options.longs === String ? String(message.maxTps) : message.maxTps;
+            if (message.stop_pos != null && message.hasOwnProperty("stop_pos"))
+                object.stop_pos = message.stop_pos;
+            if (message.max_tps != null && message.hasOwnProperty("max_tps"))
+                if (typeof message.max_tps === "number")
+                    object.max_tps = options.longs === String ? String(message.max_tps) : message.max_tps;
                 else
-                    object.maxTps = options.longs === String ? $util.Long.prototype.toString.call(message.maxTps) : options.longs === Number ? new $util.LongBits(message.maxTps.low >>> 0, message.maxTps.high >>> 0).toNumber() : message.maxTps;
-            if (message.maxReplicationLag != null && message.hasOwnProperty("maxReplicationLag"))
-                if (typeof message.maxReplicationLag === "number")
-                    object.maxReplicationLag = options.longs === String ? String(message.maxReplicationLag) : message.maxReplicationLag;
+                    object.max_tps = options.longs === String ? $util.Long.prototype.toString.call(message.max_tps) : options.longs === Number ? new $util.LongBits(message.max_tps.low >>> 0, message.max_tps.high >>> 0).toNumber() : message.max_tps;
+            if (message.max_replication_lag != null && message.hasOwnProperty("max_replication_lag"))
+                if (typeof message.max_replication_lag === "number")
+                    object.max_replication_lag = options.longs === String ? String(message.max_replication_lag) : message.max_replication_lag;
                 else
-                    object.maxReplicationLag = options.longs === String ? $util.Long.prototype.toString.call(message.maxReplicationLag) : options.longs === Number ? new $util.LongBits(message.maxReplicationLag.low >>> 0, message.maxReplicationLag.high >>> 0).toNumber() : message.maxReplicationLag;
+                    object.max_replication_lag = options.longs === String ? $util.Long.prototype.toString.call(message.max_replication_lag) : options.longs === Number ? new $util.LongBits(message.max_replication_lag.low >>> 0, message.max_replication_lag.high >>> 0).toNumber() : message.max_replication_lag;
             if (message.cell != null && message.hasOwnProperty("cell"))
                 object.cell = message.cell;
-            if (message.tabletTypes && message.tabletTypes.length) {
-                object.tabletTypes = [];
-                for (var j = 0; j < message.tabletTypes.length; ++j)
-                    object.tabletTypes[j] = message.tabletTypes[j];
+            if (message.tablet_types && message.tablet_types.length) {
+                object.tablet_types = [];
+                for (var j = 0; j < message.tablet_types.length; ++j)
+                    object.tablet_types[j] = message.tablet_types[j];
             }
-            if (message.timeUpdated != null && message.hasOwnProperty("timeUpdated"))
-                if (typeof message.timeUpdated === "number")
-                    object.timeUpdated = options.longs === String ? String(message.timeUpdated) : message.timeUpdated;
+            if (message.time_updated != null && message.hasOwnProperty("time_updated"))
+                if (typeof message.time_updated === "number")
+                    object.time_updated = options.longs === String ? String(message.time_updated) : message.time_updated;
                 else
-                    object.timeUpdated = options.longs === String ? $util.Long.prototype.toString.call(message.timeUpdated) : options.longs === Number ? new $util.LongBits(message.timeUpdated.low >>> 0, message.timeUpdated.high >>> 0).toNumber() : message.timeUpdated;
-            if (message.transactionTimestamp != null && message.hasOwnProperty("transactionTimestamp"))
-                if (typeof message.transactionTimestamp === "number")
-                    object.transactionTimestamp = options.longs === String ? String(message.transactionTimestamp) : message.transactionTimestamp;
+                    object.time_updated = options.longs === String ? $util.Long.prototype.toString.call(message.time_updated) : options.longs === Number ? new $util.LongBits(message.time_updated.low >>> 0, message.time_updated.high >>> 0).toNumber() : message.time_updated;
+            if (message.transaction_timestamp != null && message.hasOwnProperty("transaction_timestamp"))
+                if (typeof message.transaction_timestamp === "number")
+                    object.transaction_timestamp = options.longs === String ? String(message.transaction_timestamp) : message.transaction_timestamp;
                 else
-                    object.transactionTimestamp = options.longs === String ? $util.Long.prototype.toString.call(message.transactionTimestamp) : options.longs === Number ? new $util.LongBits(message.transactionTimestamp.low >>> 0, message.transactionTimestamp.high >>> 0).toNumber() : message.transactionTimestamp;
+                    object.transaction_timestamp = options.longs === String ? $util.Long.prototype.toString.call(message.transaction_timestamp) : options.longs === Number ? new $util.LongBits(message.transaction_timestamp.low >>> 0, message.transaction_timestamp.high >>> 0).toNumber() : message.transaction_timestamp;
             if (message.state != null && message.hasOwnProperty("state"))
                 object.state = options.enums === String ? $root.vreplication.VRepStreamState[message.state] : message.state;
             if (message.message != null && message.hasOwnProperty("message"))
                 object.message = message.message;
-            if (message.dbName != null && message.hasOwnProperty("dbName"))
-                object.dbName = message.dbName;
+            if (message.db_name != null && message.hasOwnProperty("db_name"))
+                object.db_name = message.db_name;
             if (message.cluster != null && message.hasOwnProperty("cluster"))
                 object.cluster = message.cluster;
             if (message.keyspace != null && message.hasOwnProperty("keyspace"))
                 object.keyspace = message.keyspace;
             if (message.shard != null && message.hasOwnProperty("shard"))
                 object.shard = message.shard;
-            if (message.tabletAlias != null && message.hasOwnProperty("tabletAlias"))
-                object.tabletAlias = message.tabletAlias;
+            if (message.tablet_alias != null && message.hasOwnProperty("tablet_alias"))
+                object.tablet_alias = message.tablet_alias;
             return object;
         };
 

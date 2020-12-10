@@ -23,8 +23,8 @@ output_dir="${vtadmin_web_root}/src/proto"
 	-t static-module \
 	-w commonjs \
 	-o "$output_dir/compiled.js" \
-	vreplication.proto
+	vreplication.proto --keep-case 
 
 ./node_modules/.bin/pbts \
 	-o "$output_dir/compiled.d.ts" \
-	compiled.js
+	"$output_dir/compiled.js"

@@ -23,26 +23,26 @@ export namespace vreplication {
         /** VRepStream pos */
         pos?: (string|null);
 
-        /** VRepStream stopPos */
-        stopPos?: (string|null);
+        /** VRepStream stop_pos */
+        stop_pos?: (string|null);
 
-        /** VRepStream maxTps */
-        maxTps?: (number|Long|null);
+        /** VRepStream max_tps */
+        max_tps?: (number|Long|null);
 
-        /** VRepStream maxReplicationLag */
-        maxReplicationLag?: (number|Long|null);
+        /** VRepStream max_replication_lag */
+        max_replication_lag?: (number|Long|null);
 
         /** VRepStream cell */
         cell?: (string|null);
 
-        /** VRepStream tabletTypes */
-        tabletTypes?: (string[]|null);
+        /** VRepStream tablet_types */
+        tablet_types?: (string[]|null);
 
-        /** VRepStream timeUpdated */
-        timeUpdated?: (number|Long|null);
+        /** VRepStream time_updated */
+        time_updated?: (number|Long|null);
 
-        /** VRepStream transactionTimestamp */
-        transactionTimestamp?: (number|Long|null);
+        /** VRepStream transaction_timestamp */
+        transaction_timestamp?: (number|Long|null);
 
         /** VRepStream state */
         state?: (vreplication.VRepStreamState|null);
@@ -50,8 +50,8 @@ export namespace vreplication {
         /** VRepStream message */
         message?: (string|null);
 
-        /** VRepStream dbName */
-        dbName?: (string|null);
+        /** VRepStream db_name */
+        db_name?: (string|null);
 
         /** VRepStream cluster */
         cluster?: (string|null);
@@ -62,8 +62,8 @@ export namespace vreplication {
         /** VRepStream shard */
         shard?: (string|null);
 
-        /** VRepStream tabletAlias */
-        tabletAlias?: (string|null);
+        /** VRepStream tablet_alias */
+        tablet_alias?: (string|null);
     }
 
     /** Represents a VRepStream. */
@@ -87,26 +87,26 @@ export namespace vreplication {
         /** VRepStream pos. */
         public pos: string;
 
-        /** VRepStream stopPos. */
-        public stopPos: string;
+        /** VRepStream stop_pos. */
+        public stop_pos: string;
 
-        /** VRepStream maxTps. */
-        public maxTps: (number|Long);
+        /** VRepStream max_tps. */
+        public max_tps: (number|Long);
 
-        /** VRepStream maxReplicationLag. */
-        public maxReplicationLag: (number|Long);
+        /** VRepStream max_replication_lag. */
+        public max_replication_lag: (number|Long);
 
         /** VRepStream cell. */
         public cell: string;
 
-        /** VRepStream tabletTypes. */
-        public tabletTypes: string[];
+        /** VRepStream tablet_types. */
+        public tablet_types: string[];
 
-        /** VRepStream timeUpdated. */
-        public timeUpdated: (number|Long);
+        /** VRepStream time_updated. */
+        public time_updated: (number|Long);
 
-        /** VRepStream transactionTimestamp. */
-        public transactionTimestamp: (number|Long);
+        /** VRepStream transaction_timestamp. */
+        public transaction_timestamp: (number|Long);
 
         /** VRepStream state. */
         public state: vreplication.VRepStreamState;
@@ -114,8 +114,8 @@ export namespace vreplication {
         /** VRepStream message. */
         public message: string;
 
-        /** VRepStream dbName. */
-        public dbName: string;
+        /** VRepStream db_name. */
+        public db_name: string;
 
         /** VRepStream cluster. */
         public cluster: string;
@@ -126,8 +126,8 @@ export namespace vreplication {
         /** VRepStream shard. */
         public shard: string;
 
-        /** VRepStream tabletAlias. */
-        public tabletAlias: string;
+        /** VRepStream tablet_alias. */
+        public tablet_alias: string;
 
         /**
          * Creates a new VRepStream instance using the specified properties.

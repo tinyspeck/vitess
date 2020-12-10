@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useQuery } from 'react-query';
 import { Link, useParams } from 'react-router-dom';
 import { useVRepStream } from '../hooks/api';
 
@@ -12,7 +11,7 @@ export const WorkflowDetails = () => {
     const { cluster, id } = useParams<RouteParams>();
     const streamQuery = useVRepStream({ cluster, id })
     const stream = streamQuery.data;
-
+    
     return (
         <div>
             <Link to="/vrep/streams">← All workflows</Link>
