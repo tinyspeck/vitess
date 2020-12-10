@@ -1,7 +1,11 @@
 import { QueryObserverResult, useQueries, useQuery } from "react-query";
 
+import * as pb from '../proto/compiled'
 import { VRepStream } from '../types';
 
+console.log('pb', pb)
+
+// For aggregating state across queries returned by `useQueries`.
 interface AggregateQueries<TD, TE> {
     anyFetching: boolean,
     anyLoading: boolean,
@@ -40,8 +44,10 @@ export const useVRepStreams = (params: { clusters: string[] }, config?: any): Ag
 
 export const useVRepStream = (params: { cluster: string, id: number | string }) => {
 	return useQuery(['stream', params], async (context) => {
-        console.log(context)
         const result = await fetch(`http://localhost:8090/vrep/stream?cluster=${params.cluster}&id=${params.id}`);
+        const rj = await result.json()
+        const _pb = pb
+        const p = pb.vreplication.VRepStream.create(rj)
         return (await result.json()) as string[];
     });
 }
