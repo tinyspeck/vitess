@@ -1,7 +1,6 @@
 import { QueryObserverResult, useQueries, useQuery } from "react-query";
 import { fetchVRepStream } from "../api/http";
 
-import * as pb from '../proto/compiled'
 import { VRepStream } from '../types';
 
 // For aggregating state across queries returned by `useQueries`.
@@ -41,9 +40,5 @@ export const useVRepStreams = (params: { clusters: string[] }, config?: any): Ag
     return { data, anyFetching, anyLoading, queries }
 }
 
-export const useVRepStream = (...params: Parameters<typeof fetchVRepStream>) => {
-	return useQuery(['stream', params], async (context) => {
-        const vs = await fetchVRepStream(...params)
-        return vs;
-    });
-}
+export const useVRepStream = (...params: Parameters<typeof fetchVRepStream>) => 
+	useQuery(['stream', params], async () => fetchVRepStream(...params))
