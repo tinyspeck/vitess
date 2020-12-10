@@ -17,7 +17,6 @@ require (
 	github.com/coreos/bbolt v1.3.2 // indirect
 	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/corpix/uarand v0.1.1 // indirect
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
@@ -29,7 +28,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.4.0
 	github.com/googleapis/gnostic v0.2.0 // indirect
-	github.com/gorilla/websocket v1.4.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/consul/api v1.5.0
@@ -70,11 +69,9 @@ require (
 	github.com/tchap/go-patricia v0.0.0-20160729071656-dd168db6051b
 	github.com/tebeka/selenium v0.9.9
 	github.com/tinylib/msgp v1.1.1 // indirect
-	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.16.0+incompatible
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
-	github.com/ugorji/go v1.1.7 // indirect
 	github.com/z-division/go-zookeeper v0.0.0-20190128072838-6d7457066b9b
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
