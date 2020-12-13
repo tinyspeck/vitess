@@ -1,11 +1,12 @@
 # VTAdmin
-
 ## Getting Started
+
 
 - Install node v.12.13.0
 - From the web/vtadmin/ directory, install dependencies with `npm install`
 - Start a local vtadmin-web server on [http://localhost:3000](http://localhost:3000) with `npm start`
 
+For more detail, see the [Developer's Guide](#developers-guide).
 
 ## Available Scripts
 
@@ -25,3 +26,13 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Developer's Guide
+
+This section is for those wanting to make changes to VTAdmin. 🎉
+
+### Environment Variables
+
+VTAdmin is configured with `process.env` environment variables. Available environment variables are defined and documented in [react-app-env.d.ts](./src/react-app-env.d.ts). (As a bonus, this gives us TypeScript autocompletion for `process.env`.)
+
+Adding and using environment variables is described in depth in the create-react-app documentation on ["Adding Custom Environment Variables"](https://create-react-app.dev/docs/adding-custom-environment-variables).
