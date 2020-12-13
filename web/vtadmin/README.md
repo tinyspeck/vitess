@@ -1,6 +1,6 @@
 # VTAdmin
-## Getting Started
 
+## Getting Started
 
 - Install node v.12.13.0
 - From the web/vtadmin/ directory, install dependencies with `npm install`
@@ -32,6 +32,44 @@ To learn React, check out the [React documentation](https://reactjs.org/).
 ## Developer's Guide
 
 This section is for those wanting to make changes to VTAdmin. 🎉
+
+## Configuring VS Code
+
+To set up automatic formatting on save:
+
+1. Install the [Prettier VS Code plugin](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode).
+2. Add the following to your VS Code workspace:
+
+	```js
+	{
+		// ... other workspace config ...
+
+		"settings": {
+			// ... other settings ..
+
+			"prettier.useEditorConfig": false,
+			// You may have to adjust this depending on which folder is the root of your workspace.
+			"prettier.configPath": ".prettiercc",
+			
+			"[typescriptreact]": {
+				"editor.defaultFormatter": "esbenp.prettier-vscode",
+				"editor.formatOnSave": true,
+			},
+			
+			"[typescript]": {
+				"editor.defaultFormatter": "esbenp.prettier-vscode",
+				"editor.formatOnSave": true,
+			},
+			
+			"[javascript]": {
+				"editor.defaultFormatter": "esbenp.prettier-vscode",
+				"editor.formatOnSave": true,
+			},
+		}
+	}
+	```
+
+For more, check out ["Setting Up Your Editor"](https://create-react-app.dev/docs/setting-up-your-editor/) in the create-react-app docs.
 
 ### Environment Variables
 
