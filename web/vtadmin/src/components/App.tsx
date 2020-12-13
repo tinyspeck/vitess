@@ -1,7 +1,7 @@
-import logo from './logo.svg';
+import logo from '../img/logo.svg';
 import style from './App.module.scss';
 
-function App() {
+export const App = () => {
   return (
     <div className={style.container}>
       <img src={logo} className="App-logo" alt="logo" width={200} />
@@ -9,5 +9,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
