@@ -1,0 +1,58 @@
+:root {
+  --primaryForegroundRGB: 29, 28, 29;
+  --primaryForeground: rgb(var(--primaryForegroundRGB));
+  --invertedForegroundRGB: 255, 255, 255;
+  --invertedForeground: rgb(var(--invertedForegroundRGB));
+  --primaryBackgroundRGB: 255, 255, 255;
+  --primaryBackground: rgb(var(--primaryBackgroundRGB));
+
+  // Grayscale
+  --maxContrastGray: rgba(var(--primaryForegroundRGB), 0.7);
+  --highContrastGray: rgba(var(--primaryForegroundRGB), 0.5);
+  --lowContrastGray: rgba(var(--primaryForegroundRGB), 0.13);
+  --minContrastGray: rgba(var(--primaryForegroundRGB), 0.04);
+}
+
+body {
+  background: var(--primaryBackground);
+  color: var(--primaryForeground);
+  margin: 0;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table th {
+  color: var(--maxContrastGray);
+  font-size: 12px;
+  text-transform: uppercase;
+  padding: 8px 24px;
+}
+
+table tbody tr {
+  border: solid 1px var(--lowContrastGray);
+}
+
+table td {
+  vertical-align: top;
+}

@@ -24,7 +24,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "format": "prettier --config \"./.prettiercc\" --check \"src/**/*.{js,jsx,ts,tsx,css,scss}\"",
-    "format:fix": "npm run format -- --write"
+    "format:fix": "npm run format -- --write",
+    "lint:css": "stylelint \"**/*.{css,scss}\"",
+    "lint:css:fix": "npm run lint:css -- --fix"
   },
   "eslintConfig": {
     "extends": [
@@ -46,6 +48,8 @@
   },
   "devDependencies": {
     "prettier": "^2.2.1",
-    "protobufjs": "^6.10.2"
+    "protobufjs": "^6.10.2",
+    "stylelint": "^13.8.0",
+    "stylelint-config-standard": "^20.0.0"
   }
 }
