@@ -22,7 +22,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "format": "prettier --config \"./.prettiercc\" --check \"src/**/*.{js,jsx,ts,tsx,css,scss}\"",
+    "format:fix": "npm run format -- --write"
   },
   "eslintConfig": {
     "extends": [
@@ -43,6 +45,7 @@
     ]
   },
   "devDependencies": {
+    "prettier": "^2.2.1",
     "protobufjs": "^6.10.2"
   }
 }
