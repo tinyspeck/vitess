@@ -50,6 +50,29 @@ import (
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 )
 
+type mergeStatsImpl struct {
+	m           *sync.Mutex
+	droppedRows int
+	droppedKeys map[string]map[string]bool
+	badRows     int
+}
+
+func (st mergeStatsImpl) dropRows(table string, n int, keys []string) {
+	st.m.Lock()
+	defer st.m.Unlock()
+
+	st.droppedRows += n
+	for _, k := range keys {
+		st.droppedKeys[table][k] = true
+	}
+}
+
+func (st mergeStatsImpl) hitBadRows(table string, n int) {
+	st.m.Lock()
+	defer st.m.Unlock()
+	st.badRows += n
+}
+
 // LegacySplitCloneWorker will clone the data within a keyspace from a
 // source set of shards to a destination set of shards.
 type LegacySplitCloneWorker struct {
@@ -67,6 +90,7 @@ type LegacySplitCloneWorker struct {
 	maxTPS                  int64
 	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
+	mergeStats              *mergeStatsImpl
 
 	// populated during WorkerStateInit, read-only after that
 	keyspaceInfo      *topo.KeyspaceInfo
@@ -133,6 +157,10 @@ func NewLegacySplitCloneWorker(
 		maxTPS:                  maxTPS,
 		vcursorArgs:             vcursorArgs,
 		cleaner:                 &wrangler.Cleaner{},
+		mergeStats: &mergeStatsImpl{
+			m:           &sync.Mutex{},
+			droppedKeys: map[string]map[string]bool{},
+		},
 
 		destinationDbNames:    make(map[string]string),
 		destinationThrottlers: make(map[string]*throttler.Throttler),
@@ -213,6 +241,19 @@ func (scw *LegacySplitCloneWorker) Run(ctx context.Context) error {
 
 	// Run the command.
 	err := scw.run(ctx)
+
+	l := scw.wr.Logger()
+	l.Errorf("Merge results")
+	l.Errorf("  Dropped Rows: %v", scw.mergeStats.droppedRows)
+	l.Errorf("  Dropped Keys")
+	for table, keys := range scw.mergeStats.droppedKeys {
+		l.Errorf("    table %v {", table)
+		for _, k := range keys {
+			l.Errorf("      %v", k)
+		}
+		l.Errorf("}")
+	}
+	l.Errorf("  Bad Rows: %v", scw.mergeStats.badRows)
 
 	// Cleanup.
 	scw.setState(WorkerStateCleanUp)
@@ -583,7 +624,8 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 					return vterrors.Wrapf(err, "cannot resolve sharding keys for keyspace %v", scw.keyspace)
 				}
 			}
-			rowSplitter := NewRowSplitter(scw.destinationShards, keyResolver)
+
+			rowSplitter := NewRowSplitter(td.Name, scw.mergeStats, scw.destinationShards, keyResolver)
 
 			chunks, err := generateChunks(ctx, scw.wr, scw.sourceTablets[shardIndex], td, scw.sourceReaderCount, defaultMinRowsPerChunk)
 			if err != nil {
