@@ -63,6 +63,9 @@ func (st mergeStatsImpl) dropRows(table string, n int, keys []string) {
 
 	st.droppedRows += n
 	for _, k := range keys {
+		if _, ok := st.droppedKeys[table]; !ok {
+			st.droppedKeys[table] = map[string]bool{}
+		}
 		st.droppedKeys[table][k] = true
 	}
 }
