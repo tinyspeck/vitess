@@ -57,7 +57,7 @@ type mergeStatsImpl struct {
 	badRows     int
 }
 
-func (st mergeStatsImpl) dropRows(table string, n int, keys []string) {
+func (st *mergeStatsImpl) dropRows(table string, n int, keys []string) {
 	st.m.Lock()
 	defer st.m.Unlock()
 
@@ -70,7 +70,7 @@ func (st mergeStatsImpl) dropRows(table string, n int, keys []string) {
 	}
 }
 
-func (st mergeStatsImpl) hitBadRows(table string, n int) {
+func (st *mergeStatsImpl) hitBadRows(table string, n int) {
 	st.m.Lock()
 	defer st.m.Unlock()
 	st.badRows += n
@@ -251,10 +251,10 @@ func (scw *LegacySplitCloneWorker) Run(ctx context.Context) error {
 	l.Errorf("  Dropped Keys")
 	for table, keys := range scw.mergeStats.droppedKeys {
 		l.Errorf("    table %v {", table)
-		for _, k := range keys {
-			l.Errorf("      %v", k)
+		for k := range keys {
+			l.Errorf("        %v", k)
 		}
-		l.Errorf("}")
+		l.Errorf("    }")
 	}
 	l.Errorf("  Bad Rows: %v", scw.mergeStats.badRows)
 
