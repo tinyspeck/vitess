@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"math/rand"
-	"os"
 
 	"github.com/spf13/pflag"
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
@@ -59,14 +58,7 @@ func NewStaticFile(cluster string, flags *pflag.FlagSet, args []string) (Discove
 		return nil, err
 	}
 
-	jsonFile, err := os.Open(*filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	defer jsonFile.Close()
-
-	b, err := ioutil.ReadAll(jsonFile)
+	b, err := ioutil.ReadFile(*filePath)
 	if err != nil {
 		return nil, err
 	}
