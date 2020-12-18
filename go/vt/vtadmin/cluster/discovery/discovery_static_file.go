@@ -98,7 +98,7 @@ func (d *StaticFileDiscovery) DiscoverVTGate(ctx context.Context, tags []string)
 
 	count := len(gates)
 	if count == 0 {
-		return nil, nil
+		return nil, ErrNoVTGates
 	}
 
 	gate := gates[rand.Intn(len(gates))]
