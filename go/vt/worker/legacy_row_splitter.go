@@ -31,13 +31,17 @@ import (
 // RowSplitter is a helper class to split rows into multiple
 // subsets targeted to different shards.
 type RowSplitter struct {
+	tableName   string
+	mergeStats  *mergeStatsImpl
 	KeyResolver keyspaceIDResolver
 	KeyRanges   []*topodatapb.KeyRange
 }
 
 // NewRowSplitter returns a new row splitter for the given shard distribution.
-func NewRowSplitter(shardInfos []*topo.ShardInfo, keyResolver keyspaceIDResolver) *RowSplitter {
+func NewRowSplitter(tableName string, stats *mergeStatsImpl, shardInfos []*topo.ShardInfo, keyResolver keyspaceIDResolver) *RowSplitter {
 	result := &RowSplitter{
+		tableName:   tableName,
+		mergeStats:  stats,
 		KeyResolver: keyResolver,
 		KeyRanges:   make([]*topodatapb.KeyRange, len(shardInfos)),
 	}
@@ -54,17 +58,34 @@ func (rs *RowSplitter) StartSplit() [][][]sqltypes.Value {
 
 // Split will split the rows into subset for each distribution
 func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Value) error {
+	droppedRows := 0
+	droppedKeys := []string{}
+
+	defer func() {
+		if droppedRows != 0 {
+			rs.mergeStats.dropRows(rs.tableName, droppedRows, droppedKeys)
+		}
+	}()
+
 	for _, row := range rows {
 		k, err := rs.KeyResolver.keyspaceID(row)
 		if err != nil {
+			rs.mergeStats.hitBadRows(rs.tableName, 1)
 			return err
 		}
 		for i, kr := range rs.KeyRanges {
 			if key.KeyRangeContains(kr, k) {
 				result[i] = append(result[i], row)
+
 				break
 			}
+			droppedRows++
+			if cr, ok := rs.KeyResolver.(*v3Resolver); ok {
+				shardingKey := row[cr.shardingColumnIndex]
+				droppedKeys = append(droppedKeys, shardingKey.ToString())
+			}
 		}
+
 	}
 	return nil
 }
