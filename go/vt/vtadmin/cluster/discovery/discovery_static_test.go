@@ -90,7 +90,7 @@ func TestDiscoverVTGate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			disco := &StaticFileDiscovery{}
+			disco := &StaticDiscovery{}
 			err := disco.parseConfig(tt.contents)
 			require.NoError(t, err)
 
@@ -181,7 +181,7 @@ func TestDiscoverVTGates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			disco := &StaticFileDiscovery{}
+			disco := &StaticDiscovery{}
 			err := disco.parseConfig(tt.contents)
 			require.NoError(t, err)
 			gates, err := disco.DiscoverVTGates(context.Background(), tt.tags)

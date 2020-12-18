@@ -75,5 +75,5 @@ func New(impl string, cluster string, args []string) (Discovery, error) {
 
 func init() { // nolint:gochecknoinits
 	Register("consul", NewConsul)
-	Register("static", NewStaticFile)
+	Register("static", NewStatic)
 }
