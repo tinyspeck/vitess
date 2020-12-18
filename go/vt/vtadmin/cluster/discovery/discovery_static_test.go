@@ -38,7 +38,7 @@ func TestDiscoverVTGate(t *testing.T) {
 			name:      "empty config",
 			contents:  []byte(`{}`),
 			expected:  nil,
-			shouldErr: false,
+			shouldErr: true,
 		},
 		{
 			name: "one gate",
