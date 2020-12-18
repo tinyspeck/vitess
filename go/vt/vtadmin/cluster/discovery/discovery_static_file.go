@@ -27,31 +27,31 @@ import (
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 )
 
-// StaticDiscovery implements the Discovery interface for "discovering"
+// StaticFileDiscovery implements the Discovery interface for "discovering"
 // Vitess components hardcoded in a static .json file.
-type StaticDiscovery struct {
+type StaticFileDiscovery struct {
 	cluster string
-	config  *StaticClusterConfig
+	config  *StaticFileClusterConfig
 	gates   struct {
 		byName map[string]*vtadminpb.VTGate
 		byTag  map[string][]*vtadminpb.VTGate
 	}
 }
 
-// StaticClusterConfig configures Vitess components for a single cluster.
-type StaticClusterConfig struct {
-	VTGates []*StaticVTGateConfig `json:"vtgates,omitempty"`
+// StaticFileClusterConfig configures Vitess components for a single cluster.
+type StaticFileClusterConfig struct {
+	VTGates []*StaticFileVTGateConfig `json:"vtgates,omitempty"`
 }
 
-// StaticVTGateConfig contains host and tag information for a single VTGate in a cluster.
-type StaticVTGateConfig struct {
+// StaticFileVTGateConfig contains host and tag information for a single VTGate in a cluster.
+type StaticFileVTGateConfig struct {
 	Host *vtadminpb.VTGate `json:"host"`
 	Tags []string          `json:"tags"`
 }
 
-// NewStatic returns a StaticDiscovery for the given cluster.
-func NewStatic(cluster string, flags *pflag.FlagSet, args []string) (Discovery, error) {
-	disco := &StaticDiscovery{
+// NewStaticFile returns a StaticFileDiscovery for the given cluster.
+func NewStaticFile(cluster string, flags *pflag.FlagSet, args []string) (Discovery, error) {
+	disco := &StaticFileDiscovery{
 		cluster: cluster,
 	}
 
@@ -76,7 +76,7 @@ func NewStatic(cluster string, flags *pflag.FlagSet, args []string) (Discovery, 
 	return disco, nil
 }
 
-func (d *StaticDiscovery) parseConfig(bytes []byte) error {
+func (d *StaticFileDiscovery) parseConfig(bytes []byte) error {
 	if err := json.Unmarshal(bytes, &d.config); err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (d *StaticDiscovery) parseConfig(bytes []byte) error {
 }
 
 // DiscoverVTGate is part of the Discovery interface.
-func (d *StaticDiscovery) DiscoverVTGate(ctx context.Context, tags []string) (*vtadminpb.VTGate, error) {
+func (d *StaticFileDiscovery) DiscoverVTGate(ctx context.Context, tags []string) (*vtadminpb.VTGate, error) {
 	gates, err := d.DiscoverVTGates(ctx, tags)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (d *StaticDiscovery) DiscoverVTGate(ctx context.Context, tags []string) (*v
 }
 
 // DiscoverVTGateAddr is part of the Discovery interface.
-func (d *StaticDiscovery) DiscoverVTGateAddr(ctx context.Context, tags []string) (string, error) {
+func (d *StaticFileDiscovery) DiscoverVTGateAddr(ctx context.Context, tags []string) (string, error) {
 	gate, err := d.DiscoverVTGate(ctx, tags)
 	if err != nil {
 		return "", err
@@ -122,7 +122,7 @@ func (d *StaticDiscovery) DiscoverVTGateAddr(ctx context.Context, tags []string)
 }
 
 // DiscoverVTGates is part of the Discovery interface.
-func (d *StaticDiscovery) DiscoverVTGates(ctx context.Context, tags []string) ([]*vtadminpb.VTGate, error) {
+func (d *StaticFileDiscovery) DiscoverVTGates(ctx context.Context, tags []string) ([]*vtadminpb.VTGate, error) {
 	if len(tags) == 0 {
 		results := []*vtadminpb.VTGate{}
 		for _, g := range d.gates.byName {
