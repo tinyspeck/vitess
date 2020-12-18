@@ -19,6 +19,7 @@ package discovery
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"math/rand"
 
@@ -26,8 +27,8 @@ import (
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 )
 
-// StaticDiscovery implements the Discovery interface for reading service discovery
-// configuration from a static config file.
+// StaticDiscovery implements the Discovery interface for "discovering"
+// Vitess components hardcoded in a static .json file.
 type StaticDiscovery struct {
 	cluster string
 	config  *StaticClusterConfig
@@ -37,11 +38,12 @@ type StaticDiscovery struct {
 	}
 }
 
-// StaticClusterConfig configures a single cluster
+// StaticClusterConfig configures Vitess components for a single cluster.
 type StaticClusterConfig struct {
 	VTGates []*StaticVTGateConfig `json:"vtgates,omitempty"`
 }
 
+// StaticVTGateConfig contains host and tag information for a single VTGate in a cluster.
 type StaticVTGateConfig struct {
 	Host *vtadminpb.VTGate `json:"host"`
 	Tags []string          `json:"tags"`
@@ -53,9 +55,13 @@ func NewStatic(cluster string, flags *pflag.FlagSet, args []string) (Discovery, 
 		cluster: cluster,
 	}
 
-	filePath := flags.String("path", "", "path to the static JSON file")
+	filePath := flags.String("path", "", "path to the service discovery JSON config file")
 	if err := flags.Parse(args); err != nil {
 		return nil, err
+	}
+
+	if filePath == nil || *filePath == "" {
+		return nil, errors.New("must specify path to the service discovery JSON config file")
 	}
 
 	b, err := ioutil.ReadFile(*filePath)
