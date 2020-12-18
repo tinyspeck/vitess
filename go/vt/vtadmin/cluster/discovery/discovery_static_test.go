@@ -177,13 +177,47 @@ func TestDiscoverVTGates(t *testing.T) {
 			},
 			shouldErr: false,
 		},
+		{
+			name: "filtered by multiple tags",
+			contents: []byte(`
+				{
+					"vtgates": [
+						{
+							"host": {
+								"hostname": "127.0.0.1:11111"
+							},
+							"tags": ["cell:cellA"]
+						}, 
+						{
+							"host": {
+								"hostname": "127.0.0.1:22222"
+							},
+							"tags": ["cell:cellA", "pool:poolZ"]
+						},
+						{
+							"host": {
+								"hostname": "127.0.0.1:33333"
+							},
+							"tags": ["pool:poolZ"]
+						}
+					]
+				}
+			`),
+			tags: []string{"cell:cellA", "pool:poolZ"},
+			expected: []*vtadminpb.VTGate{
+				{Hostname: "127.0.0.1:22222"},
+			},
+			shouldErr: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			disco := &StaticDiscovery{}
+
 			err := disco.parseConfig(tt.contents)
 			require.NoError(t, err)
+
 			gates, err := disco.DiscoverVTGates(context.Background(), tt.tags)
 			if tt.shouldErr {
 				assert.Error(t, err, assert.AnError)

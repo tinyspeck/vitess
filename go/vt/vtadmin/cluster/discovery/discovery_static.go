@@ -117,18 +117,39 @@ func (d *StaticDiscovery) DiscoverVTGateAddr(ctx context.Context, tags []string)
 
 // DiscoverVTGates is part of the Discovery interface.
 func (d *StaticDiscovery) DiscoverVTGates(ctx context.Context, tags []string) ([]*vtadminpb.VTGate, error) {
-	gates := []*vtadminpb.VTGate{}
-
 	if len(tags) == 0 {
+		results := []*vtadminpb.VTGate{}
 		for _, g := range d.gates.byName {
-			gates = append(gates, g)
+			results = append(results, g)
 		}
-	} else {
-		for _, t := range tags {
-			gs := d.gates.byTag[t]
-			gates = append(gates, gs...)
-		}
+
+		return results, nil
 	}
 
-	return gates, nil
+	set := d.gates.byName
+
+	for _, tag := range tags {
+		intermediate := map[string]*vtadminpb.VTGate{}
+
+		gates, ok := d.gates.byTag[tag]
+		if !ok {
+			return []*vtadminpb.VTGate{}, nil
+		}
+
+		for _, g := range gates {
+			if _, ok := set[g.Hostname]; ok {
+				intermediate[g.Hostname] = g
+			}
+		}
+
+		set = intermediate
+	}
+
+	results := make([]*vtadminpb.VTGate, 0, len(set))
+
+	for _, gate := range set {
+		results = append(results, gate)
+	}
+
+	return results, nil
 }
