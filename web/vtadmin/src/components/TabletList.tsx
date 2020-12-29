@@ -28,8 +28,12 @@ export const TabletList = ({ tablets }: Props) => {
             <thead>
                 <tr>
                     <th>Cluster</th>
-                    <th>Hostname</th>
+                    <th>Keyspace</th>
+                    <th>Shard</th>
                     <th>Type</th>
+                    <th>Hostname</th>
+                    <th>UID</th>
+                    <th>Cell</th>
                     <th>State</th>
                 </tr>
             </thead>
@@ -37,10 +41,14 @@ export const TabletList = ({ tablets }: Props) => {
                 {tablets.map((t, i) => (
                     <tr key={i}>
                         <td>{t.cluster?.name}</td>
+                        <td>{t.tablet?.keyspace}</td>
+                        <td>{t.tablet?.shard}</td>
+                        <td>{t.tablet?.type && TABLET_TYPES[t.tablet?.type]}</td>
                         <td>
                             <code>{t.tablet?.hostname}</code>
                         </td>
-                        <td>{t.tablet?.type && TABLET_TYPES[t.tablet?.type]}</td>
+                        <td>{t.tablet?.alias?.uid} </td>
+                        <td>{t.tablet?.alias?.cell} </td>
                         <td>{SERVING_STATES[t.state]}</td>
                     </tr>
                 ))}
