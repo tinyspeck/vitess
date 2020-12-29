@@ -24,12 +24,19 @@ Scripts for common and not-so-common tasks. These are always run from the `vites
 | `npm run lint:fix` | Run all of the linters and fix errors (where possible) in place. Note that this will overwrite your files so you may want to consider committing your work beforehand! |
 | `npm run build` | Generates a build of vtadmin-web for production and outputs the files to the `vitess/web/vtadmin/build` folder. In most cases, you won't need to run this locally, but it _can_ be useful for debugging production-specific issues. See the create-react-app documentation about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information. |
 
+## Environment Variables
+
+Under the hood, we use create-react-app's environment variable set-up which is very well documented: https://create-react-app.dev/docs/adding-custom-environment-variables. 
+
+All of our environment variables are enumerated and commented in [react-app-env.d.ts](./src/react-app-env.d.ts).
+
 ## Toolchain
 
 - [React](https://reactjs.org/)
 - [create-react-app](https://create-react-app.dev/) (generated with v.4.0.1)
 - [TypeScript](http://typescriptlang.org/)
 - [protobufjs](https://github.com/protobufjs)
+- [react-query](https://github.com/tannerlinsley/react-query)
 
 ## Configuring your editor
 
