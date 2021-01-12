@@ -54,6 +54,8 @@ type mergeStatsImpl struct {
 	m           *sync.Mutex
 	droppedRows int
 	droppedKeys map[string]map[string]bool
+	safeBadRows int
+	safeBadKeys map[string]map[string]bool
 	badRows     int
 }
 
@@ -76,6 +78,25 @@ func (st *mergeStatsImpl) hitBadRows(table string, n int) {
 	st.badRows += n
 }
 
+func (st *mergeStatsImpl) hitSafeBadRows(table string, n int, keys []string) {
+	st.m.Lock()
+	defer st.m.Unlock()
+
+	st.safeBadRows += n
+	for _, k := range keys {
+		if _, ok := st.safeBadKeys[table]; !ok {
+			st.safeBadKeys[table] = map[string]bool{}
+		}
+		st.safeBadKeys[table][k] = true
+	}
+}
+
+func mkCanIgnoreError(config map[string][]string) func(string, error) bool {
+	return func(table string, err error) bool {
+		return false
+	}
+}
+
 // LegacySplitCloneWorker will clone the data within a keyspace from a
 // source set of shards to a destination set of shards.
 type LegacySplitCloneWorker struct {
@@ -94,6 +115,7 @@ type LegacySplitCloneWorker struct {
 	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
 	mergeStats              *mergeStatsImpl
+	safeError               func(string, error) bool
 
 	// populated during WorkerStateInit, read-only after that
 	keyspaceInfo      *topo.KeyspaceInfo
@@ -164,6 +186,7 @@ func NewLegacySplitCloneWorker(
 			m:           &sync.Mutex{},
 			droppedKeys: map[string]map[string]bool{},
 		},
+		safeError: mkCanIgnoreError(map[string][]string{}),
 
 		destinationDbNames:    make(map[string]string),
 		destinationThrottlers: make(map[string]*throttler.Throttler),
@@ -628,7 +651,13 @@ func (scw *LegacySplitCloneWorker) copy(ctx context.Context) error {
 				}
 			}
 
-			rowSplitter := NewRowSplitter(td.Name, scw.mergeStats, scw.destinationShards, keyResolver)
+			rowSplitter := NewRowSplitter(
+				td.Name,
+				scw.mergeStats,
+				scw.safeError,
+				scw.destinationShards,
+				keyResolver,
+			)
 
 			chunks, err := generateChunks(ctx, scw.wr, scw.sourceTablets[shardIndex], td, scw.sourceReaderCount, defaultMinRowsPerChunk)
 			if err != nil {

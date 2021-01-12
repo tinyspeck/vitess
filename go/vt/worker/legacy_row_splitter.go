@@ -33,15 +33,23 @@ import (
 type RowSplitter struct {
 	tableName   string
 	mergeStats  *mergeStatsImpl
+	safeError   func(string, error) bool
 	KeyResolver keyspaceIDResolver
 	KeyRanges   []*topodatapb.KeyRange
 }
 
 // NewRowSplitter returns a new row splitter for the given shard distribution.
-func NewRowSplitter(tableName string, stats *mergeStatsImpl, shardInfos []*topo.ShardInfo, keyResolver keyspaceIDResolver) *RowSplitter {
+func NewRowSplitter(
+	tableName string,
+	stats *mergeStatsImpl,
+	canIgnore func(string, error) bool,
+	shardInfos []*topo.ShardInfo,
+	keyResolver keyspaceIDResolver,
+) *RowSplitter {
 	result := &RowSplitter{
 		tableName:   tableName,
 		mergeStats:  stats,
+		safeError:   canIgnore,
 		KeyResolver: keyResolver,
 		KeyRanges:   make([]*topodatapb.KeyRange, len(shardInfos)),
 	}
@@ -60,18 +68,33 @@ func (rs *RowSplitter) StartSplit() [][][]sqltypes.Value {
 func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Value) error {
 	droppedRows := 0
 	droppedKeys := []string{}
+	safeBadRows := 0
+	safeBadKeys := []string{}
 
 	defer func() {
 		if droppedRows != 0 {
 			rs.mergeStats.dropRows(rs.tableName, droppedRows, droppedKeys)
+		}
+		if safeBadRows != 0 {
+			rs.mergeStats.hitSafeBadRows(rs.tableName, safeBadRows, safeBadKeys)
 		}
 	}()
 
 	for _, row := range rows {
 		k, err := rs.KeyResolver.keyspaceID(row)
 		if err != nil {
-			rs.mergeStats.hitBadRows(rs.tableName, 1)
-			return err
+			if !rs.safeError(rs.tableName, err) {
+				rs.mergeStats.hitBadRows(rs.tableName, 1)
+				return err
+			} else {
+				safeBadRows++
+				if cr, ok := rs.KeyResolver.(*v3Resolver); ok {
+					if len(row) > cr.shardingColumnIndex {
+						shardingKey := row[cr.shardingColumnIndex]
+						safeBadKeys = append(safeBadKeys, shardingKey.ToString())
+					}
+				}
+			}
 		}
 		for i, kr := range rs.KeyRanges {
 			if key.KeyRangeContains(kr, k) {
