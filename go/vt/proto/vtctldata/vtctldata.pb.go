@@ -112,6 +112,224 @@ func (m *ExecuteVtctlCommandResponse) GetEvent() *logutil.Event {
 	return nil
 }
 
+type GetCellInfoNamesRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetCellInfoNamesRequest) Reset()         { *m = GetCellInfoNamesRequest{} }
+func (m *GetCellInfoNamesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetCellInfoNamesRequest) ProtoMessage()    {}
+func (*GetCellInfoNamesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{2}
+}
+
+func (m *GetCellInfoNamesRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCellInfoNamesRequest.Unmarshal(m, b)
+}
+func (m *GetCellInfoNamesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCellInfoNamesRequest.Marshal(b, m, deterministic)
+}
+func (m *GetCellInfoNamesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCellInfoNamesRequest.Merge(m, src)
+}
+func (m *GetCellInfoNamesRequest) XXX_Size() int {
+	return xxx_messageInfo_GetCellInfoNamesRequest.Size(m)
+}
+func (m *GetCellInfoNamesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCellInfoNamesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCellInfoNamesRequest proto.InternalMessageInfo
+
+type GetCellInfoNamesResponse struct {
+	Names                []string `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetCellInfoNamesResponse) Reset()         { *m = GetCellInfoNamesResponse{} }
+func (m *GetCellInfoNamesResponse) String() string { return proto.CompactTextString(m) }
+func (*GetCellInfoNamesResponse) ProtoMessage()    {}
+func (*GetCellInfoNamesResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{3}
+}
+
+func (m *GetCellInfoNamesResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCellInfoNamesResponse.Unmarshal(m, b)
+}
+func (m *GetCellInfoNamesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCellInfoNamesResponse.Marshal(b, m, deterministic)
+}
+func (m *GetCellInfoNamesResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCellInfoNamesResponse.Merge(m, src)
+}
+func (m *GetCellInfoNamesResponse) XXX_Size() int {
+	return xxx_messageInfo_GetCellInfoNamesResponse.Size(m)
+}
+func (m *GetCellInfoNamesResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCellInfoNamesResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCellInfoNamesResponse proto.InternalMessageInfo
+
+func (m *GetCellInfoNamesResponse) GetNames() []string {
+	if m != nil {
+		return m.Names
+	}
+	return nil
+}
+
+type GetCellInfoRequest struct {
+	Cell                 string   `protobuf:"bytes,1,opt,name=cell,proto3" json:"cell,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetCellInfoRequest) Reset()         { *m = GetCellInfoRequest{} }
+func (m *GetCellInfoRequest) String() string { return proto.CompactTextString(m) }
+func (*GetCellInfoRequest) ProtoMessage()    {}
+func (*GetCellInfoRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{4}
+}
+
+func (m *GetCellInfoRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCellInfoRequest.Unmarshal(m, b)
+}
+func (m *GetCellInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCellInfoRequest.Marshal(b, m, deterministic)
+}
+func (m *GetCellInfoRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCellInfoRequest.Merge(m, src)
+}
+func (m *GetCellInfoRequest) XXX_Size() int {
+	return xxx_messageInfo_GetCellInfoRequest.Size(m)
+}
+func (m *GetCellInfoRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCellInfoRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCellInfoRequest proto.InternalMessageInfo
+
+func (m *GetCellInfoRequest) GetCell() string {
+	if m != nil {
+		return m.Cell
+	}
+	return ""
+}
+
+type GetCellInfoResponse struct {
+	CellInfo             *topodata.CellInfo `protobuf:"bytes,1,opt,name=cell_info,json=cellInfo,proto3" json:"cell_info,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+func (m *GetCellInfoResponse) Reset()         { *m = GetCellInfoResponse{} }
+func (m *GetCellInfoResponse) String() string { return proto.CompactTextString(m) }
+func (*GetCellInfoResponse) ProtoMessage()    {}
+func (*GetCellInfoResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{5}
+}
+
+func (m *GetCellInfoResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCellInfoResponse.Unmarshal(m, b)
+}
+func (m *GetCellInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCellInfoResponse.Marshal(b, m, deterministic)
+}
+func (m *GetCellInfoResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCellInfoResponse.Merge(m, src)
+}
+func (m *GetCellInfoResponse) XXX_Size() int {
+	return xxx_messageInfo_GetCellInfoResponse.Size(m)
+}
+func (m *GetCellInfoResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCellInfoResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCellInfoResponse proto.InternalMessageInfo
+
+func (m *GetCellInfoResponse) GetCellInfo() *topodata.CellInfo {
+	if m != nil {
+		return m.CellInfo
+	}
+	return nil
+}
+
+type GetCellsAliasesRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetCellsAliasesRequest) Reset()         { *m = GetCellsAliasesRequest{} }
+func (m *GetCellsAliasesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetCellsAliasesRequest) ProtoMessage()    {}
+func (*GetCellsAliasesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{6}
+}
+
+func (m *GetCellsAliasesRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCellsAliasesRequest.Unmarshal(m, b)
+}
+func (m *GetCellsAliasesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCellsAliasesRequest.Marshal(b, m, deterministic)
+}
+func (m *GetCellsAliasesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCellsAliasesRequest.Merge(m, src)
+}
+func (m *GetCellsAliasesRequest) XXX_Size() int {
+	return xxx_messageInfo_GetCellsAliasesRequest.Size(m)
+}
+func (m *GetCellsAliasesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCellsAliasesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCellsAliasesRequest proto.InternalMessageInfo
+
+type GetCellsAliasesResponse struct {
+	Aliases              map[string]*topodata.CellsAlias `protobuf:"bytes,1,rep,name=aliases,proto3" json:"aliases,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}                        `json:"-"`
+	XXX_unrecognized     []byte                          `json:"-"`
+	XXX_sizecache        int32                           `json:"-"`
+}
+
+func (m *GetCellsAliasesResponse) Reset()         { *m = GetCellsAliasesResponse{} }
+func (m *GetCellsAliasesResponse) String() string { return proto.CompactTextString(m) }
+func (*GetCellsAliasesResponse) ProtoMessage()    {}
+func (*GetCellsAliasesResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{7}
+}
+
+func (m *GetCellsAliasesResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCellsAliasesResponse.Unmarshal(m, b)
+}
+func (m *GetCellsAliasesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCellsAliasesResponse.Marshal(b, m, deterministic)
+}
+func (m *GetCellsAliasesResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCellsAliasesResponse.Merge(m, src)
+}
+func (m *GetCellsAliasesResponse) XXX_Size() int {
+	return xxx_messageInfo_GetCellsAliasesResponse.Size(m)
+}
+func (m *GetCellsAliasesResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCellsAliasesResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCellsAliasesResponse proto.InternalMessageInfo
+
+func (m *GetCellsAliasesResponse) GetAliases() map[string]*topodata.CellsAlias {
+	if m != nil {
+		return m.Aliases
+	}
+	return nil
+}
+
 type GetKeyspacesRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -122,7 +340,7 @@ func (m *GetKeyspacesRequest) Reset()         { *m = GetKeyspacesRequest{} }
 func (m *GetKeyspacesRequest) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspacesRequest) ProtoMessage()    {}
 func (*GetKeyspacesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{2}
+	return fileDescriptor_f41247b323a1ab2e, []int{8}
 }
 
 func (m *GetKeyspacesRequest) XXX_Unmarshal(b []byte) error {
@@ -154,7 +372,7 @@ func (m *GetKeyspacesResponse) Reset()         { *m = GetKeyspacesResponse{} }
 func (m *GetKeyspacesResponse) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspacesResponse) ProtoMessage()    {}
 func (*GetKeyspacesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{3}
+	return fileDescriptor_f41247b323a1ab2e, []int{9}
 }
 
 func (m *GetKeyspacesResponse) XXX_Unmarshal(b []byte) error {
@@ -193,7 +411,7 @@ func (m *GetKeyspaceRequest) Reset()         { *m = GetKeyspaceRequest{} }
 func (m *GetKeyspaceRequest) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspaceRequest) ProtoMessage()    {}
 func (*GetKeyspaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{4}
+	return fileDescriptor_f41247b323a1ab2e, []int{10}
 }
 
 func (m *GetKeyspaceRequest) XXX_Unmarshal(b []byte) error {
@@ -232,7 +450,7 @@ func (m *GetKeyspaceResponse) Reset()         { *m = GetKeyspaceResponse{} }
 func (m *GetKeyspaceResponse) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspaceResponse) ProtoMessage()    {}
 func (*GetKeyspaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{5}
+	return fileDescriptor_f41247b323a1ab2e, []int{11}
 }
 
 func (m *GetKeyspaceResponse) XXX_Unmarshal(b []byte) error {
@@ -594,6 +812,13 @@ func (m *MaterializeSettings) GetTabletTypes() string {
 func init() {
 	proto.RegisterType((*ExecuteVtctlCommandRequest)(nil), "vtctldata.ExecuteVtctlCommandRequest")
 	proto.RegisterType((*ExecuteVtctlCommandResponse)(nil), "vtctldata.ExecuteVtctlCommandResponse")
+	proto.RegisterType((*GetCellInfoNamesRequest)(nil), "vtctldata.GetCellInfoNamesRequest")
+	proto.RegisterType((*GetCellInfoNamesResponse)(nil), "vtctldata.GetCellInfoNamesResponse")
+	proto.RegisterType((*GetCellInfoRequest)(nil), "vtctldata.GetCellInfoRequest")
+	proto.RegisterType((*GetCellInfoResponse)(nil), "vtctldata.GetCellInfoResponse")
+	proto.RegisterType((*GetCellsAliasesRequest)(nil), "vtctldata.GetCellsAliasesRequest")
+	proto.RegisterType((*GetCellsAliasesResponse)(nil), "vtctldata.GetCellsAliasesResponse")
+	proto.RegisterMapType((map[string]*topodata.CellsAlias)(nil), "vtctldata.GetCellsAliasesResponse.AliasesEntry")
 	proto.RegisterType((*GetKeyspacesRequest)(nil), "vtctldata.GetKeyspacesRequest")
 	proto.RegisterType((*GetKeyspacesResponse)(nil), "vtctldata.GetKeyspacesResponse")
 	proto.RegisterType((*GetKeyspaceRequest)(nil), "vtctldata.GetKeyspaceRequest")
