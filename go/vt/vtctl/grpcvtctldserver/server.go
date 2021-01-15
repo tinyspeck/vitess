@@ -21,9 +21,11 @@ import (
 
 	"google.golang.org/grpc"
 	"vitess.io/vitess/go/vt/topo"
+	"vitess.io/vitess/go/vt/vterrors"
 
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
 	vtctlservicepb "vitess.io/vitess/go/vt/proto/vtctlservice"
+	"vitess.io/vitess/go/vt/proto/vtrpc"
 )
 
 // VtctldServer implements the Vtctld RPC service protocol.
@@ -55,6 +57,44 @@ func (s *VtctldServer) FindAllShardsInKeyspace(ctx context.Context, req *vtctlda
 	return &vtctldatapb.FindAllShardsInKeyspaceResponse{
 		Shards: shards,
 	}, nil
+}
+
+// GetCellInfoNames is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) GetCellInfoNames(ctx context.Context, req *vtctldatapb.GetCellInfoNamesRequest) (*vtctldatapb.GetCellInfoNamesResponse, error) {
+	names, err := s.ts.GetCellInfoNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtctldatapb.GetCellInfoNamesResponse{Names: names}, nil
+}
+
+// GetCellInfo is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) GetCellInfo(ctx context.Context, req *vtctldatapb.GetCellInfoRequest) (*vtctldatapb.GetCellInfoResponse, error) {
+	if req.Cell == "" {
+		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "cell field is required")
+	}
+
+	// We use a strong read, because users using this command want the latest
+	// data, and this is user-generated, not used in any automated process.
+	strongRead := true
+	ci, err := s.ts.GetCellInfo(ctx, req.Cell, strongRead)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtctldatapb.GetCellInfoResponse{CellInfo: ci}, nil
+}
+
+// GetCellsAliases is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) GetCellsAliases(ctx context.Context, req *vtctldatapb.GetCellsAliasesRequest) (*vtctldatapb.GetCellsAliasesResponse, error) {
+	strongRead := true
+	aliases, err := s.ts.GetCellsAliases(ctx, strongRead)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtctldatapb.GetCellsAliasesResponse{Aliases: aliases}, nil
 }
 
 // GetKeyspace is part of the vtctlservicepb.VtctldServer interface.
