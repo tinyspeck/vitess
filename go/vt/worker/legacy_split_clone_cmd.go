@@ -95,6 +95,7 @@ func commandLegacySplitClone(wi *Instance, wr *wrangler.Wrangler, subFlags *flag
 	destinationWriterCount := subFlags.Int("destination_writer_count", defaultDestinationWriterCount, "number of concurrent RPCs to execute on the destination")
 	minHealthyRdonlyTablets := subFlags.Int("min_healthy_rdonly_tablets", defaultMinHealthyTablets, "minimum number of healthy RDONLY tablets before taking out one")
 	maxTPS := subFlags.Int64("max_tps", defaultMaxTPS, "if non-zero, limit copy to maximum number of (write) transactions/second on the destination (unlimited by default)")
+	safeErrCfg := subFlags.String("safe_err_config", "", "comma-separated string of <table>:<error> that indicates which errors can be ignored from which tables")
 	vcursorArgs := vcursor.NewArgs(subFlags)
 
 	if err := subFlags.Parse(args); err != nil {
@@ -118,12 +119,28 @@ func commandLegacySplitClone(wi *Instance, wr *wrangler.Wrangler, subFlags *flag
 	if *excludeTables != "" {
 		excludeTableArray = strings.Split(*excludeTables, ",")
 	}
+	safeErrMap := map[string][]string{}
+	if *safeErrCfg != "" {
+		values := strings.Split(*safeErrCfg, ",")
+		for _, kv := range values {
+			tableErrArr := strings.Split(kv, ":")
+			if len(tableErrArr) != 2 {
+				return nil, fmt.Errorf("safe_err_config entry in unexpected format: %v", kv)
+			}
+			table := tableErrArr[0]
+			errName := tableErrArr[1]
+			tk := strings.TrimSpace(table)
+			errv := strings.TrimSpace(errName)
+			safeErrMap[tk] = append(safeErrMap[tk], errv)
+		}
+	}
 	worker, err := NewLegacySplitCloneWorker(
 		wr,
 		wi.cell,
 		keyspace,
 		shard,
 		excludeTableArray,
+		safeErrMap,
 		*sourceReaderCount,
 		*destinationPackCount,
 		*destinationWriterCount,
@@ -209,6 +226,7 @@ func interactiveLegacySplitClone(ctx context.Context, wi *Instance, wr *wrangler
 		keyspace,
 		shard,
 		excludeTableArray,
+		nil, // @rbailey: We're not supporting interactive legacy split clones at this time
 		int(sourceReaderCount),
 		int(destinationPackCount),
 		int(destinationWriterCount),
@@ -225,6 +243,6 @@ func interactiveLegacySplitClone(ctx context.Context, wi *Instance, wr *wrangler
 func init() {
 	AddCommand("Clones", Command{"LegacySplitClone",
 		commandLegacySplitClone, interactiveLegacySplitClone,
-		"[--exclude_tables=''] <keyspace/shard>",
+		"[--exclude_tables=''] [--safe_err_config=''] <keyspace/shard>",
 		"Old SplitClone code which supports VARCHAR primary key columns. Use this ONLY if SplitClone failed for you."})
 }

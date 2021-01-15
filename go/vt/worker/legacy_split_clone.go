@@ -91,9 +91,27 @@ func (st *mergeStatsImpl) hitSafeBadRows(table string, n int, keys []string) {
 	}
 }
 
-func mkCanIgnoreError(config map[string][]string) func(string, error) bool {
-	return func(table string, err error) bool {
-		return false
+func defaultNoneErr(value string, err error) bool {
+	expected := fmt.Sprintf("could not map %v to a keyspace id, got destination DestinationNone()", value)
+	return value == expected
+}
+
+func mkCanIgnoreError(config map[string][]string) func(string, error) (bool, string) {
+	return func(table string, err error) (bool, string) {
+		allowedErrs, ok := config[table]
+		if !ok {
+			return false, ""
+		}
+		// janky way to do this but it'll work for now
+		for _, allowedErr := range allowedErrs {
+			switch allowedErr {
+			case "DefaultNone(0)": return defaultNoneErr("UINT64(0)", err), "DefaultNone(0)"
+			default:
+				// there shouldn't be an error case we don't handle
+				return false, ""
+			}
+		}
+		return false, ""
 	}
 }
 
@@ -115,7 +133,7 @@ type LegacySplitCloneWorker struct {
 	vcursorArgs             vcursor.Args
 	cleaner                 *wrangler.Cleaner
 	mergeStats              *mergeStatsImpl
-	safeError               func(string, error) bool
+	safeError               func(string, error) (bool, string)
 
 	// populated during WorkerStateInit, read-only after that
 	keyspaceInfo      *topo.KeyspaceInfo
@@ -154,6 +172,7 @@ func NewLegacySplitCloneWorker(
 	wr *wrangler.Wrangler,
 	cell, keyspace, shard string,
 	excludeTables []string,
+	safeErrMap map[string][]string,
 	sourceReaderCount, destinationPackCount, destinationWriterCount, minHealthyRdonlyTablets int,
 	maxTPS int64,
 	vcursorArgs vcursor.Args,
@@ -185,8 +204,9 @@ func NewLegacySplitCloneWorker(
 		mergeStats: &mergeStatsImpl{
 			m:           &sync.Mutex{},
 			droppedKeys: map[string]map[string]bool{},
+			safeBadKeys: map[string]map[string]bool{},
 		},
-		safeError: mkCanIgnoreError(map[string][]string{}),
+		safeError: mkCanIgnoreError(safeErrMap),
 
 		destinationDbNames:    make(map[string]string),
 		destinationThrottlers: make(map[string]*throttler.Throttler),
@@ -276,6 +296,14 @@ func (scw *LegacySplitCloneWorker) Run(ctx context.Context) error {
 		l.Errorf("    table %v {", table)
 		for k := range keys {
 			l.Errorf("        %v", k)
+		}
+		l.Errorf("    }")
+	}
+	l.Errorf("  Safe Errors: %v", scw.mergeStats.safeBadRows)
+	for table, keys := range scw.mergeStats.safeBadKeys {
+		l.Errorf("    table %v {", table)
+		for k := range keys {
+			l.Errorf("      %v", k)
 		}
 		l.Errorf("    }")
 	}

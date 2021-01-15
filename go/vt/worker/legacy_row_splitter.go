@@ -20,6 +20,8 @@ package worker
 // primary key columns based on the MySQL collation.
 
 import (
+	"fmt"
+
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/topo"
@@ -33,7 +35,7 @@ import (
 type RowSplitter struct {
 	tableName   string
 	mergeStats  *mergeStatsImpl
-	safeError   func(string, error) bool
+	safeError   func(string, error) (bool, string)
 	KeyResolver keyspaceIDResolver
 	KeyRanges   []*topodatapb.KeyRange
 }
@@ -42,7 +44,7 @@ type RowSplitter struct {
 func NewRowSplitter(
 	tableName string,
 	stats *mergeStatsImpl,
-	canIgnore func(string, error) bool,
+	canIgnore func(string, error) (bool, string),
 	shardInfos []*topo.ShardInfo,
 	keyResolver keyspaceIDResolver,
 ) *RowSplitter {
@@ -83,7 +85,8 @@ func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Valu
 	for _, row := range rows {
 		k, err := rs.KeyResolver.keyspaceID(row)
 		if err != nil {
-			if !rs.safeError(rs.tableName, err) {
+			wasSafe, errMatched := rs.safeError(rs.tableName, err)
+			if !wasSafe {
 				rs.mergeStats.hitBadRows(rs.tableName, 1)
 				return err
 			} else {
@@ -91,7 +94,7 @@ func (rs *RowSplitter) Split(result [][][]sqltypes.Value, rows [][]sqltypes.Valu
 				if cr, ok := rs.KeyResolver.(*v3Resolver); ok {
 					if len(row) > cr.shardingColumnIndex {
 						shardingKey := row[cr.shardingColumnIndex]
-						safeBadKeys = append(safeBadKeys, shardingKey.ToString())
+						safeBadKeys = append(safeBadKeys, fmt.Sprintf("%v - %v", errMatched, shardingKey.ToString()))
 					}
 				}
 			}
