@@ -76,6 +76,7 @@
   text-align: center;
 }
 
+.navList a:hover .badge,
 .active .badge {
   background: rgba(61, 90, 254, 0.1);
   color: var(--colorPrimary_light);
