@@ -1,9 +1,41 @@
 .input {
-  border: solid 1px var(--grey400);
+  border: solid 2px var(--grey400);
   border-radius: 6px;
   font-family: var(--fontFamilyPrimary);
   font-size: 15px;
   line-height: 15px;
+  max-width: 960px;
   padding: 16px 20px;
   width: 100%;
+}
+
+.container {
+  display: flex;
+}
+
+.button {
+  background: none;
+  border: solid 2px var(--grey400);
+  border-radius: 6px;
+  color: var(--grey600);
+  cursor: pointer;
+  font-family: var(--fontFamilyPrimary);
+  font-weight: 700;
+  margin: 0 24px;
+  outline: none;
+  text-align: center;
+  transition: all 0.1s ease-in-out;
+  width: 64px;
+}
+
+.button:hover {
+  box-shadow: 0 3px 3px rgba(#cbd5e0, 0.5);
+}
+
+.button:active {
+  background: var(--grey75);
+}
+
+.button svg {
+  vertical-align: bottom;
 }
