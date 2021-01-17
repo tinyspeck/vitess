@@ -23,25 +23,44 @@ const SERVING_STATES = Object.keys(pb.Tablet.ServingState);
 const TABLET_TYPES = Object.keys(topodata.TabletType);
 
 export const TabletList = ({ tablets }: Props) => {
+    console.log(tablets);
     return (
         <table>
             <thead>
                 <tr>
                     <th>Cluster</th>
-                    <th>Hostname</th>
+                    <th>Keyspace</th>
+                    <th>Shard</th>
                     <th>Type</th>
                     <th>State</th>
+                    <th>Hostname</th>
+                    <th>Alias</th>
                 </tr>
             </thead>
             <tbody>
                 {tablets.map((t, i) => (
                     <tr key={i}>
-                        <td>{t.cluster?.name}</td>
+                        <td>
+                            <code>{t.cluster?.name}</code>
+                        </td>
+                        <td>
+                            <code>{t.tablet?.keyspace}</code>
+                        </td>
+                        <td>
+                            <code>{t.tablet?.shard}</code>
+                        </td>
+                        <td>
+                            <code>{t.tablet?.type && TABLET_TYPES[t.tablet?.type]}</code>
+                        </td>
+                        <td>
+                            <code>{SERVING_STATES[t.state]}</code>
+                        </td>
                         <td>
                             <code>{t.tablet?.hostname}</code>
                         </td>
-                        <td>{t.tablet?.type && TABLET_TYPES[t.tablet?.type]}</td>
-                        <td>{SERVING_STATES[t.state]}</td>
+                        <td>
+                            <code>{`${t.tablet?.alias?.cell}-${t.tablet?.alias?.uid}`}</code>
+                        </td>
                     </tr>
                 ))}
             </tbody>
