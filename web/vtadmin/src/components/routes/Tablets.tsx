@@ -36,7 +36,8 @@ export const Tablets = () => {
     return (
         <div>
             <h1>Tablets</h1>
-            {content}
+
+            <div style={{ marginTop: 24 }}>{content}</div>
         </div>
     );
 };

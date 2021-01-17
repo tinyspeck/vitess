@@ -98,6 +98,10 @@
   --textColorDisabled: var(--textColorDisabled_dark);
 }
 
+* {
+  box-sizing: border-box;
+}
+
 html {
   /**
    * Set a base font size of 1rem == 10px, based on the common browser default of 16px.
@@ -125,6 +129,8 @@ h1 {
   font-size: var(--fontSizeHeading1);
   font-weight: 700;
   line-height: var(--lineHeightHeading);
+  margin: 0;
+  padding: 0;
 }
 
 h2 {
@@ -132,6 +138,8 @@ h2 {
   font-size: var(--fontSizeHeading2);
   font-weight: 700;
   line-height: var(--lineHeightHeading);
+  margin: 0;
+  padding: 0;
 }
 
 h3 {
@@ -139,6 +147,8 @@ h3 {
   font-size: var(--fontSizeHeading3);
   font-weight: 700;
   line-height: var(--lineHeightHeading);
+  margin: 0;
+  padding: 0;
 }
 
 code {
@@ -153,10 +163,14 @@ table {
 }
 
 table th {
-  padding: 8px;
+  text-align: left;
+  padding: 12px 16px;
+}
+
+table tbody tr {
+  border: solid 1px var(--tableBorderColor);
 }
 
 table tbody td {
-  border: solid 1px var(--tableBorderColor);
-  padding: 12px;
+  padding: 12px 16px;
 }

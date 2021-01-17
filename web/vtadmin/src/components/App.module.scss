@@ -15,12 +15,30 @@
  */
 
 .container {
-  margin: 0 auto;
-  max-width: 1200px;
-  padding: 24px;
+  background: lime;
+  display: flex;
+  flex-direction: row;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 48px auto;
+.nav {
+  background: var(--grey75);
+  flex: 0 0 320px;
+  // padding: 24px;
+}
+
+.main {
+  background: var(--backgroundPrimary);
+  flex: 1;
+}
+
+.search {
+  border-bottom: solid 1px var(--grey200);
+  padding: 36px;
+}
+
+.content {
+  padding: 36px;
 }
