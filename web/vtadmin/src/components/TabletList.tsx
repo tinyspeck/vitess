@@ -25,7 +25,7 @@ const TABLET_TYPES = Object.keys(topodata.TabletType);
 export const TabletList = ({ tablets }: Props) => {
     console.log(tablets);
     return (
-        <table>
+        <table style={{ maxWidth: 1600 }}>
             <thead>
                 <tr>
                     <th>Cluster</th>
