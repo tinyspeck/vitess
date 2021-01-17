@@ -75,3 +75,8 @@
   padding: 2px 10px;
   text-align: center;
 }
+
+.active .badge {
+  background: rgba(61, 90, 254, 0.1);
+  color: var(--colorPrimary_light);
+}
