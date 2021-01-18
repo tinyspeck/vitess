@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 import { vtadmin as pb, topodata } from '../proto/vtadmin';
+import cx from 'classnames';
 
+import style from './TabletList.module.scss';
 interface Props {
     tablets: pb.Tablet[];
 }
@@ -38,31 +40,42 @@ export const TabletList = ({ tablets }: Props) => {
                 </tr>
             </thead>
             <tbody>
-                {tablets.map((t, i) => (
-                    <tr key={i}>
-                        <td>
-                            <code>{t.cluster?.name}</code>
-                        </td>
-                        <td>
-                            <code>{t.tablet?.keyspace}</code>
-                        </td>
-                        <td>
-                            <code>{t.tablet?.shard}</code>
-                        </td>
-                        <td>
-                            <code>{t.tablet?.type && TABLET_TYPES[t.tablet?.type]}</code>
-                        </td>
-                        <td>
-                            <code>{SERVING_STATES[t.state]}</code>
-                        </td>
-                        <td>
-                            <code>{t.tablet?.hostname}</code>
-                        </td>
-                        <td>
-                            <code>{`${t.tablet?.alias?.cell}-${t.tablet?.alias?.uid}`}</code>
-                        </td>
-                    </tr>
-                ))}
+                {tablets.map((t, i) => {
+                    const pipClass = cx(style.pip, {
+                        [style.pipOk]: t.state === pb.Tablet.ServingState.SERVING,
+                        [style.pipNotOk]: t.state === pb.Tablet.ServingState.NOT_SERVING,
+                    });
+
+                    const ttype = t.tablet?.type && TABLET_TYPES[t.tablet?.type];
+                    const tdisplay = !!ttype && ttype === 'MASTER' ? 'PRIMARY' : ttype;
+
+                    return (
+                        <tr key={i}>
+                            <td>
+                                <code>{t.cluster?.name}</code>
+                            </td>
+                            <td>
+                                <code>{t.tablet?.keyspace}</code>
+                            </td>
+                            <td>
+                                <code>{t.tablet?.shard}</code>
+                            </td>
+                            <td>
+                                <code>{tdisplay}</code>
+                            </td>
+                            <td>
+                                <div className={pipClass} />
+                                <code>{SERVING_STATES[t.state]}</code>
+                            </td>
+                            <td>
+                                <code>{t.tablet?.hostname}</code>
+                            </td>
+                            <td>
+                                <code>{`${t.tablet?.alias?.cell}-${t.tablet?.alias?.uid}`}</code>
+                            </td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );

@@ -1,0 +1,16 @@
+.pip {
+  background: var(--grey400);
+  border-radius: 100px;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+}
+
+.pipOk {
+  background: var(--colorSuccess50);
+}
+
+.pipNotOk {
+  background: var(--colorError50);
+}
