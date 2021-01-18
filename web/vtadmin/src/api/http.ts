@@ -85,3 +85,22 @@ export const fetchTablets = async () => {
         return pb.Tablet.create(t);
     });
 };
+
+export const fetchKeyspaces = async () => {
+    const endpoint = '/api/keyspaces';
+    const res = await vtfetch(endpoint);
+
+    // Throw "not ok" responses so that react-query correctly interprets them as errors.
+    // See https://react-query.tanstack.com/guides/query-functions#handling-and-throwing-errors
+    if (!res.ok) throw new HttpResponseNotOkError(endpoint, res);
+
+    const keyspaces = res.result?.keyspaces;
+    if (!Array.isArray(keyspaces)) throw Error(`expected keyspaces to be an array, got ${keyspaces}`);
+
+    return keyspaces.map((t: any) => {
+        const err = pb.Keyspace.verify(t);
+        if (err) throw Error(err);
+
+        return pb.Keyspace.create(t);
+    });
+};

@@ -22,6 +22,7 @@ import { Tablets } from './routes/Tablets';
 import { Debug } from './routes/Debug';
 import { QuickSearch } from './QuickSearch';
 import { NavRail } from './NavRail';
+import { Keyspaces } from './routes/Keyspaces';
 
 export const App = () => {
     return (
@@ -37,6 +38,10 @@ export const App = () => {
                     </div>
                     <div className={style.content}>
                         <Switch>
+                            <Route path="/keyspaces">
+                                <Keyspaces />
+                            </Route>
+
                             <Route path="/tablets">
                                 <Tablets />
                             </Route>
