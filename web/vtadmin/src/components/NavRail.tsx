@@ -13,7 +13,7 @@ export const NavRail = () => {
         <div className={style.container}>
             <div className={style.logoContainer}>
                 <NavLink exact activeClassName={style.active} to="/">
-                    <img className={style.logo} src={logo} alt="logo" height={49} />
+                    <img className={style.logo} src={logo} alt="logo" height={42} />
                 </NavLink>
             </div>
 
