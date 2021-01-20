@@ -1,6 +1,11 @@
 import * as React from 'react';
 import { useKeyspaces, useTablets } from '../../hooks/api';
 import { groupBy } from 'lodash';
+import { topodata } from '../../proto/vtadmin';
+
+import style from './Keyspaces.module.scss';
+
+const TABLET_TYPES = Object.keys(topodata.TabletType);
 
 export const Keyspaces = () => {
     const { data, error, isError, isSuccess } = useKeyspaces();
@@ -27,11 +32,28 @@ export const Keyspaces = () => {
                 <tbody>
                     {data.map((k, kdx) => {
                         const tabletsForKeyspace = (tdata || []).filter((t) => t.tablet?.keyspace === k.keyspace?.name);
+                        const tabletsByType = groupBy(
+                            tabletsForKeyspace,
+                            (t) => t.tablet && t.tablet.type && TABLET_TYPES[t.tablet.type]
+                        );
+                        console.log(tabletsByType, tabletsForKeyspace);
                         return (
                             <tr key={kdx}>
-                                <td>{k.cluster?.name}</td>
-                                <td>{k.keyspace?.name}</td>
-                                <td>{tabletsForKeyspace.length} tablets</td>
+                                <td>
+                                    <code>{k.cluster?.name}</code>
+                                </td>
+                                <td>
+                                    <code>{k.keyspace?.name}</code>
+                                </td>
+                                <td>
+                                    {Object.keys(tabletsByType).map((tabletType, idx) => (
+                                        <span className={style.tabletType} key={tabletType}>
+                                            <code>
+                                                {(tabletsByType[tabletType] || []).length} {tabletType}
+                                            </code>
+                                        </span>
+                                    ))}
+                                </td>
                             </tr>
                         );
                     })}

@@ -174,5 +174,6 @@ table tbody tr {
 }
 
 table tbody td {
-  padding: 12px 16px;
+  padding: 16px 20px;
+  vertical-align: top;
 }
