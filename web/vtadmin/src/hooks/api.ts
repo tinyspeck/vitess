@@ -1,5 +1,5 @@
 import { useQuery } from 'react-query';
-import { fetchKeyspaces, fetchTablets } from '../api/http';
+import { fetchGates, fetchKeyspaces, fetchTablets } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
 
 export const useTablets = () => {
@@ -11,5 +11,11 @@ export const useTablets = () => {
 export const useKeyspaces = () => {
     return useQuery<pb.Keyspace[], Error>(['keyspaces'], async () => {
         return await fetchKeyspaces();
+    });
+};
+
+export const useGates = () => {
+    return useQuery<pb.VTGate[], Error>(['vtgates'], async () => {
+        return await fetchGates();
     });
 };

@@ -23,6 +23,7 @@ import { Debug } from './routes/Debug';
 import { QuickSearch } from './QuickSearch';
 import { NavRail } from './NavRail';
 import { Keyspaces } from './routes/Keyspaces';
+import { VTGates } from './routes/VTGates';
 
 export const App = () => {
     return (
@@ -44,6 +45,10 @@ export const App = () => {
 
                             <Route path="/tablets">
                                 <Tablets />
+                            </Route>
+
+                            <Route path="/vtgates">
+                                <VTGates />
                             </Route>
 
                             <Route path="/debug">

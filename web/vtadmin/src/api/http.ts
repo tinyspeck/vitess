@@ -104,3 +104,22 @@ export const fetchKeyspaces = async () => {
         return pb.Keyspace.create(t);
     });
 };
+
+export const fetchGates = async () => {
+    const endpoint = '/api/gates';
+    const res = await vtfetch(endpoint);
+
+    // Throw "not ok" responses so that react-query correctly interprets them as errors.
+    // See https://react-query.tanstack.com/guides/query-functions#handling-and-throwing-errors
+    if (!res.ok) throw new HttpResponseNotOkError(endpoint, res);
+
+    const gates = res.result?.gates;
+    if (!Array.isArray(gates)) throw Error(`expected gates to be an array, got ${gates}`);
+
+    return gates.map((e: any) => {
+        const err = pb.VTGate.verify(e);
+        if (err) throw Error(err);
+
+        return pb.VTGate.create(e);
+    });
+};

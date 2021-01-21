@@ -3,11 +3,12 @@ import { NavLink } from 'react-router-dom';
 
 import style from './NavRail.module.scss';
 import logo from '../img/vitess-icon-color.svg';
-import { useKeyspaces, useTablets } from '../hooks/api';
+import { useGates, useKeyspaces, useTablets } from '../hooks/api';
 
 export const NavRail = () => {
     const { data: kdata, error, isError, isSuccess } = useKeyspaces();
     const { data: tdata } = useTablets();
+    const { data: gdata } = useGates();
 
     return (
         <div className={style.container}>
@@ -52,14 +53,6 @@ export const NavRail = () => {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink exact activeClassName={style.active} to="/gates">
-                                <div className={style.linkRow}>
-                                    <span>Gates</span>
-                                    <div className={style.badge}>0</div>
-                                </div>
-                            </NavLink>
-                        </li>
-                        <li>
                             <NavLink exact activeClassName={style.active} to="/keyspaces">
                                 <div className={style.linkRow}>
                                     <span>Keyspaces</span>
@@ -80,6 +73,14 @@ export const NavRail = () => {
                                 <div className={style.linkRow}>
                                     <span>Tablets</span>
                                     <div className={style.badge}>{(tdata || []).length}</div>
+                                </div>
+                            </NavLink>
+                        </li>
+                        <li>
+                            <NavLink exact activeClassName={style.active} to="/vtgates">
+                                <div className={style.linkRow}>
+                                    <span>VTGates</span>
+                                    <div className={style.badge}>{(gdata || []).length}</div>
                                 </div>
                             </NavLink>
                         </li>
