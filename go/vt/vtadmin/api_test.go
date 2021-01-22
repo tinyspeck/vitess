@@ -31,10 +31,16 @@ import (
 	"vitess.io/vitess/go/vt/vtadmin/http"
 	"vitess.io/vitess/go/vt/vtadmin/vtsql"
 	"vitess.io/vitess/go/vt/vtadmin/vtsql/fakevtsql"
+	"vitess.io/vitess/go/vt/vtctl/grpcvtctldserver/testutil"
+	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 )
+
+func init() {
+	*tmclient.TabletManagerProtocol = testutil.TabletManagerClientProtocol
+}
 
 func TestGetGates(t *testing.T) {
 	fakedisco1 := fakediscovery.New()

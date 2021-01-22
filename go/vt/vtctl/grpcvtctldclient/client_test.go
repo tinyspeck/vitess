@@ -28,13 +28,18 @@ import (
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topo/memorytopo"
 	"vitess.io/vitess/go/vt/vtctl/grpcvtctldserver"
+	"vitess.io/vitess/go/vt/vtctl/grpcvtctldserver/testutil"
 	"vitess.io/vitess/go/vt/vtctl/vtctldclient"
+	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
-	"vitess.io/vitess/go/vt/proto/vtctldata"
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
 	vtctlservicepb "vitess.io/vitess/go/vt/proto/vtctlservice"
 )
+
+func init() {
+	*tmclient.TabletManagerProtocol = testutil.TabletManagerClientProtocol
+}
 
 // annoyingly, this is duplicated with theu tests in package grpcvtctldserver.
 // fine for now, I suppose.
@@ -117,7 +122,7 @@ func TestGetKeyspace(t *testing.T) {
 
 	withTestServer(t, vtctld, func(t *testing.T, client vtctldclient.VtctldClient) {
 		expected := &vtctldatapb.GetKeyspaceResponse{
-			Keyspace: &vtctldata.Keyspace{
+			Keyspace: &vtctldatapb.Keyspace{
 				Name: "testkeyspace",
 				Keyspace: &topodatapb.Keyspace{
 					ShardingColumnName: "col1",
