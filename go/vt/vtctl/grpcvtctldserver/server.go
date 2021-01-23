@@ -19,14 +19,18 @@ package grpcvtctldserver
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"google.golang.org/grpc"
+	"vitess.io/vitess/go/vt/mysqlctl/backupstorage"
+	"vitess.io/vitess/go/vt/mysqlctl/mysqlctlproto"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topotools"
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
+	mysqlctlpb "vitess.io/vitess/go/vt/proto/mysqlctl"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
@@ -64,6 +68,32 @@ func (s *VtctldServer) FindAllShardsInKeyspace(ctx context.Context, req *vtctlda
 	return &vtctldatapb.FindAllShardsInKeyspaceResponse{
 		Shards: shards,
 	}, nil
+}
+
+// GetBackups is part of the vtctldservicepb.VtctldServer interface.
+func (s *VtctldServer) GetBackups(ctx context.Context, req *vtctldatapb.GetBackupsRequest) (*vtctldatapb.GetBackupsResponse, error) {
+	bs, err := backupstorage.GetBackupStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	defer bs.Close()
+
+	bucket := filepath.Join(req.Keyspace, req.Shard)
+	bhs, err := bs.ListBackups(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &vtctldatapb.GetBackupsResponse{
+		Backups: make([]*mysqlctlpb.BackupInfo, len(bhs)),
+	}
+
+	for i, bh := range bhs {
+		resp.Backups[i] = mysqlctlproto.BackupHandleToProto(bh)
+	}
+
+	return resp, nil
 }
 
 // GetCellInfoNames is part of the vtctlservicepb.VtctldServer interface.
