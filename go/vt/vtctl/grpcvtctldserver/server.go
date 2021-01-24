@@ -328,6 +328,18 @@ func (s *VtctldServer) GetTablets(ctx context.Context, req *vtctldatapb.GetTable
 	}, nil
 }
 
+// GetVSchema is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) GetVSchema(ctx context.Context, req *vtctldatapb.GetVSchemaRequest) (*vtctldatapb.GetVSchemaResponse, error) {
+	vschema, err := s.ts.GetVSchema(ctx, req.Keyspace)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtctldatapb.GetVSchemaResponse{
+		VSchema: vschema,
+	}, nil
+}
+
 // StartServer registers a VtctldServer for RPCs on the given gRPC server.
 func StartServer(s *grpc.Server, ts *topo.Server) {
 	vtctlservicepb.RegisterVtctldServer(s, NewVtctldServer(ts))
