@@ -140,6 +140,14 @@ message GetTabletsResponse {
   repeated topodata.Tablet tablets = 1;
 }
 
+message GetVSchemaRequest {
+  string keyspace = 1;
+}
+
+message GetVSchemaResponse {
+  vschema.Keyspace v_schema = 1;
+}
+
 message Keyspace {
   string name = 1;
   topodata.Keyspace keyspace = 2;
