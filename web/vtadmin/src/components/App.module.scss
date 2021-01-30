@@ -32,5 +32,15 @@
 .mainContainer {
   grid-area: content;
   overflow: auto;
-  padding: 24px;
+}
+
+.omniSearchContainer {
+  border-bottom: solid 1px var(--colorScaffoldingHighlight);
+  display: grid;
+  grid-template-columns: 960px auto;
+  padding: 36px;
+}
+
+.routeContainer {
+  padding: 36px;
 }

@@ -28,6 +28,7 @@ export const TabletList = ({ tablets }: Props) => {
             <thead>
                 <tr>
                     <th>Cluster</th>
+                    <th>Alias</th>
                     <th>Hostname</th>
                     <th>Type</th>
                     <th>State</th>
@@ -37,6 +38,9 @@ export const TabletList = ({ tablets }: Props) => {
                 {tablets.map((t, i) => (
                     <tr key={i}>
                         <td>{t.cluster?.name}</td>
+                        <td>
+                            {t.tablet?.alias?.cell}-{t.tablet?.alias?.uid}
+                        </td>
                         <td>
                             <code>{t.tablet?.hostname}</code>
                         </td>

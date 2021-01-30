@@ -1,0 +1,25 @@
+.container {
+  position: relative;
+}
+
+$inputHeight: 48px;
+
+.popover {
+  background: var(--backgroundPrimary);
+  border: solid 2px var(--colorDisabled);
+  border-radius: 6px;
+  box-shadow: 0 0 1px #cbd5e0, 0 0 10px #edf2f7;
+  margin-top: 4px;
+  min-height: 200px;
+  padding: 0 16px;
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+}
+
+.list {
+  list-style-type: none;
+  margin: 0 0 16px 0;
+  padding: 0;
+}

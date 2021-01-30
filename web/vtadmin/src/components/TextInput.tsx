@@ -18,20 +18,22 @@ interface Props extends NativeInputProps {
     size?: 'large' | 'medium'; // We have no need for small inputs right now.
 }
 
-export const TextInput = ({ className, iconLeft, iconRight, size = 'medium', ...props }: Props) => {
-    const inputClass = cx(style.input, {
-        [style.large]: size === 'large',
-        [style.withIconLeft]: !!iconLeft,
-        [style.withIconRight]: !!iconRight,
-    });
+export const TextInput = React.forwardRef(
+    ({ className, iconLeft, iconRight, size = 'medium', ...props }: Props, ref: any) => {
+        const inputClass = cx(style.input, className, {
+            [style.large]: size === 'large',
+            [style.withIconLeft]: !!iconLeft,
+            [style.withIconRight]: !!iconRight,
+        });
 
-    // Order of elements matters: the <input> comes before the icons so that
-    // we can use CSS adjacency selectors like `input:focus ~ .icon`.
-    return (
-        <div className={style.inputContainer}>
-            <input {...props} className={inputClass} type="text" />
-            {iconLeft && <Icon className={style.iconLeft} icon={iconLeft} />}
-            {iconRight && <Icon className={style.iconRight} icon={iconRight} />}
-        </div>
-    );
-};
+        // Order of elements matters: the <input> comes before the icons so that
+        // we can use CSS adjacency selectors like `input:focus ~ .icon`.
+        return (
+            <div className={style.inputContainer}>
+                <input {...props} className={inputClass} ref={ref} type="text" />
+                {iconLeft && <Icon className={style.iconLeft} icon={iconLeft} />}
+                {iconRight && <Icon className={style.iconRight} icon={iconRight} />}
+            </div>
+        );
+    }
+);

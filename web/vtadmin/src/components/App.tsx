@@ -21,6 +21,7 @@ import { Tablets } from './routes/Tablets';
 import { Debug } from './routes/Debug';
 import { NavRail } from './NavRail';
 import { Error404 } from './routes/Error404';
+import { OmniSearch } from './omniSearch/OmniSearch';
 
 export const App = () => {
     return (
@@ -31,21 +32,27 @@ export const App = () => {
                 </div>
 
                 <div className={style.mainContainer}>
-                    <Switch>
-                        <Route path="/tablets">
-                            <Tablets />
-                        </Route>
+                    <div className={style.omniSearchContainer}>
+                        <OmniSearch />
+                    </div>
 
-                        <Route path="/debug">
-                            <Debug />
-                        </Route>
+                    <div className={style.routeContainer}>
+                        <Switch>
+                            <Route path="/tablets">
+                                <Tablets />
+                            </Route>
 
-                        <Redirect exact from="/" to="/tablets" />
+                            <Route path="/debug">
+                                <Debug />
+                            </Route>
 
-                        <Route>
-                            <Error404 />
-                        </Route>
-                    </Switch>
+                            <Redirect exact from="/" to="/tablets" />
+
+                            <Route>
+                                <Error404 />
+                            </Route>
+                        </Switch>
+                    </div>
                 </div>
             </div>
         </Router>
