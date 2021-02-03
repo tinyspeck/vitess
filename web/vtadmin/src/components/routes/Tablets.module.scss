@@ -1,5 +1,13 @@
+.searchContainer {
+  display: grid;
+  grid-gap: 8px;
+  grid-template-columns: auto min-content;
+  margin-bottom: 8px;
+}
+
 .filterContainer {
   display: grid;
   grid-gap: 8px;
-  grid-template-columns: repeat(auto-fill, 200px);
+  grid-template-columns: repeat(6, 1fr);
+  margin-bottom: 48px;
 }

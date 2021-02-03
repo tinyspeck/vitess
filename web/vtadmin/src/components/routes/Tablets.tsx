@@ -16,8 +16,11 @@
 import * as React from 'react';
 
 import { useTablets } from '../../hooks/api';
+import { Button } from '../Button';
+import { Icons } from '../Icon';
 import { ComboBox } from '../lib/ComboBox';
 import { TabletList } from '../TabletList';
+import { TextInput } from '../TextInput';
 import style from './Tablets.module.scss';
 
 export const Tablets = () => {
@@ -41,6 +44,10 @@ export const Tablets = () => {
     return (
         <div>
             <h1>Tablets</h1>
+            <div className={style.searchContainer}>
+                <TextInput iconLeft={Icons.search} placeholder="Filter tablets" />
+                <Button secondary>Clear filters</Button>
+            </div>
             <div className={style.filterContainer}>
                 <ComboBox items={clusterNames} placeholder="Cluster" />
                 <ComboBox placeholder="Cell" />
