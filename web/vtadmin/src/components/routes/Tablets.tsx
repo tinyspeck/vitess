@@ -49,6 +49,7 @@ export const Tablets = () => {
                 <Button secondary>Clear filters</Button>
             </div>
             <div className={style.filterContainer}>
+                {/* Maybe hide if only one cluster */}
                 <ComboBox items={clusterNames} placeholder="Cluster" />
                 <ComboBox placeholder="Cell" />
                 <ComboBox placeholder="Keyspace" />
