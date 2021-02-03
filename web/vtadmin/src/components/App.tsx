@@ -21,6 +21,8 @@ import { Tablets } from './routes/Tablets';
 import { Debug } from './routes/Debug';
 import { NavRail } from './NavRail';
 import { Error404 } from './routes/Error404';
+import { TextInput } from './TextInput';
+import { Icons } from './Icon';
 
 export const App = () => {
     return (
@@ -31,21 +33,30 @@ export const App = () => {
                 </div>
 
                 <div className={style.mainContainer}>
-                    <Switch>
-                        <Route path="/tablets">
-                            <Tablets />
-                        </Route>
+                    <div className={style.searchContainer}>
+                        <div className={style.content}>
+                            <TextInput iconLeft={Icons.search} size="large" placeholder="Search for anything" />
+                        </div>
+                    </div>
+                    <div className={style.routeContainer}>
+                        <div className={style.content}>
+                            <Switch>
+                                <Route path="/tablets">
+                                    <Tablets />
+                                </Route>
 
-                        <Route path="/debug">
-                            <Debug />
-                        </Route>
+                                <Route path="/debug">
+                                    <Debug />
+                                </Route>
 
-                        <Redirect exact from="/" to="/tablets" />
+                                <Redirect exact from="/" to="/tablets" />
 
-                        <Route>
-                            <Error404 />
-                        </Route>
-                    </Switch>
+                                <Route>
+                                    <Error404 />
+                                </Route>
+                            </Switch>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Router>

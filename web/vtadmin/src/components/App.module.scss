@@ -32,6 +32,17 @@
 .mainContainer {
   grid-area: content;
   overflow: auto;
-  padding: 24px;
-  max-width: 1200px;
+}
+
+.content {
+  max-width: 1400px;
+}
+
+.searchContainer {
+  border-bottom: solid 1px var(--colorDisabled);
+  padding: 36px;
+}
+
+.routeContainer {
+  padding: 12px 36px;
 }
