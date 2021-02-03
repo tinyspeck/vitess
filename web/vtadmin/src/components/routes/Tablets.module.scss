@@ -1,0 +1,5 @@
+.filterContainer {
+  display: grid;
+  grid-gap: 8px;
+  grid-template-columns: repeat(auto-fill, 200px);
+}

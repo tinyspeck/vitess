@@ -1,0 +1,15 @@
+.container {
+  position: relative;
+}
+
+.input {
+  cursor: pointer !important;
+}
+
+.dropdown {
+  background: var(--backgroundPrimary);
+  border: solid 2px var(--inputDisabled);
+  position: absolute;
+  width: 100%;
+  z-index: 100;
+}

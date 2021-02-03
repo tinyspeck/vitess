@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Theme, useTheme } from '../../hooks/useTheme';
 import { Button } from '../Button';
 import { Icon, Icons } from '../Icon';
+import { ComboBox } from '../lib/ComboBox';
 import { TextInput } from '../TextInput';
 import style from './Debug.module.scss';
 
@@ -40,6 +41,11 @@ export const Debug = () => {
                 {Object.values(Icons).map((i) => (
                     <Icon className={style.icon} icon={i} key={i} />
                 ))}
+            </div>
+
+            <h3>ComboBox</h3>
+            <div className={style.inputContainer}>
+                <ComboBox />
             </div>
 
             <h3>Text Inputs</h3>

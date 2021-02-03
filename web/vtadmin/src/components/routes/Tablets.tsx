@@ -16,10 +16,12 @@
 import * as React from 'react';
 
 import { useTablets } from '../../hooks/api';
+import { ComboBox } from '../lib/ComboBox';
 import { TabletList } from '../TabletList';
+import style from './Tablets.module.scss';
 
 export const Tablets = () => {
-    const { data, error, isError, isSuccess } = useTablets();
+    const { data = [], error, isError, isSuccess } = useTablets();
 
     // Placeholder UI :D
     let content = <div>Loading...</div>;
@@ -33,9 +35,20 @@ export const Tablets = () => {
         content = <TabletList tablets={data || []} />;
     }
 
+    const clusterNames = data.map((t) => t.cluster?.name) as string[];
+    console.log(clusterNames);
+
     return (
         <div>
             <h1>Tablets</h1>
+            <div className={style.filterContainer}>
+                <ComboBox items={clusterNames} placeholder="Cluster" />
+                <ComboBox placeholder="Cell" />
+                <ComboBox placeholder="Keyspace" />
+                <ComboBox placeholder="Shard" />
+                <ComboBox placeholder="Serving State" />
+                <ComboBox placeholder="TabletType" />
+            </div>
             {content}
         </div>
     );
