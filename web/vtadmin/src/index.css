@@ -65,7 +65,7 @@
 
   /* Inputs + other form controls */
   --inputHeightSmall: 2.4rem;
-  --inputHeightMedium: 3.6rem;
+  --inputHeightMedium: 4rem;
   --inputHeightLarge: 4.8rem;
 
   /* Layout variables, set to light theme by default */
@@ -148,6 +148,13 @@ h3 {
   font-size: var(--fontSizeHeading3);
   font-weight: 700;
   line-height: var(--lineHeightHeading);
+}
+
+h4 {
+  color: var(--textColorPrimary);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 33px;
 }
 
 code {

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Theme, useTheme } from '../../hooks/useTheme';
 import { Button } from '../Button';
 import { Icon, Icons } from '../Icon';
+import { Modal } from '../lib/Modal';
 import { TextInput } from '../TextInput';
 import style from './Debug.module.scss';
 
@@ -33,6 +34,13 @@ export const Debug = () => {
                         </label>
                     </div>
                 ))}
+            </div>
+
+            <h3>Modal</h3>
+            <div className={style.modalContainer}>
+                <Modal title="Example modal">
+                    <p>Hello world!</p>
+                </Modal>
             </div>
 
             <h3>Icons</h3>
