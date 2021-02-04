@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import * as React from 'react';
-import { Redirect, Route, Switch, useLocation } from 'react-router-dom';
+import { Redirect, Route, Switch, useHistory, useLocation } from 'react-router-dom';
 
 import style from './App.module.scss';
 import { Tablets } from './routes/Tablets';
@@ -24,6 +24,7 @@ import { Error404 } from './routes/Error404';
 import { SettingsModal } from './settings/SettingsModal';
 
 export const App = () => {
+    const history = useHistory();
     const location = useLocation();
 
     // This piece of state is set when one of the
@@ -34,7 +35,12 @@ export const App = () => {
     // we show the gallery in the background, behind
     // the modal.
     let background = location.state && (location.state as any).background;
+    if (!background && location.pathname.startsWith('/settings')) {
+        history.replace(location.pathname, { background: '/tablets' });
+    }
+
     console.log('App background', background);
+    console.log('App location', location);
 
     return (
         <div className={style.container}>

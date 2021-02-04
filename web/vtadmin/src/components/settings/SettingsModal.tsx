@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link, Redirect, Route, Switch, useHistory, useLocation, useRouteMatch } from 'react-router-dom';
 
 import { Modal } from '../lib/modal/Modal';
+import { TextInput } from '../TextInput';
 import style from './SettingsModal.module.scss';
 
 export const SettingsModal = () => {
@@ -36,8 +37,26 @@ export const SettingsModal = () => {
                 </div>
                 <div className={style.content}>
                     <Switch>
-                        <Route path={`${path}/time`}>Time</Route>
-                        <Route path={`${path}/theme`}>Theme</Route>
+                        <Route path={`${path}/time`}>
+                            <div>
+                                <div style={{ marginBottom: 24 }}>
+                                    <label>
+                                        <strong>Primary time zone</strong>
+                                        <p>Set your primary time zone, which is displayed by default.</p>
+                                        <TextInput />
+                                    </label>
+                                </div>
+
+                                <div style={{ marginBottom: 24 }}>
+                                    <label>
+                                        <strong>Secondary time zone</strong>
+                                        <p>Set your primary time zone, which is displayed by default.</p>
+                                        <TextInput />
+                                    </label>
+                                </div>
+                            </div>
+                        </Route>
+                        <Route path={`${path}/theme`}></Route>
                         <Route path={`${path}/advanced`}>Advanced</Route>
                         <Redirect exact from={path} to={{ pathname: `${url}/time`, state: { background } }} />
                     </Switch>

@@ -12,7 +12,7 @@
 .container {
   display: grid;
   grid-gap: 24px;
-  grid-template-columns: 25% 1fr;
+  grid-template-columns: 160px 1fr;
 }
 
 .nav ul {
@@ -26,8 +26,15 @@
 }
 
 .nav a {
+  border-radius: 6px;
   color: var(--textColorPrimary);
+  display: block;
   font-size: 14px;
-  line-height: 24px;
+  line-height: 30px;
+  padding: 0 8px;
   text-decoration: none;
+
+  &:hover {
+    background: var(--grey200);
+  }
 }
