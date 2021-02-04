@@ -1,8 +1,8 @@
 import * as React from 'react';
 import ReactModal from 'react-modal';
 
-import { Button } from '../Button';
-import { Icon, Icons } from '../Icon';
+import { Button } from '../../Button';
+import { Icon, Icons } from '../../Icon';
 
 import style from './Modal.module.scss';
 

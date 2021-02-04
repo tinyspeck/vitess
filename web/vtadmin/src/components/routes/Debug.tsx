@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Theme, useTheme } from '../../hooks/useTheme';
 import { Button } from '../Button';
 import { Icon, Icons } from '../Icon';
-import { Modal } from '../lib/Modal';
+import { Modal } from '../lib/modal/Modal';
 import { TextInput } from '../TextInput';
 import style from './Debug.module.scss';
 
