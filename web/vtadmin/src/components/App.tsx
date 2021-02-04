@@ -35,7 +35,7 @@ export const App = () => {
                 <div className={style.mainContainer}>
                     <div className={style.searchContainer}>
                         <div className={style.content}>
-                            <TextInput iconLeft={Icons.search} size="large" placeholder="Search for anything" />
+                            <TextInput iconLeft={Icons.search} size="large" placeholder="[ / ] Search for anything" />
                         </div>
                     </div>
                     <div className={style.routeContainer}>

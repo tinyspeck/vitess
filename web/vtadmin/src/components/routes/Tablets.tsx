@@ -45,8 +45,13 @@ export const Tablets = () => {
         <div>
             <h1>Tablets</h1>
             <div className={style.searchContainer}>
-                <TextInput iconLeft={Icons.search} placeholder="Filter tablets" />
-                <Button secondary>Clear filters</Button>
+                <TextInput iconLeft={Icons.search} placeholder="[ f ] Filter tablets" />
+                <Button icon={Icons.download} secondary>
+                    Export
+                </Button>
+                <Button icon={Icons.delete} secondary>
+                    Clear filters
+                </Button>
             </div>
             <div className={style.filterContainer}>
                 {/* Maybe hide if only one cluster */}

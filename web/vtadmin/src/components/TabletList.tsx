@@ -28,23 +28,57 @@ export const TabletList = ({ tablets }: Props) => {
             <thead>
                 <tr>
                     <th>Cluster</th>
+                    <th>Keyspace</th>
+                    <th>Shard</th>
+                    <th>Alias</th>
                     <th>Hostname</th>
+
                     <th>Type</th>
                     <th>State</th>
                 </tr>
             </thead>
             <tbody>
-                {tablets.map((t, i) => (
-                    <tr key={i}>
-                        <td>{t.cluster?.name}</td>
+                {tablets.map((t, tdx) => (
+                    <tr key={tdx}>
                         <td>
-                            <code>{t.tablet?.hostname}</code>
+                            🇺🇸 <a href="#">{t.cluster?.name}</a>
                         </td>
-                        <td>{t.tablet?.type && TABLET_TYPES[t.tablet?.type]}</td>
-                        <td>{SERVING_STATES[t.state]}</td>
+                        <td>
+                            <a href="#">{t.tablet?.keyspace}</a>
+                        </td>
+                        <td>
+                            <a href="#">{t.tablet?.shard}</a>
+                        </td>
+                        <td>
+                            <a href="#">{formatAlias(t)}</a>
+                        </td>
+                        <td>
+                            <a href="#">{t.tablet?.hostname}</a>
+                        </td>
+                        <td>
+                            <div
+                                style={{
+                                    background: '#4cba6a',
+                                    borderRadius: 100,
+                                    display: 'inline-block',
+                                    height: 10,
+                                    verticalAlign: 'middle',
+                                    width: 10,
+                                }}
+                            />{' '}
+                            {formatType(t)}
+                        </td>
+                        <td>{formatState(t)}</td>
                     </tr>
                 ))}
             </tbody>
         </table>
     );
 };
+
+const formatAlias = (t: pb.Tablet) =>
+    t.tablet?.alias?.cell && t.tablet?.alias?.uid && `${t.tablet.alias.cell}-${t.tablet.alias.uid}`;
+
+const formatType = (t: pb.Tablet) => t.tablet?.type && TABLET_TYPES[t.tablet?.type];
+
+const formatState = (t: pb.Tablet) => t.state && SERVING_STATES[t.state];

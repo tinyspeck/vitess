@@ -80,7 +80,9 @@
   --colorPrimary200: #0031ca;
   --colorScaffoldingHighlight: var(--grey400);
   --colorScaffoldingForeground: var(--grey600);
-  --tableBorderColor: var(--grey400);
+  --tableBorderColor: var(--grey200);
+  --tableHeaderBackground: var(--grey75);
+  --tableHeaderTextColor: var(--grey800);
   --textColorPrimary: #17171b;
   --textColorInverted: #fff;
   --textColorSecondary: #718096;
@@ -100,7 +102,9 @@
   --colorPrimary200: #4a5acb;
   --colorScaffoldingHighlight: var(--grey600);
   --colorScaffoldingForeground: var(--grey400);
-  --tableBorderColor: var(--grey800);
+  --tableBorderColor: var(--grey900);
+  --tableHeaderBackground: var(--grey900);
+  --tableHeaderTextColor: var(--grey400);
   --textColorPrimary: #fff;
   --textColorInverted: #17171b;
   --textColorSecondary: #cbd5e0;
@@ -155,17 +159,43 @@ code {
   font-size: var(--fontSizeDefault);
 }
 
+table a,
+table a:visited,
+table a:focus {
+  color: var(--colorPrimary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* Tables */
 table {
   border-collapse: collapse;
   width: 100%;
 }
 
+table thead tr {
+}
+
 table th {
-  padding: 8px;
+  background: var(--tableHeaderBackground);
+  color: var(--tableHeaderTextColor);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 16px;
+}
+
+table th:first-child {
+  border-top-left-radius: 6px;
+}
+
+table th:last-child {
+  border-top-right-radius: 6px;
 }
 
 table tbody td {
-  border: solid 1px var(--tableBorderColor);
-  padding: 12px;
+  border-bottom: solid 1px var(--tableBorderColor);
+  border-top: solid 1px var(--tableBorderColor);
+  padding: 16px;
+  font-family: var(--fontFamilyMonospace);
 }
