@@ -34,6 +34,7 @@ export const App = () => {
     // we show the gallery in the background, behind
     // the modal.
     let background = location.state && (location.state as any).background;
+    console.log('App background', background);
 
     return (
         <div className={style.container}>

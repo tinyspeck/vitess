@@ -1,8 +1,33 @@
 .modal {
-  max-width: 960px;
+  height: 60vh;
+  max-height: 800px;
+  max-width: 800px;
   width: 80vw;
 }
 
 .modal h3 {
   margin-top: 0;
+}
+
+.container {
+  display: grid;
+  grid-gap: 24px;
+  grid-template-columns: 25% 1fr;
+}
+
+.nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav li {
+  white-space: nowrap;
+}
+
+.nav a {
+  color: var(--textColorPrimary);
+  font-size: 14px;
+  line-height: 24px;
+  text-decoration: none;
 }
