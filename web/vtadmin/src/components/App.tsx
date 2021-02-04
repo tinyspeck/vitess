@@ -39,9 +39,6 @@ export const App = () => {
         history.replace(location.pathname, { background: '/tablets' });
     }
 
-    console.log('App background', background);
-    console.log('App location', location);
-
     return (
         <div className={style.container}>
             <div className={style.navContainer}>

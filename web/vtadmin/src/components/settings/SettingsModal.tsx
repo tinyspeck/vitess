@@ -13,11 +13,8 @@ export const SettingsModal = () => {
     const background = location.state && (location.state as any).background;
 
     const onClose = () => {
-        console.log('closing');
         history.push(background);
     };
-
-    console.log('background', background);
 
     return (
         <Modal className={style.modal} onRequestClose={onClose} title="Settings">
