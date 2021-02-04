@@ -14,40 +14,52 @@
  * limitations under the License.
  */
 import * as React from 'react';
-import { BrowserRouter as Router, Redirect, Route, Switch } from 'react-router-dom';
+import { Redirect, Route, Switch, useLocation } from 'react-router-dom';
 
 import style from './App.module.scss';
 import { Tablets } from './routes/Tablets';
 import { Debug } from './routes/Debug';
 import { NavRail } from './NavRail';
 import { Error404 } from './routes/Error404';
+import { SettingsModal } from './settings/SettingsModal';
 
 export const App = () => {
+    const location = useLocation();
+
+    // This piece of state is set when one of the
+    // gallery links is clicked. The `background` state
+    // is the location that we were at when one of
+    // the gallery links was clicked. If it's there,
+    // use it as the location for the <Switch> so
+    // we show the gallery in the background, behind
+    // the modal.
+    let background = location.state && (location.state as any).background;
+
     return (
-        <Router>
-            <div className={style.container}>
-                <div className={style.navContainer}>
-                    <NavRail />
-                </div>
-
-                <div className={style.mainContainer}>
-                    <Switch>
-                        <Route path="/tablets">
-                            <Tablets />
-                        </Route>
-
-                        <Route path="/debug">
-                            <Debug />
-                        </Route>
-
-                        <Redirect exact from="/" to="/tablets" />
-
-                        <Route>
-                            <Error404 />
-                        </Route>
-                    </Switch>
-                </div>
+        <div className={style.container}>
+            <div className={style.navContainer}>
+                <NavRail />
             </div>
-        </Router>
+
+            <div className={style.mainContainer}>
+                <Switch location={background || location}>
+                    <Route path="/tablets">
+                        <Tablets />
+                    </Route>
+
+                    <Route path="/debug">
+                        <Debug />
+                    </Route>
+
+                    <Redirect exact from="/" to="/tablets" />
+
+                    <Route>
+                        <Error404 />
+                    </Route>
+                </Switch>
+
+                {background && <Route path="/settings" children={<SettingsModal />} />}
+            </div>
+        </div>
     );
 };

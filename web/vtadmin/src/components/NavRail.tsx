@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import * as React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 import style from './NavRail.module.scss';
 import logo from '../img/vitess-icon-color.svg';
@@ -23,6 +23,7 @@ import { Icon, Icons } from './Icon';
 
 export const NavRail = () => {
     const { data: tabletData } = useTablets();
+    let location = useLocation();
 
     return (
         <div className={style.container}>
@@ -64,7 +65,11 @@ export const NavRail = () => {
                         <NavRailLink icon={Icons.runQuery} text="VTExplain" to="/vtexplain" />
                     </li>
                     <li>
-                        <NavRailLink icon={Icons.gear} text="Settings" to="/settings" />
+                        <NavRailLink
+                            icon={Icons.gear}
+                            text="Settings"
+                            to={{ pathname: '/settings', state: { background: location } }}
+                        />
                     </li>
                 </ul>
             </div>
@@ -83,7 +88,7 @@ export const NavRail = () => {
     );
 };
 
-const NavRailLink = ({ count, icon, text, to }: { count?: number; icon: Icons; text: string; to: string }) => {
+const NavRailLink = ({ count, icon, text, to }: { count?: number; icon: Icons; text: string; to: string | object }) => {
     return (
         <NavLink activeClassName={style.navLinkActive} className={style.navLink} to={to}>
             <Icon className={style.icon} icon={icon} />
