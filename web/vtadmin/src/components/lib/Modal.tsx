@@ -1,4 +1,6 @@
 import * as React from 'react';
+import ReactModal from 'react-modal';
+
 import { Button } from '../Button';
 import { Icon, Icons } from '../Icon';
 
@@ -8,20 +10,22 @@ type Props = React.PropsWithChildren<{
     title: string;
 }>;
 
+ReactModal.setAppElement('#root');
+
 export const Modal = ({ children, title }: Props) => {
     return (
-        <div className={style.modal}>
+        <ReactModal className={style.modal} isOpen={true}>
             <div className={style.heading}>
                 <h4 className={style.title}>{title}</h4>
                 <button className={style.close}>
                     <Icon className={style.closeIcon} icon={Icons.delete} />
                 </button>
             </div>
-            <div>{children}</div>
+            <div className={style.content}>{children}</div>
             <div className={style.buttonContainer}>
                 <Button secondary>Secondary</Button>
                 <Button>Primary</Button>
             </div>
-        </div>
+        </ReactModal>
     );
 };
