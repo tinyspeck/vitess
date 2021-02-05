@@ -66,6 +66,7 @@ require (
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/cobra v0.0.5
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
 	github.com/tchap/go-patricia v0.0.0-20160729071656-dd168db6051b
 	github.com/tebeka/selenium v0.9.9
