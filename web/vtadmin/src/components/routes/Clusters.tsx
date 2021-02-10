@@ -17,6 +17,7 @@ import { orderBy } from 'lodash-es';
 import * as React from 'react';
 import { useClusters } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { DataTable } from '../dataTable/DataTable';
 
 export const Clusters = () => {
     useDocumentTitle('Clusters');
@@ -29,22 +30,18 @@ export const Clusters = () => {
     return (
         <div>
             <h1>Clusters</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Id</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((cluster, idx) => (
+            <DataTable
+                columns={['Name', 'ID']}
+                data={rows}
+                renderRows={(rows) =>
+                    rows.map((cluster, idx) => (
                         <tr key={idx}>
                             <td>{cluster.name}</td>
                             <td>{cluster.id}</td>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    ))
+                }
+            />
         </div>
     );
 };

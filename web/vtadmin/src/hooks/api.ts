@@ -2,11 +2,19 @@ import { useQuery } from 'react-query';
 import { fetchClusters, fetchGates, fetchKeyspaces, fetchSchemas, fetchTablets } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
 
-export const useClusters = () => useQuery<pb.Cluster[], Error>(['clusters'], fetchClusters);
-export const useGates = () => useQuery<pb.VTGate[], Error>(['gates'], fetchGates);
-export const useKeyspaces = () => useQuery<pb.Keyspace[], Error>(['keyspaces'], fetchKeyspaces);
-export const useSchemas = () => useQuery<pb.Schema[], Error>(['schemas'], fetchSchemas);
-export const useTablets = () => useQuery<pb.Tablet[], Error>(['tablets'], fetchTablets);
+// FIXME remove or tweak this
+const QUERY_OPTS = {
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
+};
+
+export const useClusters = () => useQuery<pb.Cluster[], Error>(['clusters'], fetchClusters, QUERY_OPTS);
+export const useGates = () => useQuery<pb.VTGate[], Error>(['gates'], fetchGates, QUERY_OPTS);
+export const useKeyspaces = () => useQuery<pb.Keyspace[], Error>(['keyspaces'], fetchKeyspaces, QUERY_OPTS);
+export const useSchemas = () => useQuery<pb.Schema[], Error>(['schemas'], fetchSchemas, QUERY_OPTS);
+export const useTablets = () => useQuery<pb.Tablet[], Error>(['tablets'], fetchTablets, QUERY_OPTS);
 
 export interface TableDefinition {
     cluster?: pb.Schema['cluster'];

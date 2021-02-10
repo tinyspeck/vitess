@@ -1,0 +1,39 @@
+.paginationContainer {
+  display: flex;
+  justify-content: space-between;
+  margin: 1.2rem 0;
+}
+
+a.pageLink,
+.pageLinkPlaceholder {
+  border: solid 1px var(--backgroundPrimaryHighlight);
+  border-radius: 6px;
+  color: var(--textColorSecondary);
+  display: inline-block;
+  font-size: 1.6rem;
+  line-height: 3.6rem;
+  margin: 0 0 0 0.8rem;
+  text-align: center;
+  width: 3.6rem;
+}
+
+a.pageLink {
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--backgroundPrimaryHighlight);
+  }
+
+  &.activePageLink {
+    border: solid 1px var(--colorPrimary);
+  }
+}
+
+.pageLinkPlaceholder {
+  cursor: not-allowed;
+
+  &::after {
+    content: '...';
+  }
+}

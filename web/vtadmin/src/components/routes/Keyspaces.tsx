@@ -17,6 +17,7 @@ import { orderBy } from 'lodash-es';
 import * as React from 'react';
 import { useKeyspaces } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { DataTable } from '../dataTable/DataTable';
 
 export const Keyspaces = () => {
     useDocumentTitle('Keyspaces');
@@ -29,22 +30,18 @@ export const Keyspaces = () => {
     return (
         <div>
             <h1>Keyspaces</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cluster</th>
-                        <th>Keyspace</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((keyspace, idx) => (
+            <DataTable
+                columns={['Cluster', 'Keyspace']}
+                data={rows}
+                renderRows={(rows) =>
+                    rows.map((keyspace, idx) => (
                         <tr key={idx}>
                             <td>{keyspace.cluster?.name}</td>
                             <td>{keyspace.keyspace?.name}</td>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    ))
+                }
+            />
         </div>
     );
 };
