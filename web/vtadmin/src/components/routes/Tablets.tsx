@@ -32,6 +32,8 @@ export const Tablets = () => {
 
     const renderRows = (tablets: pb.Tablet[]) => {
         return Object.entries(groupBy(tablets, 'cluster.name')).reduce((acc, [clusterName, tabletsForCluster]) => {
+            let cdx = 0;
+
             Object.entries(groupBy(tabletsForCluster, 'tablet.keyspace')).forEach(([keyspace, tabletsForKeyspace]) => {
                 let kdx = 0;
 
@@ -42,13 +44,11 @@ export const Tablets = () => {
                         const alias = formatAlias(t);
                         acc.push(
                             <tr key={alias}>
+                                {cdx === 0 && <DataCell rowSpan={tabletsForCluster.length}>{t.cluster?.name}</DataCell>}
                                 {kdx === 0 && (
-                                    <DataCell rowSpan={tabletsForKeyspace.length}>{t.cluster?.name}</DataCell>
+                                    <DataCell rowSpan={tabletsForKeyspace.length}>{t.tablet?.keyspace}</DataCell>
                                 )}
-                                {sdx === 0 && (
-                                    <DataCell rowSpan={tabletsForShard.length}>{t.tablet?.keyspace}</DataCell>
-                                )}
-                                {tdx === 0 && <DataCell rowSpan={tabletsForShard.length}>{t.tablet?.shard}</DataCell>}
+                                {sdx === 0 && <DataCell rowSpan={tabletsForShard.length}>{t.tablet?.shard}</DataCell>}
                                 <DataCell>{formatType(t)}</DataCell>
                                 <DataCell>{formatState(t)}</DataCell>
                                 <DataCell>{formatAlias(t)}</DataCell>
@@ -56,6 +56,7 @@ export const Tablets = () => {
                             </tr>
                         );
 
+                        cdx++;
                         kdx++;
                         sdx++;
                     });
