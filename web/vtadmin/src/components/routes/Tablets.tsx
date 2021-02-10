@@ -17,9 +17,10 @@ import * as React from 'react';
 
 import { useTablets } from '../../hooks/api';
 import { vtadmin as pb, topodata } from '../../proto/vtadmin';
-import { orderBy } from 'lodash-es';
+import { groupBy, orderBy } from 'lodash-es';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { DataTable } from '../dataTable/DataTable';
+import { DataCell } from '../dataTable/DataCell';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
@@ -29,25 +30,49 @@ export const Tablets = () => {
         return orderBy(data, ['cluster.name', 'tablet.keyspace', 'tablet.shard', 'tablet.type']);
     }, [data]);
 
+    const renderRows = (tablets: pb.Tablet[]) => {
+        return Object.entries(groupBy(tablets, 'cluster.name')).reduce((acc, [clusterName, tabletsForCluster]) => {
+            Object.entries(groupBy(tabletsForCluster, 'tablet.keyspace')).forEach(([keyspace, tabletsForKeyspace]) => {
+                let kdx = 0;
+
+                Object.entries(groupBy(tabletsForKeyspace, 'tablet.shard')).forEach(([shard, tabletsForShard]) => {
+                    let sdx = 0;
+
+                    tabletsForShard.forEach((t, tdx) => {
+                        const alias = formatAlias(t);
+                        acc.push(
+                            <tr key={alias}>
+                                {kdx === 0 && (
+                                    <DataCell rowSpan={tabletsForKeyspace.length}>{t.cluster?.name}</DataCell>
+                                )}
+                                {sdx === 0 && (
+                                    <DataCell rowSpan={tabletsForShard.length}>{t.tablet?.keyspace}</DataCell>
+                                )}
+                                {tdx === 0 && <DataCell rowSpan={tabletsForShard.length}>{t.tablet?.shard}</DataCell>}
+                                <DataCell>{formatType(t)}</DataCell>
+                                <DataCell>{formatState(t)}</DataCell>
+                                <DataCell>{formatAlias(t)}</DataCell>
+                                <DataCell>{t.tablet?.hostname}</DataCell>
+                            </tr>
+                        );
+
+                        kdx++;
+                        sdx++;
+                    });
+                });
+            });
+
+            return acc;
+        }, [] as JSX.Element[]);
+    };
+
     return (
         <div>
             <h1>Tablets</h1>
             <DataTable
-                columns={['Cluster', 'Keyspace', 'Shard', 'Alias', 'Hostname']}
+                columns={['Cluster', 'Keyspace', 'Shard', 'Type', 'State', 'Alias', 'Hostname']}
                 data={rows}
-                renderRows={(rows) =>
-                    rows.map((t, tdx) => (
-                        <tr key={tdx}>
-                            <td>{t.cluster?.name}</td>
-                            <td>{t.tablet?.keyspace}</td>
-                            <td>{t.tablet?.shard}</td>
-                            <td>{formatAlias(t)}</td>
-                            <td>{t.tablet?.hostname}</td>
-                            <td>{formatType(t)}</td>
-                            <td>{formatState(t)}</td>
-                        </tr>
-                    ))
-                }
+                renderRows={renderRows}
             />
         </div>
     );
