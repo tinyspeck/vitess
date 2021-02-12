@@ -14,20 +14,45 @@
  * limitations under the License.
  */
 import * as React from 'react';
+import 'string_score';
 
 import { useTablets } from '../../hooks/api';
 import { vtadmin as pb, topodata } from '../../proto/vtadmin';
 import { orderBy } from 'lodash-es';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { DataTable } from '../dataTable/DataTable';
+import { TextInput } from '../TextInput';
+import { Icons } from '../Icon';
+import style from './Tablets.module.scss';
+import { useURLQuery } from '../../hooks/useURLQuery';
+import { Button } from '../Button';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
     const { data = [] } = useTablets();
+    const { query, pushQuery, syncQuery } = useURLQuery();
+
+    const filter = typeof query.filter === 'string' ? query.filter : null;
 
     const rows = React.useMemo(() => {
-        return orderBy(data, ['cluster.name', 'tablet.keyspace', 'tablet.shard', 'tablet.type']);
-    }, [data]);
+        const ordered = orderBy(data, ['cluster.name', 'tablet.keyspace', 'tablet.shard', 'tablet.type']);
+        if (!filter) return ordered;
+
+        return ordered.filter((t) => {
+            const alias = `${t.tablet?.alias?.cell}-${t.tablet?.alias?.uid}`;
+            const shard = `${t.tablet?.keyspace}/${t.tablet?.shard}`;
+
+            const fields = [t.tablet?.keyspace, t.tablet?.hostname, alias, shard, t.tablet?.type, t.state];
+
+            return fields.some((f) => {
+                if (typeof f !== 'string') return false;
+
+                const threshold = 0.5;
+                const fscore = (f as any).score(filter);
+                return fscore > threshold;
+            });
+        });
+    }, [data, filter]);
 
     const renderRows = React.useCallback((rows: pb.Tablet[]) => {
         return rows.map((t, tdx) => (
@@ -43,9 +68,31 @@ export const Tablets = () => {
         ));
     }, []);
 
+    const onChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+        syncQuery({ filter: e.target.value });
+    };
+
+    const onClickClear = (e: any) => {
+        pushQuery({ filter: '' });
+    };
+
     return (
         <div>
             <h1>Tablets</h1>
+            <div className={style.controls}>
+                <TextInput
+                    autoFocus
+                    className={style.filterInput}
+                    iconLeft={Icons.search}
+                    // onBlur={onBlur}
+                    onChange={onChange}
+                    placeholder="Filter tablets"
+                    value={filter || ''}
+                />
+                <Button disabled={!filter} onClick={onClickClear} secondary>
+                    Clear
+                </Button>
+            </div>
             <DataTable
                 columns={['Cluster', 'Keyspace', 'Shard', 'Alias', 'Hostname', 'Type', 'State']}
                 data={rows}

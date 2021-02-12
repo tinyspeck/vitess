@@ -34,7 +34,7 @@ const DEFAULT_PAGE_SIZE = 50;
 
 export const DataTable = <T extends object>({ columns, data, pageSize = DEFAULT_PAGE_SIZE, renderRows }: Props<T>) => {
     const { pathname } = useLocation();
-    const urlQuery = useURLQuery();
+    const { query } = useURLQuery();
 
     const totalPages = Math.ceil(data.length / pageSize);
     const { page } = useURLPagination({ totalPages });
@@ -48,7 +48,7 @@ export const DataTable = <T extends object>({ columns, data, pageSize = DEFAULT_
 
     const formatPageLink = (p: number) => ({
         pathname,
-        search: qs.stringify({ ...urlQuery, page: p === 1 ? undefined : p }),
+        search: qs.stringify({ ...query, page: p === 1 ? undefined : p }),
     });
 
     return (

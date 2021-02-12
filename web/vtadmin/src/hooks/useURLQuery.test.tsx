@@ -20,44 +20,57 @@ import { Router } from 'react-router-dom';
 import { useURLQuery } from './useURLQuery';
 
 describe('useURLQuery', () => {
-    const tests: {
-        name: string;
-        url: string;
-        expected: ReturnType<typeof useURLQuery>;
-    }[] = [
-        {
-            name: 'parses numbers',
-            url: '/test?page=1',
-            expected: { page: 1 },
-        },
-        {
-            name: 'parses booleans',
-            url: '/test?foo=true&bar=false',
-            expected: { foo: true, bar: false },
-        },
-        {
-            name: 'parses arrays by duplicate keys',
-            url: '/test?list=1&list=2&list=3',
-            expected: { list: [1, 2, 3] },
-        },
-        {
-            name: 'parses complex URLs',
-            url: '/test?page=1&isTrue=true&isFalse=false&list=one&list=two&list=three&foo=bar',
-            expected: { page: 1, isTrue: true, isFalse: false, list: ['one', 'two', 'three'], foo: 'bar' },
-        },
-    ];
-
-    test.each(tests.map(Object.values))('%s', (name: string, url: string, expected: ReturnType<typeof useURLQuery>) => {
-        const history = createMemoryHistory({
-            initialEntries: [url],
-        });
-
-        const { result } = renderHook(() => useURLQuery(), {
-            wrapper: ({ children }) => {
-                return <Router history={history}>{children}</Router>;
+    describe('parsing', () => {
+        const tests: {
+            name: string;
+            url: string;
+            expected: ReturnType<typeof useURLQuery>;
+        }[] = [
+            {
+                name: 'parses numbers',
+                url: '/test?page=1',
+                expected: {
+                    query: { page: 1 },
+                },
             },
-        });
+            {
+                name: 'parses booleans',
+                url: '/test?foo=true&bar=false',
+                expected: {
+                    query: { foo: true, bar: false },
+                },
+            },
+            {
+                name: 'parses arrays by duplicate keys',
+                url: '/test?list=1&list=2&list=3',
+                expected: {
+                    query: { list: [1, 2, 3] },
+                },
+            },
+            {
+                name: 'parses complex URLs',
+                url: '/test?page=1&isTrue=true&isFalse=false&list=one&list=two&list=three&foo=bar',
+                expected: {
+                    query: { page: 1, isTrue: true, isFalse: false, list: ['one', 'two', 'three'], foo: 'bar' },
+                },
+            },
+        ];
 
-        expect(result.current).toEqual(expected);
+        test.each(tests.map(Object.values))(
+            '%s',
+            (name: string, url: string, expected: ReturnType<typeof useURLQuery>) => {
+                const history = createMemoryHistory({
+                    initialEntries: [url],
+                });
+
+                const { result } = renderHook(() => useURLQuery(), {
+                    wrapper: ({ children }) => {
+                        return <Router history={history}>{children}</Router>;
+                    },
+                });
+
+                expect(result.current).toEqual(expected);
+            }
+        );
     });
 });
