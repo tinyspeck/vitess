@@ -67,7 +67,19 @@ export const useURLQuery = (
     const history = useHistory();
     const location = useLocation();
 
-    // Hmm: https://github.com/ReactTraining/react-router/blob/master/packages/react-router/docs/api/history.md#history-is-mutable
+    // A spicy note: typically, we always want to use the `location` from useLocation() instead of useHistory().
+    // From the React documentation: https://github.com/ReactTraining/react-router/blob/master/packages/react-router/docs/api/history.md#history-is-mutable
+    //
+    //      The history object is mutable. Therefore it is recommended to access the location from the render props of <Route>,
+    //      not from history.location. This ensures your assumptions about React are correct in lifecycle hooks.
+    //
+    // However, in a *test* environment, the "?...string" one usually finds at `location.search`
+    // is (confusingly) nested at `location.location.search`. This seems like a discrepancy between how
+    // `history.push` + `history.replace` calls are handled by `Router` + memory history (used for tests)
+    // vs. `BrowserRouter` (used"for real", in the browser).
+    //
+    // So, in practice, this `search` variable is set to `location.search` "for real" (in the browser)
+    // and only falls back to `history.location.search` for tests. It's... not ideal. :/ But it works.
     const search = location.search || history.location.search;
 
     // Destructure `opts` for more granular useMemo and useCallback dependencies.
