@@ -15,7 +15,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { parse, ParsedQuery, stringify } from '../utils/query-string';
+import { ArrayFormatType, parse, ParsedQuery, stringify } from '../utils/query-string';
 
 export interface URLQueryOptions {
     arrayFormat?: ArrayFormatType;
@@ -23,19 +23,18 @@ export interface URLQueryOptions {
     parseNumbers?: boolean;
 }
 
-// See https://github.com/sindresorhus/query-string#arrayformat
-type ArrayFormatType = 'bracket' | 'index' | 'comma' | 'separator' | 'none';
-
 /**
  * useURLQuery is a hook for getting and setting query parameters from the current URL,
  * where "query parameters" are those appearing after the "?":
  *
- *      https://test.com/some/route?foo=bar&count=123
- *                                  ^^^^^^^^^^^^^^^^^
+ *      https://test.com/some/route?foo=bar&count=123&list=one&list=two&list=3
+ *                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  *
  * The query parameters from the above URL would be parsed as:
  *
- *      { foo: "bar", count: 123 }
+ *      { foo: "bar", count: 123, list: ["one", "two", "three"] }
+ *
+ * For lots more usage examples, see the useURLQuery unit tests.
  */
 export const useURLQuery = (
     opts: URLQueryOptions = {}
@@ -44,22 +43,24 @@ export const useURLQuery = (
     query: ParsedQuery<string | number | boolean>;
 
     /**
-     * pushQuery stringifies and pushes `nextQuery` onto the history stack.
+     * pushQuery stringifies and pushes `nextQuery` onto the history stack,
+     * merging `nextQuery` with the current query parameters.
      *
      * This does not affect location.pathname: if your current path
      * is "/test?greeting=hello", then calling `pushQuery({ greeting: "hi" })`
      * will push "/test?greeting=hi". If you *do* want to update the pathname,
-     * then use history.push directly.
+     * then use useHistory()'s history.push directly.
      */
     pushQuery: (nextQuery: ParsedQuery<string | number | boolean>) => void;
 
     /**
-     * replaceQuery stringifies and pushes `nextQuery` onto the history stack.
+     * replaceQuery stringifies and pushes `nextQuery` onto the history stack,
+     * merging `nextQuery` with the current query parameters.
      *
      * This does not affect location.pathname: if your current path
-     * is "/test?greeting=hello", then calling `pushQuery({ greeting: "hi" })`
-     * will push "/test?greeting=hi". If you *do* want to update the pathname,
-     * then use history.push directly.
+     * is "/test?greeting=hello", then calling `replaceQuery({ greeting: "hi" })`
+     * will replace "/test?greeting=hi". If you *do* want to update the pathname,
+     * then use useHistory()'s history.push directly.
      */
     replaceQuery: (nextQuery: ParsedQuery<string | number | boolean>) => void;
 } => {
