@@ -76,10 +76,10 @@ export const useURLQuery = (
     // However, in a *test* environment, the "?...string" one usually finds at `location.search`
     // is (confusingly) nested at `location.location.search`. This seems like a discrepancy between how
     // `history.push` + `history.replace` calls are handled by `Router` + memory history (used for tests)
-    // vs. `BrowserRouter` (used"for real", in the browser).
+    // vs. `BrowserRouter` (used "for real", in the browser).
     //
     // So, in practice, this `search` variable is set to `location.search` "for real" (in the browser)
-    // and only falls back to `history.location.search` for tests. It's... not ideal. :/ But it works.
+    // and only falls back to `location.location.search` for tests. It's... not ideal. :/ But it seems to work.
     const search = location.search || history.location.search;
 
     // Destructure `opts` for more granular useMemo and useCallback dependencies.
