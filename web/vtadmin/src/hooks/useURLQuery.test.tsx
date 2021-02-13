@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { act } from '@testing-library/react';
 import { renderHook } from '@testing-library/react-hooks';
 import { createMemoryHistory } from 'history';
 import { Router } from 'react-router-dom';
 
-import { useURLQuery } from './useURLQuery';
+import { ParsedQuery, useURLQuery } from './useURLQuery';
 
 describe('useURLQuery', () => {
     describe('parsing', () => {
@@ -62,6 +63,49 @@ describe('useURLQuery', () => {
                 });
 
                 expect(result.current.query).toEqual(expected);
+            }
+        );
+    });
+
+    describe('pushQuery', () => {
+        const tests: {
+            // todo
+            name: string;
+            initialEntries: string[];
+            nextQuery: ParsedQuery<string | number | boolean>;
+            expected: ParsedQuery<string | number | boolean>;
+        }[] = [
+            {
+                name: 'stringifies and pushes query parameters onto history',
+                initialEntries: ['/test'],
+                nextQuery: { foo: 'bar' },
+                expected: { foo: 'bar' },
+            },
+        ];
+
+        test.each(tests.map(Object.values))(
+            '%s',
+            (name: string, initialEntries: string[], nextQuery: ParsedQuery<string | number | boolean>) => {
+                // TODO
+                const history = createMemoryHistory({ initialEntries });
+                jest.spyOn(history, 'push');
+
+                const { result } = renderHook(() => useURLQuery(), {
+                    wrapper: ({ children }) => {
+                        return <Router history={history}>{children}</Router>;
+                    },
+                });
+
+                act(() => {
+                    result.current.pushQuery({ foo: 'bar' });
+                });
+
+                expect(history.push).toHaveBeenCalledTimes(1);
+                expect(history.push).toHaveBeenCalledWith({ search: '?foo=bar' });
+
+                console.log(result.current.query);
+
+                // result.current.pushQuery({ foo: 'qux' })
             }
         );
     });

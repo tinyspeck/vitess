@@ -30,7 +30,7 @@ interface Props<T> {
 
 // Generally, page sizes of ~100 rows are fine in terms of performance,
 // but anything over ~50 feels unwieldy in terms of UX.
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 2;
 
 export const DataTable = <T extends object>({ columns, data, pageSize = DEFAULT_PAGE_SIZE, renderRows }: Props<T>) => {
     const { pathname } = useLocation();
@@ -48,7 +48,7 @@ export const DataTable = <T extends object>({ columns, data, pageSize = DEFAULT_
 
     const formatPageLink = (p: number) => ({
         pathname,
-        search: qs.stringify({ ...urlQuery, page: p === 1 ? undefined : p }),
+        search: qs.stringify({ ...urlQuery.query, page: p === 1 ? undefined : p }),
     });
 
     return (
