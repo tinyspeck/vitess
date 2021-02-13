@@ -45,10 +45,10 @@ export const useURLPagination = ({ totalPages }: PaginationOpts): PaginationPara
     // If the value in the URL *is* defined but is negative, non-numeric,
     // too big, or otherwise Weird, then we *do* want to redirect to the first page.
     useEffect(() => {
-        const isPageTooBig = totalPages > 0 && page > totalPages;
-        const isPageTooSmall = page < FIRST_PAGE;
+        const isPageTooBig = totalPages > 0 && typeof page === 'number' && page > totalPages;
+        const isPageTooSmall = typeof page === 'number' && page < FIRST_PAGE;
 
-        if (isPageTooBig || isPageTooSmall || typeof page !== 'number') {
+        if (typeof page !== 'number' || isPageTooBig || isPageTooSmall) {
             // Replace history instead of pushing onto it so the invalid value
             // is not persisted in browser history.
             replaceQuery({ page: FIRST_PAGE });

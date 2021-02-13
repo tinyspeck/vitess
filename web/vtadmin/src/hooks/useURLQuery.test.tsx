@@ -17,8 +17,9 @@ import { act } from '@testing-library/react';
 import { renderHook } from '@testing-library/react-hooks';
 import { createMemoryHistory } from 'history';
 import { Router } from 'react-router-dom';
+import { ParsedQuery } from '../utils/query-string';
 
-import { ParsedQuery, useURLQuery } from './useURLQuery';
+import { useURLQuery } from './useURLQuery';
 
 describe('useURLQuery', () => {
     describe('parsing', () => {
@@ -69,7 +70,6 @@ describe('useURLQuery', () => {
 
     describe('pushQuery', () => {
         const tests: {
-            // todo
             name: string;
             initialEntries: string[];
             nextQuery: ParsedQuery<string | number | boolean>;
@@ -81,13 +81,31 @@ describe('useURLQuery', () => {
                 nextQuery: { foo: 'bar' },
                 expected: { foo: 'bar' },
             },
+            {
+                name: 'merges the next query with the current query',
+                initialEntries: ['/test?hello=world'],
+                nextQuery: { goodnight: 'moon' },
+                expected: { hello: 'world', goodnight: 'moon' },
+            },
+            {
+                name: 'it does not merge array-like queries',
+                initialEntries: ['/test?arr=one&arr=two'],
+                nextQuery: { arr: [3, 4, 5] },
+                expected: { arr: [3, 4, 5] },
+            },
         ];
 
-        test.each(tests.map(Object.values))(
+        test.concurrent.each(tests.map(Object.values))(
             '%s',
-            (name: string, initialEntries: string[], nextQuery: ParsedQuery<string | number | boolean>) => {
-                // TODO
+            (
+                name: string,
+                initialEntries: string[],
+                nextQuery: ParsedQuery<string | number | boolean>,
+                expected: ParsedQuery<string | number | boolean>
+            ) => {
                 const history = createMemoryHistory({ initialEntries });
+                const initialPathname = history.location.pathname;
+
                 jest.spyOn(history, 'push');
 
                 const { result } = renderHook(() => useURLQuery(), {
@@ -97,16 +115,45 @@ describe('useURLQuery', () => {
                 });
 
                 act(() => {
-                    result.current.pushQuery({ foo: 'bar' });
+                    result.current.pushQuery(nextQuery);
                 });
 
                 expect(history.push).toHaveBeenCalledTimes(1);
-                expect(history.push).toHaveBeenCalledWith({ search: '?foo=bar' });
-
-                console.log(result.current.query);
-
-                // result.current.pushQuery({ foo: 'qux' })
+                expect(result.current.query).toEqual(expected);
+                expect(history.location.pathname).toEqual(initialPathname);
             }
         );
+    });
+
+    it('memoizes the query object by search string', () => {
+        const history = createMemoryHistory({ initialEntries: ['/test?hello=world'] });
+
+        jest.spyOn(history, 'push');
+
+        const { result } = renderHook(() => useURLQuery(), {
+            wrapper: ({ children }) => {
+                return <Router history={history}>{children}</Router>;
+            },
+        });
+
+        const firstResult = result.current.query;
+        expect(firstResult).toEqual({ hello: 'world' });
+
+        act(() => {
+            result.current.pushQuery({ hello: 'world' });
+        });
+
+        expect(history.push).toHaveBeenCalledTimes(1);
+        expect(result.current.query).toEqual({ hello: 'world' });
+        expect(result.current.query).toBe(firstResult);
+
+        // Make sure the returned query actually changes when the search string changes,
+        // and that we're not memoizing too aggressively.
+        act(() => {
+            result.current.pushQuery({ hello: 'moon' });
+        });
+
+        expect(history.push).toHaveBeenCalledTimes(2);
+        expect(result.current.query).toEqual({ hello: 'moon' });
     });
 });

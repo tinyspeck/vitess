@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import qs from 'query-string';
 import { useCallback, useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
+import { parse, ParsedQuery, stringify } from '../utils/query-string';
 
-export interface ParsedQuery<T = string> {
-    [key: string]: T | T[] | null;
-}
-
-export interface ParseOptions {
-    // See https://github.com/sindresorhus/query-string#arrayformat
-    arrayFormat?: 'bracket' | 'index' | 'comma' | 'separator' | 'none';
+export interface URLQueryOptions {
+    arrayFormat?: ArrayFormatType;
     parseBooleans?: boolean;
     parseNumbers?: boolean;
 }
+
+// See https://github.com/sindresorhus/query-string#arrayformat
+type ArrayFormatType = 'bracket' | 'index' | 'comma' | 'separator' | 'none';
 
 /**
  * useURLQuery is a hook for getting and setting query parameters from the current URL,
@@ -39,13 +37,9 @@ export interface ParseOptions {
  *
  *      { foo: "bar", count: 123 }
  */
-export const useURLQuery = ({
-    // By default, parse arrays with elements using duplicate keys.
-    // Example: foo=1&foo=2&foo=3' => { foo: [1, 2, 3] }
-    arrayFormat = 'none',
-    parseBooleans = true,
-    parseNumbers = true,
-}: ParseOptions = {}): {
+export const useURLQuery = (
+    opts: URLQueryOptions = {}
+): {
     /** query is the current URL query parameters, parsed into an object. */
     query: ParsedQuery<string | number | boolean>;
 
@@ -70,13 +64,18 @@ export const useURLQuery = ({
     replaceQuery: (nextQuery: ParsedQuery<string | number | boolean>) => void;
 } => {
     const history = useHistory();
-    // FIXME: https://github.com/ReactTraining/react-router/blob/master/packages/react-router/docs/api/history.md#history-is-mutable
-    // hmmmm.
-    const { search } = history.location;
+    const location = useLocation();
 
+    // Hmm: https://github.com/ReactTraining/react-router/blob/master/packages/react-router/docs/api/history.md#history-is-mutable
+    const search = location.search || history.location.search;
+
+    // Destructure `opts` for more granular useMemo and useCallback dependencies.
+    const { arrayFormat, parseBooleans, parseNumbers } = opts;
+
+    // Parse the URL search string into a mapping from URL parameter key to value.
     const query = useMemo(
         () =>
-            qs.parse(search, {
+            parse(search, {
                 arrayFormat,
                 parseBooleans,
                 parseNumbers,
@@ -84,11 +83,9 @@ export const useURLQuery = ({
         [search, arrayFormat, parseBooleans, parseNumbers]
     );
 
-    console.log(search);
-
     const pushQuery = useCallback(
         (nextQuery: ParsedQuery<string | number | boolean>) => {
-            const nextSearch = qs.stringify({ ...query, ...nextQuery }, { arrayFormat });
+            const nextSearch = stringify({ ...query, ...nextQuery }, { arrayFormat });
             return history.push({ search: `?${nextSearch}` });
         },
         [arrayFormat, history, query]
@@ -96,7 +93,7 @@ export const useURLQuery = ({
 
     const replaceQuery = useCallback(
         (nextQuery: ParsedQuery<string | number | boolean>) => {
-            const nextSearch = qs.stringify({ ...query, ...nextQuery }, { arrayFormat });
+            const nextSearch = stringify({ ...query, ...nextQuery }, { arrayFormat });
             return history.replace({ search: `?${nextSearch}` });
         },
         [arrayFormat, history, query]
