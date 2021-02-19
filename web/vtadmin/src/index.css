@@ -69,7 +69,7 @@
   --inputHeightLarge: 4.8rem;
 
   /* Tables */
-  --tableCellPadding: 1.6rem;
+  --tableCellPadding: 2rem;
 
   /* Layout variables, set to light theme by default */
   --backgroundPrimary: #fff;
@@ -78,6 +78,7 @@
   --backgroundSecondaryHighlight: var(--grey200);
   --boxShadowHover: 0 3px 3px #cbd5e0;
   --colorDisabled: var(--grey400);
+  --colorLinks: #0031ca;
   --colorPrimary: #3d5afe;
   --colorPrimary50: #8187ff;
   --colorPrimary200: #0031ca;
@@ -98,6 +99,7 @@
   --backgroundSecondaryHighlight: var(--grey800);
   --boxShadowHover: 0 3px 3px #2d3748;
   --colorDisabled: var(--grey600);
+  --colorLinks: #b6b7ff;
   --colorPrimary: #8187ff;
   --colorPrimary50: #b6b7ff;
   --colorPrimary200: #4a5acb;
@@ -158,6 +160,14 @@ code {
   font-size: var(--fontSizeDefault);
 }
 
+a,
+a:visited,
+a:focus,
+a:active {
+  color: var(--colorLinks);
+  text-decoration: none;
+}
+
 /* Tables */
 table {
   border-collapse: collapse;
@@ -171,12 +181,25 @@ table th {
   text-align: left;
 }
 
-table tbody td {
+table tbody tr {
   border: solid 1px var(--tableBorderColor);
+}
+
+table tbody td {
   padding: var(--tableCellPadding);
+  vertical-align: top;
+}
+
+table tbody td[rowSpan] {
+  border-right: solid 1px var(--tableBorderColor);
 }
 
 /* Utilities */
 .text-color-secondary {
   color: var(--textColorSecondary);
+}
+
+.hint {
+  color: var(--textColorSecondary);
+  font-size: var(--fontSizeSmall);
 }

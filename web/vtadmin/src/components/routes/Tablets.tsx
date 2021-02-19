@@ -17,7 +17,7 @@ import * as React from 'react';
 
 import { useTablets } from '../../hooks/api';
 import { vtadmin as pb, topodata } from '../../proto/vtadmin';
-import { orderBy } from 'lodash-es';
+import { groupBy, orderBy } from 'lodash-es';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { DataTable } from '../dataTable/DataTable';
 import { TextInput } from '../TextInput';
@@ -25,6 +25,7 @@ import { Icons } from '../Icon';
 import { filterNouns } from '../../util/filterNouns';
 import style from './Tablets.module.scss';
 import { Button } from '../Button';
+import { DataTableCell } from '../dataTable/DataTableCell';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
@@ -55,21 +56,65 @@ export const Tablets = () => {
     }, [filter, data]);
 
     const renderRows = React.useCallback((rows: typeof filteredData) => {
-        return rows.map((t, tdx) => (
-            <tr key={tdx}>
-                <td>{t.cluster}</td>
-                <td>{t.keyspace}</td>
-                <td>{t.shard}</td>
-                <td>{t.displayType}</td>
-                <td>{t.state}</td>
-                <td>{t.alias}</td>
-                <td>{t.hostname}</td>
-            </tr>
-        ));
+        return Object.entries(groupBy(rows, 'cluster')).reduce((acc, [clusterName, tabletsForCluster]) => {
+            Object.entries(groupBy(tabletsForCluster, 'keyspace')).forEach(([keyspace, tabletsForKeyspace]) => {
+                let kdx = 0;
+
+                Object.entries(groupBy(tabletsForKeyspace, 'shard')).forEach(([shard, tabletsForShard]) => {
+                    let sdx = 0;
+
+                    tabletsForShard.forEach((t) => {
+                        acc.push(
+                            <tr key={`${t.cluster}-${t.keyspace}-${t.alias}`}>
+                                {kdx === 0 && (
+                                    <DataTableCell rowSpan={tabletsForKeyspace.length}>
+                                        {t.keyspace}
+                                        <div className="hint">{t.cluster}</div>
+                                    </DataTableCell>
+                                )}
+                                {sdx === 0 && (
+                                    <DataTableCell rowSpan={tabletsForShard.length}>
+                                        <span className={style.shard}>{t.shard}</span>
+                                    </DataTableCell>
+                                )}
+                                <DataTableCell>
+                                    <span className={style.tabletType} data-state={t.state}>
+                                        {t.displayType}
+                                    </span>
+                                </DataTableCell>
+                                <DataTableCell>{t.state}</DataTableCell>
+                                <DataTableCell>{t.alias}</DataTableCell>
+                                <DataTableCell>
+                                    {process.env.REACT_APP_TABLET_URL_TEMPLATE && t.hostname ? (
+                                        <a
+                                            className={style.externalLink}
+                                            href={process.env.REACT_APP_TABLET_URL_TEMPLATE.replace(
+                                                '{{hostname}}',
+                                                t.hostname
+                                            )}
+                                            rel="noreferrer"
+                                            target="_blank"
+                                        >
+                                            {t.hostname}
+                                        </a>
+                                    ) : (
+                                        t.hostname
+                                    )}
+                                </DataTableCell>
+                            </tr>
+                        );
+                        kdx++;
+                        sdx++;
+                    });
+                });
+            });
+
+            return acc;
+        }, [] as JSX.Element[]);
     }, []);
 
     return (
-        <div>
+        <div className={style.container}>
             <h1>Tablets</h1>
             <div className={style.controls}>
                 <TextInput
@@ -84,7 +129,7 @@ export const Tablets = () => {
                 </Button>
             </div>
             <DataTable
-                columns={['Cluster', 'Keyspace', 'Shard', 'Type', 'State', 'Alias', 'Hostname']}
+                columns={['Keyspace', 'Shard', 'Type', 'State', 'Alias', 'Hostname']}
                 data={filteredData}
                 renderRows={renderRows}
             />

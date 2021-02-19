@@ -1,7 +1,45 @@
+.container {
+  max-width: 1600px;
+}
+
 .controls {
   display: grid;
   grid-gap: 8px;
   grid-template-columns: 1fr min-content;
   margin-bottom: 24px;
-  max-width: 1200px;
+}
+
+.shard {
+  font-size: var(--fontSizeLarge);
+  text-align: right;
+}
+
+.tabletType {
+  white-space: nowrap;
+}
+
+.tabletType::before {
+  background: var(--grey400);
+  border-radius: 100px;
+  content: '';
+  display: inline-block;
+  height: 12px;
+  margin-right: 8px;
+  vertical-align: middle;
+  width: 12px;
+}
+
+.tabletType[data-state="SERVING"]::before {
+  background: var(--colorSuccess50);
+}
+
+.tabletType[data-state="NOT_SERVING"]::before {
+  background: var(--colorError50);
+}
+
+.externalLink::after {
+  content: "↪";
+  display: inline-block;
+  margin-left: 0.25em;
+  vertical-align: middle;
 }

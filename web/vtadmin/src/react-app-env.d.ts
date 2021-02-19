@@ -12,6 +12,11 @@ declare namespace NodeJS {
         // made against vtadmin-api. If unspecified, uses fetch defaults.
         // See https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#sending_a_request_with_credentials_included
         REACT_APP_FETCH_CREDENTIALS?: RequestCredentials;
+
+        // Optional, but recommended. A template string for tablet URLs, where
+        // "{{hostname}}" is a placeholder for the tablet hostname.
+        // Example: "https://{{hostname}}.example.com".
+        REACT_APP_TABLET_URL_TEMPLATE?: string;
     }
 }
 
