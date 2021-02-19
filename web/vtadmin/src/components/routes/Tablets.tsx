@@ -52,7 +52,7 @@ export const Tablets = () => {
             _type: formatType(t),
         }));
         const filtered = filterNouns(filter, mapped);
-        return orderBy(filtered, ['cluster', 'keyspace', 'shard', 'displayType']);
+        return orderBy(filtered, ['cluster', 'keyspace', 'shard', 'displayType', 'alias']);
     }, [filter, data]);
 
     const renderRows = React.useCallback((rows: typeof filteredData) => {
