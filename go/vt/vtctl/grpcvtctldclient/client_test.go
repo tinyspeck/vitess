@@ -29,16 +29,11 @@ import (
 	"vitess.io/vitess/go/vt/vtctl/grpcvtctldserver"
 	"vitess.io/vitess/go/vt/vtctl/grpcvtctldserver/testutil"
 	"vitess.io/vitess/go/vt/vtctl/vtctldclient"
-	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
 	vtctlservicepb "vitess.io/vitess/go/vt/proto/vtctlservice"
 )
-
-func init() {
-	*tmclient.TabletManagerProtocol = testutil.TabletManagerClientProtocol
-}
 
 // annoyingly, this is duplicated with theu tests in package grpcvtctldserver.
 // fine for now, I suppose.
@@ -74,7 +69,9 @@ func withTestServer(
 func TestFindAllShardsInKeyspace(t *testing.T) {
 	ctx := context.Background()
 	ts := memorytopo.NewServer("cell1")
-	vtctld := grpcvtctldserver.NewVtctldServer(ts)
+	vtctld := testutil.NewVtctldServerWithTabletManagerClient(t, ts, nil, func(ts *topo.Server) vtctlservicepb.VtctldServer {
+		return grpcvtctldserver.NewVtctldServer(ts)
+	})
 
 	withTestServer(t, vtctld, func(t *testing.T, client vtctldclient.VtctldClient) {
 		ks := &vtctldatapb.Keyspace{
@@ -117,7 +114,9 @@ func TestGetKeyspace(t *testing.T) {
 	ctx := context.Background()
 
 	ts := memorytopo.NewServer("cell1")
-	vtctld := grpcvtctldserver.NewVtctldServer(ts)
+	vtctld := testutil.NewVtctldServerWithTabletManagerClient(t, ts, nil, func(ts *topo.Server) vtctlservicepb.VtctldServer {
+		return grpcvtctldserver.NewVtctldServer(ts)
+	})
 
 	withTestServer(t, vtctld, func(t *testing.T, client vtctldclient.VtctldClient) {
 		expected := &vtctldatapb.GetKeyspaceResponse{
@@ -144,7 +143,9 @@ func TestGetKeyspaces(t *testing.T) {
 	ctx := context.Background()
 
 	ts := memorytopo.NewServer("cell1")
-	vtctld := grpcvtctldserver.NewVtctldServer(ts)
+	vtctld := testutil.NewVtctldServerWithTabletManagerClient(t, ts, nil, func(ts *topo.Server) vtctlservicepb.VtctldServer {
+		return grpcvtctldserver.NewVtctldServer(ts)
+	})
 
 	withTestServer(t, vtctld, func(t *testing.T, client vtctldclient.VtctldClient) {
 		resp, err := client.GetKeyspaces(ctx, &vtctldatapb.GetKeyspacesRequest{})
