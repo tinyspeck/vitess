@@ -25,11 +25,11 @@ import { Icons } from '../Icon';
 import { filterNouns } from '../../util/filterNouns';
 import style from './Tablets.module.scss';
 import { Button } from '../Button';
+import { useSyncURLQuery } from '../../hooks/syncURLQuery';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
-
-    const [filter, setFilter] = React.useState<string>('');
+    const [filter, setFilter] = useSyncURLQuery();
     const { data = [] } = useTablets();
 
     const filteredData = React.useMemo(() => {
@@ -43,12 +43,12 @@ export const Tablets = () => {
             shard: t.tablet?.shard,
             alias: formatAlias(t),
             hostname: t.tablet?.hostname,
-            displayType: formatDisplayType(t),
+            type: formatDisplayType(t),
             state: formatState(t),
             _keyspaceShard: `${t.tablet?.keyspace}/${t.tablet?.shard}`,
             // Include the unformatted type so (string) filtering by "master" works
             // even if "primary" is what we display, and what we use for key:value searches.
-            _type: formatType(t),
+            _rawType: formatType(t),
         }));
         const filtered = filterNouns(filter, mapped);
         return orderBy(filtered, ['cluster', 'keyspace', 'shard', 'displayType']);
@@ -60,7 +60,7 @@ export const Tablets = () => {
                 <td>{t.cluster}</td>
                 <td>{t.keyspace}</td>
                 <td>{t.shard}</td>
-                <td>{t.displayType}</td>
+                <td>{t.type}</td>
                 <td>{t.state}</td>
                 <td>{t.alias}</td>
                 <td>{t.hostname}</td>
