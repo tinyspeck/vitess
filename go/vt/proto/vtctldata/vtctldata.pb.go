@@ -9,6 +9,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 
+	binlogdata "vitess.io/vitess/go/vt/proto/binlogdata"
 	logutil "vitess.io/vitess/go/vt/proto/logutil"
 	mysqlctl "vitess.io/vitess/go/vt/proto/mysqlctl"
 	tabletmanagerdata "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
@@ -117,6 +118,617 @@ func (m *ExecuteVtctlCommandResponse) GetEvent() *logutil.Event {
 	return nil
 }
 
+// TableMaterializeSttings contains the settings for one table.
+type TableMaterializeSettings struct {
+	TargetTable string `protobuf:"bytes,1,opt,name=target_table,json=targetTable,proto3" json:"target_table,omitempty"`
+	// source_expression is a select statement.
+	SourceExpression string `protobuf:"bytes,2,opt,name=source_expression,json=sourceExpression,proto3" json:"source_expression,omitempty"`
+	// create_ddl contains the DDL to create the target table.
+	// If empty, the target table must already exist.
+	// if "copy", the target table DDL is the same as the source table.
+	CreateDdl            string   `protobuf:"bytes,3,opt,name=create_ddl,json=createDdl,proto3" json:"create_ddl,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TableMaterializeSettings) Reset()         { *m = TableMaterializeSettings{} }
+func (m *TableMaterializeSettings) String() string { return proto.CompactTextString(m) }
+func (*TableMaterializeSettings) ProtoMessage()    {}
+func (*TableMaterializeSettings) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{2}
+}
+
+func (m *TableMaterializeSettings) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TableMaterializeSettings.Unmarshal(m, b)
+}
+func (m *TableMaterializeSettings) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TableMaterializeSettings.Marshal(b, m, deterministic)
+}
+func (m *TableMaterializeSettings) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TableMaterializeSettings.Merge(m, src)
+}
+func (m *TableMaterializeSettings) XXX_Size() int {
+	return xxx_messageInfo_TableMaterializeSettings.Size(m)
+}
+func (m *TableMaterializeSettings) XXX_DiscardUnknown() {
+	xxx_messageInfo_TableMaterializeSettings.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TableMaterializeSettings proto.InternalMessageInfo
+
+func (m *TableMaterializeSettings) GetTargetTable() string {
+	if m != nil {
+		return m.TargetTable
+	}
+	return ""
+}
+
+func (m *TableMaterializeSettings) GetSourceExpression() string {
+	if m != nil {
+		return m.SourceExpression
+	}
+	return ""
+}
+
+func (m *TableMaterializeSettings) GetCreateDdl() string {
+	if m != nil {
+		return m.CreateDdl
+	}
+	return ""
+}
+
+// MaterializeSettings contains the settings for the Materialize command.
+type MaterializeSettings struct {
+	// workflow is the name of the workflow.
+	Workflow       string `protobuf:"bytes,1,opt,name=workflow,proto3" json:"workflow,omitempty"`
+	SourceKeyspace string `protobuf:"bytes,2,opt,name=source_keyspace,json=sourceKeyspace,proto3" json:"source_keyspace,omitempty"`
+	TargetKeyspace string `protobuf:"bytes,3,opt,name=target_keyspace,json=targetKeyspace,proto3" json:"target_keyspace,omitempty"`
+	// stop_after_copy specifies if vreplication should be stopped after copying.
+	StopAfterCopy bool                        `protobuf:"varint,4,opt,name=stop_after_copy,json=stopAfterCopy,proto3" json:"stop_after_copy,omitempty"`
+	TableSettings []*TableMaterializeSettings `protobuf:"bytes,5,rep,name=table_settings,json=tableSettings,proto3" json:"table_settings,omitempty"`
+	// optional parameters.
+	Cell        string `protobuf:"bytes,6,opt,name=cell,proto3" json:"cell,omitempty"`
+	TabletTypes string `protobuf:"bytes,7,opt,name=tablet_types,json=tabletTypes,proto3" json:"tablet_types,omitempty"`
+	// ExternalCluster is the name of the mounted cluster which has the source keyspace/db for this workflow
+	// it is of the type <cluster_type.cluster_name>
+	ExternalCluster      string   `protobuf:"bytes,8,opt,name=external_cluster,json=externalCluster,proto3" json:"external_cluster,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MaterializeSettings) Reset()         { *m = MaterializeSettings{} }
+func (m *MaterializeSettings) String() string { return proto.CompactTextString(m) }
+func (*MaterializeSettings) ProtoMessage()    {}
+func (*MaterializeSettings) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{3}
+}
+
+func (m *MaterializeSettings) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MaterializeSettings.Unmarshal(m, b)
+}
+func (m *MaterializeSettings) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MaterializeSettings.Marshal(b, m, deterministic)
+}
+func (m *MaterializeSettings) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MaterializeSettings.Merge(m, src)
+}
+func (m *MaterializeSettings) XXX_Size() int {
+	return xxx_messageInfo_MaterializeSettings.Size(m)
+}
+func (m *MaterializeSettings) XXX_DiscardUnknown() {
+	xxx_messageInfo_MaterializeSettings.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MaterializeSettings proto.InternalMessageInfo
+
+func (m *MaterializeSettings) GetWorkflow() string {
+	if m != nil {
+		return m.Workflow
+	}
+	return ""
+}
+
+func (m *MaterializeSettings) GetSourceKeyspace() string {
+	if m != nil {
+		return m.SourceKeyspace
+	}
+	return ""
+}
+
+func (m *MaterializeSettings) GetTargetKeyspace() string {
+	if m != nil {
+		return m.TargetKeyspace
+	}
+	return ""
+}
+
+func (m *MaterializeSettings) GetStopAfterCopy() bool {
+	if m != nil {
+		return m.StopAfterCopy
+	}
+	return false
+}
+
+func (m *MaterializeSettings) GetTableSettings() []*TableMaterializeSettings {
+	if m != nil {
+		return m.TableSettings
+	}
+	return nil
+}
+
+func (m *MaterializeSettings) GetCell() string {
+	if m != nil {
+		return m.Cell
+	}
+	return ""
+}
+
+func (m *MaterializeSettings) GetTabletTypes() string {
+	if m != nil {
+		return m.TabletTypes
+	}
+	return ""
+}
+
+func (m *MaterializeSettings) GetExternalCluster() string {
+	if m != nil {
+		return m.ExternalCluster
+	}
+	return ""
+}
+
+type Keyspace struct {
+	Name                 string             `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Keyspace             *topodata.Keyspace `protobuf:"bytes,2,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+func (m *Keyspace) Reset()         { *m = Keyspace{} }
+func (m *Keyspace) String() string { return proto.CompactTextString(m) }
+func (*Keyspace) ProtoMessage()    {}
+func (*Keyspace) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{4}
+}
+
+func (m *Keyspace) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Keyspace.Unmarshal(m, b)
+}
+func (m *Keyspace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Keyspace.Marshal(b, m, deterministic)
+}
+func (m *Keyspace) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Keyspace.Merge(m, src)
+}
+func (m *Keyspace) XXX_Size() int {
+	return xxx_messageInfo_Keyspace.Size(m)
+}
+func (m *Keyspace) XXX_DiscardUnknown() {
+	xxx_messageInfo_Keyspace.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Keyspace proto.InternalMessageInfo
+
+func (m *Keyspace) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *Keyspace) GetKeyspace() *topodata.Keyspace {
+	if m != nil {
+		return m.Keyspace
+	}
+	return nil
+}
+
+type Shard struct {
+	Keyspace             string          `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	Name                 string          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Shard                *topodata.Shard `protobuf:"bytes,3,opt,name=shard,proto3" json:"shard,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *Shard) Reset()         { *m = Shard{} }
+func (m *Shard) String() string { return proto.CompactTextString(m) }
+func (*Shard) ProtoMessage()    {}
+func (*Shard) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{5}
+}
+
+func (m *Shard) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Shard.Unmarshal(m, b)
+}
+func (m *Shard) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Shard.Marshal(b, m, deterministic)
+}
+func (m *Shard) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Shard.Merge(m, src)
+}
+func (m *Shard) XXX_Size() int {
+	return xxx_messageInfo_Shard.Size(m)
+}
+func (m *Shard) XXX_DiscardUnknown() {
+	xxx_messageInfo_Shard.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Shard proto.InternalMessageInfo
+
+func (m *Shard) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
+	}
+	return ""
+}
+
+func (m *Shard) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *Shard) GetShard() *topodata.Shard {
+	if m != nil {
+		return m.Shard
+	}
+	return nil
+}
+
+// TODO: comment the hell out of this.
+type Workflow struct {
+	Name                 string                           `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Source               *Workflow_ReplicationLocation    `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Target               *Workflow_ReplicationLocation    `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	MaxVReplicationLag   int64                            `protobuf:"varint,4,opt,name=max_v_replication_lag,json=maxVReplicationLag,proto3" json:"max_v_replication_lag,omitempty"`
+	ShardStreams         map[string]*Workflow_ShardStream `protobuf:"bytes,5,rep,name=shard_streams,json=shardStreams,proto3" json:"shard_streams,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}                         `json:"-"`
+	XXX_unrecognized     []byte                           `json:"-"`
+	XXX_sizecache        int32                            `json:"-"`
+}
+
+func (m *Workflow) Reset()         { *m = Workflow{} }
+func (m *Workflow) String() string { return proto.CompactTextString(m) }
+func (*Workflow) ProtoMessage()    {}
+func (*Workflow) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{6}
+}
+
+func (m *Workflow) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Workflow.Unmarshal(m, b)
+}
+func (m *Workflow) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Workflow.Marshal(b, m, deterministic)
+}
+func (m *Workflow) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Workflow.Merge(m, src)
+}
+func (m *Workflow) XXX_Size() int {
+	return xxx_messageInfo_Workflow.Size(m)
+}
+func (m *Workflow) XXX_DiscardUnknown() {
+	xxx_messageInfo_Workflow.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Workflow proto.InternalMessageInfo
+
+func (m *Workflow) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *Workflow) GetSource() *Workflow_ReplicationLocation {
+	if m != nil {
+		return m.Source
+	}
+	return nil
+}
+
+func (m *Workflow) GetTarget() *Workflow_ReplicationLocation {
+	if m != nil {
+		return m.Target
+	}
+	return nil
+}
+
+func (m *Workflow) GetMaxVReplicationLag() int64 {
+	if m != nil {
+		return m.MaxVReplicationLag
+	}
+	return 0
+}
+
+func (m *Workflow) GetShardStreams() map[string]*Workflow_ShardStream {
+	if m != nil {
+		return m.ShardStreams
+	}
+	return nil
+}
+
+type Workflow_ReplicationLocation struct {
+	Keyspace             string   `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	Shards               []string `protobuf:"bytes,2,rep,name=shards,proto3" json:"shards,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Workflow_ReplicationLocation) Reset()         { *m = Workflow_ReplicationLocation{} }
+func (m *Workflow_ReplicationLocation) String() string { return proto.CompactTextString(m) }
+func (*Workflow_ReplicationLocation) ProtoMessage()    {}
+func (*Workflow_ReplicationLocation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{6, 1}
+}
+
+func (m *Workflow_ReplicationLocation) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Workflow_ReplicationLocation.Unmarshal(m, b)
+}
+func (m *Workflow_ReplicationLocation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Workflow_ReplicationLocation.Marshal(b, m, deterministic)
+}
+func (m *Workflow_ReplicationLocation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Workflow_ReplicationLocation.Merge(m, src)
+}
+func (m *Workflow_ReplicationLocation) XXX_Size() int {
+	return xxx_messageInfo_Workflow_ReplicationLocation.Size(m)
+}
+func (m *Workflow_ReplicationLocation) XXX_DiscardUnknown() {
+	xxx_messageInfo_Workflow_ReplicationLocation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Workflow_ReplicationLocation proto.InternalMessageInfo
+
+func (m *Workflow_ReplicationLocation) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
+	}
+	return ""
+}
+
+func (m *Workflow_ReplicationLocation) GetShards() []string {
+	if m != nil {
+		return m.Shards
+	}
+	return nil
+}
+
+type Workflow_ShardStream struct {
+	Streams              []*Workflow_Stream              `protobuf:"bytes,1,rep,name=streams,proto3" json:"streams,omitempty"`
+	TabletControls       []*topodata.Shard_TabletControl `protobuf:"bytes,2,rep,name=tablet_controls,json=tabletControls,proto3" json:"tablet_controls,omitempty"`
+	IsPrimaryServing     bool                            `protobuf:"varint,3,opt,name=is_primary_serving,json=isPrimaryServing,proto3" json:"is_primary_serving,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                        `json:"-"`
+	XXX_unrecognized     []byte                          `json:"-"`
+	XXX_sizecache        int32                           `json:"-"`
+}
+
+func (m *Workflow_ShardStream) Reset()         { *m = Workflow_ShardStream{} }
+func (m *Workflow_ShardStream) String() string { return proto.CompactTextString(m) }
+func (*Workflow_ShardStream) ProtoMessage()    {}
+func (*Workflow_ShardStream) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{6, 2}
+}
+
+func (m *Workflow_ShardStream) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Workflow_ShardStream.Unmarshal(m, b)
+}
+func (m *Workflow_ShardStream) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Workflow_ShardStream.Marshal(b, m, deterministic)
+}
+func (m *Workflow_ShardStream) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Workflow_ShardStream.Merge(m, src)
+}
+func (m *Workflow_ShardStream) XXX_Size() int {
+	return xxx_messageInfo_Workflow_ShardStream.Size(m)
+}
+func (m *Workflow_ShardStream) XXX_DiscardUnknown() {
+	xxx_messageInfo_Workflow_ShardStream.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Workflow_ShardStream proto.InternalMessageInfo
+
+func (m *Workflow_ShardStream) GetStreams() []*Workflow_Stream {
+	if m != nil {
+		return m.Streams
+	}
+	return nil
+}
+
+func (m *Workflow_ShardStream) GetTabletControls() []*topodata.Shard_TabletControl {
+	if m != nil {
+		return m.TabletControls
+	}
+	return nil
+}
+
+func (m *Workflow_ShardStream) GetIsPrimaryServing() bool {
+	if m != nil {
+		return m.IsPrimaryServing
+	}
+	return false
+}
+
+type Workflow_Stream struct {
+	Id                   int64                        `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Shard                string                       `protobuf:"bytes,2,opt,name=shard,proto3" json:"shard,omitempty"`
+	Tablet               *topodata.TabletAlias        `protobuf:"bytes,3,opt,name=tablet,proto3" json:"tablet,omitempty"`
+	BinlogSource         *binlogdata.BinlogSource     `protobuf:"bytes,4,opt,name=binlog_source,json=binlogSource,proto3" json:"binlog_source,omitempty"`
+	Position             string                       `protobuf:"bytes,5,opt,name=position,proto3" json:"position,omitempty"`
+	StopPosition         string                       `protobuf:"bytes,6,opt,name=stop_position,json=stopPosition,proto3" json:"stop_position,omitempty"`
+	State                string                       `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
+	DbName               string                       `protobuf:"bytes,8,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`
+	TransactionTimestamp *vttime.Time                 `protobuf:"bytes,9,opt,name=transaction_timestamp,json=transactionTimestamp,proto3" json:"transaction_timestamp,omitempty"`
+	TimeUpdated          *vttime.Time                 `protobuf:"bytes,10,opt,name=time_updated,json=timeUpdated,proto3" json:"time_updated,omitempty"`
+	Message              string                       `protobuf:"bytes,11,opt,name=message,proto3" json:"message,omitempty"`
+	CopyStates           []*Workflow_Stream_CopyState `protobuf:"bytes,12,rep,name=copy_states,json=copyStates,proto3" json:"copy_states,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
+	XXX_unrecognized     []byte                       `json:"-"`
+	XXX_sizecache        int32                        `json:"-"`
+}
+
+func (m *Workflow_Stream) Reset()         { *m = Workflow_Stream{} }
+func (m *Workflow_Stream) String() string { return proto.CompactTextString(m) }
+func (*Workflow_Stream) ProtoMessage()    {}
+func (*Workflow_Stream) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{6, 3}
+}
+
+func (m *Workflow_Stream) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Workflow_Stream.Unmarshal(m, b)
+}
+func (m *Workflow_Stream) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Workflow_Stream.Marshal(b, m, deterministic)
+}
+func (m *Workflow_Stream) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Workflow_Stream.Merge(m, src)
+}
+func (m *Workflow_Stream) XXX_Size() int {
+	return xxx_messageInfo_Workflow_Stream.Size(m)
+}
+func (m *Workflow_Stream) XXX_DiscardUnknown() {
+	xxx_messageInfo_Workflow_Stream.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Workflow_Stream proto.InternalMessageInfo
+
+func (m *Workflow_Stream) GetId() int64 {
+	if m != nil {
+		return m.Id
+	}
+	return 0
+}
+
+func (m *Workflow_Stream) GetShard() string {
+	if m != nil {
+		return m.Shard
+	}
+	return ""
+}
+
+func (m *Workflow_Stream) GetTablet() *topodata.TabletAlias {
+	if m != nil {
+		return m.Tablet
+	}
+	return nil
+}
+
+func (m *Workflow_Stream) GetBinlogSource() *binlogdata.BinlogSource {
+	if m != nil {
+		return m.BinlogSource
+	}
+	return nil
+}
+
+func (m *Workflow_Stream) GetPosition() string {
+	if m != nil {
+		return m.Position
+	}
+	return ""
+}
+
+func (m *Workflow_Stream) GetStopPosition() string {
+	if m != nil {
+		return m.StopPosition
+	}
+	return ""
+}
+
+func (m *Workflow_Stream) GetState() string {
+	if m != nil {
+		return m.State
+	}
+	return ""
+}
+
+func (m *Workflow_Stream) GetDbName() string {
+	if m != nil {
+		return m.DbName
+	}
+	return ""
+}
+
+func (m *Workflow_Stream) GetTransactionTimestamp() *vttime.Time {
+	if m != nil {
+		return m.TransactionTimestamp
+	}
+	return nil
+}
+
+func (m *Workflow_Stream) GetTimeUpdated() *vttime.Time {
+	if m != nil {
+		return m.TimeUpdated
+	}
+	return nil
+}
+
+func (m *Workflow_Stream) GetMessage() string {
+	if m != nil {
+		return m.Message
+	}
+	return ""
+}
+
+func (m *Workflow_Stream) GetCopyStates() []*Workflow_Stream_CopyState {
+	if m != nil {
+		return m.CopyStates
+	}
+	return nil
+}
+
+type Workflow_Stream_CopyState struct {
+	Table                string   `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
+	LastPk               string   `protobuf:"bytes,2,opt,name=last_pk,json=lastPk,proto3" json:"last_pk,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Workflow_Stream_CopyState) Reset()         { *m = Workflow_Stream_CopyState{} }
+func (m *Workflow_Stream_CopyState) String() string { return proto.CompactTextString(m) }
+func (*Workflow_Stream_CopyState) ProtoMessage()    {}
+func (*Workflow_Stream_CopyState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{6, 3, 0}
+}
+
+func (m *Workflow_Stream_CopyState) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Workflow_Stream_CopyState.Unmarshal(m, b)
+}
+func (m *Workflow_Stream_CopyState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Workflow_Stream_CopyState.Marshal(b, m, deterministic)
+}
+func (m *Workflow_Stream_CopyState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Workflow_Stream_CopyState.Merge(m, src)
+}
+func (m *Workflow_Stream_CopyState) XXX_Size() int {
+	return xxx_messageInfo_Workflow_Stream_CopyState.Size(m)
+}
+func (m *Workflow_Stream_CopyState) XXX_DiscardUnknown() {
+	xxx_messageInfo_Workflow_Stream_CopyState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Workflow_Stream_CopyState proto.InternalMessageInfo
+
+func (m *Workflow_Stream_CopyState) GetTable() string {
+	if m != nil {
+		return m.Table
+	}
+	return ""
+}
+
+func (m *Workflow_Stream_CopyState) GetLastPk() string {
+	if m != nil {
+		return m.LastPk
+	}
+	return ""
+}
+
 type ChangeTabletTypeRequest struct {
 	TabletAlias          *topodata.TabletAlias `protobuf:"bytes,1,opt,name=tablet_alias,json=tabletAlias,proto3" json:"tablet_alias,omitempty"`
 	DbType               topodata.TabletType   `protobuf:"varint,2,opt,name=db_type,json=dbType,proto3,enum=topodata.TabletType" json:"db_type,omitempty"`
@@ -130,7 +742,7 @@ func (m *ChangeTabletTypeRequest) Reset()         { *m = ChangeTabletTypeRequest
 func (m *ChangeTabletTypeRequest) String() string { return proto.CompactTextString(m) }
 func (*ChangeTabletTypeRequest) ProtoMessage()    {}
 func (*ChangeTabletTypeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{2}
+	return fileDescriptor_f41247b323a1ab2e, []int{7}
 }
 
 func (m *ChangeTabletTypeRequest) XXX_Unmarshal(b []byte) error {
@@ -185,7 +797,7 @@ func (m *ChangeTabletTypeResponse) Reset()         { *m = ChangeTabletTypeRespon
 func (m *ChangeTabletTypeResponse) String() string { return proto.CompactTextString(m) }
 func (*ChangeTabletTypeResponse) ProtoMessage()    {}
 func (*ChangeTabletTypeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{3}
+	return fileDescriptor_f41247b323a1ab2e, []int{8}
 }
 
 func (m *ChangeTabletTypeResponse) XXX_Unmarshal(b []byte) error {
@@ -259,7 +871,7 @@ func (m *CreateKeyspaceRequest) Reset()         { *m = CreateKeyspaceRequest{} }
 func (m *CreateKeyspaceRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateKeyspaceRequest) ProtoMessage()    {}
 func (*CreateKeyspaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{4}
+	return fileDescriptor_f41247b323a1ab2e, []int{9}
 }
 
 func (m *CreateKeyspaceRequest) XXX_Unmarshal(b []byte) error {
@@ -355,7 +967,7 @@ func (m *CreateKeyspaceResponse) Reset()         { *m = CreateKeyspaceResponse{}
 func (m *CreateKeyspaceResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateKeyspaceResponse) ProtoMessage()    {}
 func (*CreateKeyspaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{5}
+	return fileDescriptor_f41247b323a1ab2e, []int{10}
 }
 
 func (m *CreateKeyspaceResponse) XXX_Unmarshal(b []byte) error {
@@ -403,7 +1015,7 @@ func (m *CreateShardRequest) Reset()         { *m = CreateShardRequest{} }
 func (m *CreateShardRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateShardRequest) ProtoMessage()    {}
 func (*CreateShardRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{6}
+	return fileDescriptor_f41247b323a1ab2e, []int{11}
 }
 
 func (m *CreateShardRequest) XXX_Unmarshal(b []byte) error {
@@ -470,7 +1082,7 @@ func (m *CreateShardResponse) Reset()         { *m = CreateShardResponse{} }
 func (m *CreateShardResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateShardResponse) ProtoMessage()    {}
 func (*CreateShardResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{7}
+	return fileDescriptor_f41247b323a1ab2e, []int{12}
 }
 
 func (m *CreateShardResponse) XXX_Unmarshal(b []byte) error {
@@ -528,7 +1140,7 @@ func (m *DeleteKeyspaceRequest) Reset()         { *m = DeleteKeyspaceRequest{} }
 func (m *DeleteKeyspaceRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteKeyspaceRequest) ProtoMessage()    {}
 func (*DeleteKeyspaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{8}
+	return fileDescriptor_f41247b323a1ab2e, []int{13}
 }
 
 func (m *DeleteKeyspaceRequest) XXX_Unmarshal(b []byte) error {
@@ -573,7 +1185,7 @@ func (m *DeleteKeyspaceResponse) Reset()         { *m = DeleteKeyspaceResponse{}
 func (m *DeleteKeyspaceResponse) String() string { return proto.CompactTextString(m) }
 func (*DeleteKeyspaceResponse) ProtoMessage()    {}
 func (*DeleteKeyspaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{9}
+	return fileDescriptor_f41247b323a1ab2e, []int{14}
 }
 
 func (m *DeleteKeyspaceResponse) XXX_Unmarshal(b []byte) error {
@@ -614,7 +1226,7 @@ func (m *DeleteShardsRequest) Reset()         { *m = DeleteShardsRequest{} }
 func (m *DeleteShardsRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteShardsRequest) ProtoMessage()    {}
 func (*DeleteShardsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{10}
+	return fileDescriptor_f41247b323a1ab2e, []int{15}
 }
 
 func (m *DeleteShardsRequest) XXX_Unmarshal(b []byte) error {
@@ -666,7 +1278,7 @@ func (m *DeleteShardsResponse) Reset()         { *m = DeleteShardsResponse{} }
 func (m *DeleteShardsResponse) String() string { return proto.CompactTextString(m) }
 func (*DeleteShardsResponse) ProtoMessage()    {}
 func (*DeleteShardsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{11}
+	return fileDescriptor_f41247b323a1ab2e, []int{16}
 }
 
 func (m *DeleteShardsResponse) XXX_Unmarshal(b []byte) error {
@@ -702,7 +1314,7 @@ func (m *DeleteTabletsRequest) Reset()         { *m = DeleteTabletsRequest{} }
 func (m *DeleteTabletsRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteTabletsRequest) ProtoMessage()    {}
 func (*DeleteTabletsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{12}
+	return fileDescriptor_f41247b323a1ab2e, []int{17}
 }
 
 func (m *DeleteTabletsRequest) XXX_Unmarshal(b []byte) error {
@@ -747,7 +1359,7 @@ func (m *DeleteTabletsResponse) Reset()         { *m = DeleteTabletsResponse{} }
 func (m *DeleteTabletsResponse) String() string { return proto.CompactTextString(m) }
 func (*DeleteTabletsResponse) ProtoMessage()    {}
 func (*DeleteTabletsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{13}
+	return fileDescriptor_f41247b323a1ab2e, []int{18}
 }
 
 func (m *DeleteTabletsResponse) XXX_Unmarshal(b []byte) error {
@@ -768,6 +1380,234 @@ func (m *DeleteTabletsResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DeleteTabletsResponse proto.InternalMessageInfo
 
+type EmergencyReparentShardRequest struct {
+	// Keyspace is the name of the keyspace to perform the Emergency Reparent in.
+	Keyspace string `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	// Shard is the name of the shard to perform the Emergency Reparent in.
+	Shard string `protobuf:"bytes,2,opt,name=shard,proto3" json:"shard,omitempty"`
+	// Optional alias of a tablet that should become the new shard primary. If not
+	// not specified, the vtctld will select the most up-to-date canditate to
+	// promote.
+	NewPrimary *topodata.TabletAlias `protobuf:"bytes,3,opt,name=new_primary,json=newPrimary,proto3" json:"new_primary,omitempty"`
+	// List of replica aliases to ignore during the Emergency Reparent. The vtctld
+	// will not attempt to stop replication on these tablets, nor attempt to
+	// demote any that may think they are the shard primary.
+	IgnoreReplicas []*topodata.TabletAlias `protobuf:"bytes,4,rep,name=ignore_replicas,json=ignoreReplicas,proto3" json:"ignore_replicas,omitempty"`
+	// WaitReplicasTimeout is the duration of time to wait for replicas to catch
+	// up in reparenting.
+	WaitReplicasTimeout  *vttime.Duration `protobuf:"bytes,5,opt,name=wait_replicas_timeout,json=waitReplicasTimeout,proto3" json:"wait_replicas_timeout,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
+}
+
+func (m *EmergencyReparentShardRequest) Reset()         { *m = EmergencyReparentShardRequest{} }
+func (m *EmergencyReparentShardRequest) String() string { return proto.CompactTextString(m) }
+func (*EmergencyReparentShardRequest) ProtoMessage()    {}
+func (*EmergencyReparentShardRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{19}
+}
+
+func (m *EmergencyReparentShardRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EmergencyReparentShardRequest.Unmarshal(m, b)
+}
+func (m *EmergencyReparentShardRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EmergencyReparentShardRequest.Marshal(b, m, deterministic)
+}
+func (m *EmergencyReparentShardRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EmergencyReparentShardRequest.Merge(m, src)
+}
+func (m *EmergencyReparentShardRequest) XXX_Size() int {
+	return xxx_messageInfo_EmergencyReparentShardRequest.Size(m)
+}
+func (m *EmergencyReparentShardRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EmergencyReparentShardRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EmergencyReparentShardRequest proto.InternalMessageInfo
+
+func (m *EmergencyReparentShardRequest) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
+	}
+	return ""
+}
+
+func (m *EmergencyReparentShardRequest) GetShard() string {
+	if m != nil {
+		return m.Shard
+	}
+	return ""
+}
+
+func (m *EmergencyReparentShardRequest) GetNewPrimary() *topodata.TabletAlias {
+	if m != nil {
+		return m.NewPrimary
+	}
+	return nil
+}
+
+func (m *EmergencyReparentShardRequest) GetIgnoreReplicas() []*topodata.TabletAlias {
+	if m != nil {
+		return m.IgnoreReplicas
+	}
+	return nil
+}
+
+func (m *EmergencyReparentShardRequest) GetWaitReplicasTimeout() *vttime.Duration {
+	if m != nil {
+		return m.WaitReplicasTimeout
+	}
+	return nil
+}
+
+type EmergencyReparentShardResponse struct {
+	// Keyspace is the name of the keyspace the Emergency Reparent took place in.
+	Keyspace string `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	// Shard is the name of the shard the Emergency Reparent took place in.
+	Shard string `protobuf:"bytes,2,opt,name=shard,proto3" json:"shard,omitempty"`
+	// PromotedPrimary is the alias of the tablet that was promoted to shard
+	// primary. If NewPrimary was set in the request, then this will be the same
+	// alias. Otherwise, it will be the alias of the tablet found to be most
+	// up-to-date.
+	PromotedPrimary      *topodata.TabletAlias `protobuf:"bytes,3,opt,name=promoted_primary,json=promotedPrimary,proto3" json:"promoted_primary,omitempty"`
+	Events               []*logutil.Event      `protobuf:"bytes,4,rep,name=events,proto3" json:"events,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *EmergencyReparentShardResponse) Reset()         { *m = EmergencyReparentShardResponse{} }
+func (m *EmergencyReparentShardResponse) String() string { return proto.CompactTextString(m) }
+func (*EmergencyReparentShardResponse) ProtoMessage()    {}
+func (*EmergencyReparentShardResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{20}
+}
+
+func (m *EmergencyReparentShardResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EmergencyReparentShardResponse.Unmarshal(m, b)
+}
+func (m *EmergencyReparentShardResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EmergencyReparentShardResponse.Marshal(b, m, deterministic)
+}
+func (m *EmergencyReparentShardResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EmergencyReparentShardResponse.Merge(m, src)
+}
+func (m *EmergencyReparentShardResponse) XXX_Size() int {
+	return xxx_messageInfo_EmergencyReparentShardResponse.Size(m)
+}
+func (m *EmergencyReparentShardResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EmergencyReparentShardResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EmergencyReparentShardResponse proto.InternalMessageInfo
+
+func (m *EmergencyReparentShardResponse) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
+	}
+	return ""
+}
+
+func (m *EmergencyReparentShardResponse) GetShard() string {
+	if m != nil {
+		return m.Shard
+	}
+	return ""
+}
+
+func (m *EmergencyReparentShardResponse) GetPromotedPrimary() *topodata.TabletAlias {
+	if m != nil {
+		return m.PromotedPrimary
+	}
+	return nil
+}
+
+func (m *EmergencyReparentShardResponse) GetEvents() []*logutil.Event {
+	if m != nil {
+		return m.Events
+	}
+	return nil
+}
+
+type FindAllShardsInKeyspaceRequest struct {
+	Keyspace             string   `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *FindAllShardsInKeyspaceRequest) Reset()         { *m = FindAllShardsInKeyspaceRequest{} }
+func (m *FindAllShardsInKeyspaceRequest) String() string { return proto.CompactTextString(m) }
+func (*FindAllShardsInKeyspaceRequest) ProtoMessage()    {}
+func (*FindAllShardsInKeyspaceRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{21}
+}
+
+func (m *FindAllShardsInKeyspaceRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_FindAllShardsInKeyspaceRequest.Unmarshal(m, b)
+}
+func (m *FindAllShardsInKeyspaceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_FindAllShardsInKeyspaceRequest.Marshal(b, m, deterministic)
+}
+func (m *FindAllShardsInKeyspaceRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FindAllShardsInKeyspaceRequest.Merge(m, src)
+}
+func (m *FindAllShardsInKeyspaceRequest) XXX_Size() int {
+	return xxx_messageInfo_FindAllShardsInKeyspaceRequest.Size(m)
+}
+func (m *FindAllShardsInKeyspaceRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_FindAllShardsInKeyspaceRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FindAllShardsInKeyspaceRequest proto.InternalMessageInfo
+
+func (m *FindAllShardsInKeyspaceRequest) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
+	}
+	return ""
+}
+
+type FindAllShardsInKeyspaceResponse struct {
+	Shards               map[string]*Shard `protobuf:"bytes,1,rep,name=shards,proto3" json:"shards,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
+}
+
+func (m *FindAllShardsInKeyspaceResponse) Reset()         { *m = FindAllShardsInKeyspaceResponse{} }
+func (m *FindAllShardsInKeyspaceResponse) String() string { return proto.CompactTextString(m) }
+func (*FindAllShardsInKeyspaceResponse) ProtoMessage()    {}
+func (*FindAllShardsInKeyspaceResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{22}
+}
+
+func (m *FindAllShardsInKeyspaceResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_FindAllShardsInKeyspaceResponse.Unmarshal(m, b)
+}
+func (m *FindAllShardsInKeyspaceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_FindAllShardsInKeyspaceResponse.Marshal(b, m, deterministic)
+}
+func (m *FindAllShardsInKeyspaceResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FindAllShardsInKeyspaceResponse.Merge(m, src)
+}
+func (m *FindAllShardsInKeyspaceResponse) XXX_Size() int {
+	return xxx_messageInfo_FindAllShardsInKeyspaceResponse.Size(m)
+}
+func (m *FindAllShardsInKeyspaceResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_FindAllShardsInKeyspaceResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FindAllShardsInKeyspaceResponse proto.InternalMessageInfo
+
+func (m *FindAllShardsInKeyspaceResponse) GetShards() map[string]*Shard {
+	if m != nil {
+		return m.Shards
+	}
+	return nil
+}
+
 type GetBackupsRequest struct {
 	Keyspace             string   `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
 	Shard                string   `protobuf:"bytes,2,opt,name=shard,proto3" json:"shard,omitempty"`
@@ -780,7 +1620,7 @@ func (m *GetBackupsRequest) Reset()         { *m = GetBackupsRequest{} }
 func (m *GetBackupsRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBackupsRequest) ProtoMessage()    {}
 func (*GetBackupsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{14}
+	return fileDescriptor_f41247b323a1ab2e, []int{23}
 }
 
 func (m *GetBackupsRequest) XXX_Unmarshal(b []byte) error {
@@ -826,7 +1666,7 @@ func (m *GetBackupsResponse) Reset()         { *m = GetBackupsResponse{} }
 func (m *GetBackupsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetBackupsResponse) ProtoMessage()    {}
 func (*GetBackupsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{15}
+	return fileDescriptor_f41247b323a1ab2e, []int{24}
 }
 
 func (m *GetBackupsResponse) XXX_Unmarshal(b []byte) error {
@@ -864,7 +1704,7 @@ func (m *GetCellInfoNamesRequest) Reset()         { *m = GetCellInfoNamesRequest
 func (m *GetCellInfoNamesRequest) String() string { return proto.CompactTextString(m) }
 func (*GetCellInfoNamesRequest) ProtoMessage()    {}
 func (*GetCellInfoNamesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{16}
+	return fileDescriptor_f41247b323a1ab2e, []int{25}
 }
 
 func (m *GetCellInfoNamesRequest) XXX_Unmarshal(b []byte) error {
@@ -896,7 +1736,7 @@ func (m *GetCellInfoNamesResponse) Reset()         { *m = GetCellInfoNamesRespon
 func (m *GetCellInfoNamesResponse) String() string { return proto.CompactTextString(m) }
 func (*GetCellInfoNamesResponse) ProtoMessage()    {}
 func (*GetCellInfoNamesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{17}
+	return fileDescriptor_f41247b323a1ab2e, []int{26}
 }
 
 func (m *GetCellInfoNamesResponse) XXX_Unmarshal(b []byte) error {
@@ -935,7 +1775,7 @@ func (m *GetCellInfoRequest) Reset()         { *m = GetCellInfoRequest{} }
 func (m *GetCellInfoRequest) String() string { return proto.CompactTextString(m) }
 func (*GetCellInfoRequest) ProtoMessage()    {}
 func (*GetCellInfoRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{18}
+	return fileDescriptor_f41247b323a1ab2e, []int{27}
 }
 
 func (m *GetCellInfoRequest) XXX_Unmarshal(b []byte) error {
@@ -974,7 +1814,7 @@ func (m *GetCellInfoResponse) Reset()         { *m = GetCellInfoResponse{} }
 func (m *GetCellInfoResponse) String() string { return proto.CompactTextString(m) }
 func (*GetCellInfoResponse) ProtoMessage()    {}
 func (*GetCellInfoResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{19}
+	return fileDescriptor_f41247b323a1ab2e, []int{28}
 }
 
 func (m *GetCellInfoResponse) XXX_Unmarshal(b []byte) error {
@@ -1012,7 +1852,7 @@ func (m *GetCellsAliasesRequest) Reset()         { *m = GetCellsAliasesRequest{}
 func (m *GetCellsAliasesRequest) String() string { return proto.CompactTextString(m) }
 func (*GetCellsAliasesRequest) ProtoMessage()    {}
 func (*GetCellsAliasesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{20}
+	return fileDescriptor_f41247b323a1ab2e, []int{29}
 }
 
 func (m *GetCellsAliasesRequest) XXX_Unmarshal(b []byte) error {
@@ -1044,7 +1884,7 @@ func (m *GetCellsAliasesResponse) Reset()         { *m = GetCellsAliasesResponse
 func (m *GetCellsAliasesResponse) String() string { return proto.CompactTextString(m) }
 func (*GetCellsAliasesResponse) ProtoMessage()    {}
 func (*GetCellsAliasesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{21}
+	return fileDescriptor_f41247b323a1ab2e, []int{30}
 }
 
 func (m *GetCellsAliasesResponse) XXX_Unmarshal(b []byte) error {
@@ -1082,7 +1922,7 @@ func (m *GetKeyspacesRequest) Reset()         { *m = GetKeyspacesRequest{} }
 func (m *GetKeyspacesRequest) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspacesRequest) ProtoMessage()    {}
 func (*GetKeyspacesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{22}
+	return fileDescriptor_f41247b323a1ab2e, []int{31}
 }
 
 func (m *GetKeyspacesRequest) XXX_Unmarshal(b []byte) error {
@@ -1114,7 +1954,7 @@ func (m *GetKeyspacesResponse) Reset()         { *m = GetKeyspacesResponse{} }
 func (m *GetKeyspacesResponse) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspacesResponse) ProtoMessage()    {}
 func (*GetKeyspacesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{23}
+	return fileDescriptor_f41247b323a1ab2e, []int{32}
 }
 
 func (m *GetKeyspacesResponse) XXX_Unmarshal(b []byte) error {
@@ -1153,7 +1993,7 @@ func (m *GetKeyspaceRequest) Reset()         { *m = GetKeyspaceRequest{} }
 func (m *GetKeyspaceRequest) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspaceRequest) ProtoMessage()    {}
 func (*GetKeyspaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{24}
+	return fileDescriptor_f41247b323a1ab2e, []int{33}
 }
 
 func (m *GetKeyspaceRequest) XXX_Unmarshal(b []byte) error {
@@ -1192,7 +2032,7 @@ func (m *GetKeyspaceResponse) Reset()         { *m = GetKeyspaceResponse{} }
 func (m *GetKeyspaceResponse) String() string { return proto.CompactTextString(m) }
 func (*GetKeyspaceResponse) ProtoMessage()    {}
 func (*GetKeyspaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{25}
+	return fileDescriptor_f41247b323a1ab2e, []int{34}
 }
 
 func (m *GetKeyspaceResponse) XXX_Unmarshal(b []byte) error {
@@ -1246,7 +2086,7 @@ func (m *GetSchemaRequest) Reset()         { *m = GetSchemaRequest{} }
 func (m *GetSchemaRequest) String() string { return proto.CompactTextString(m) }
 func (*GetSchemaRequest) ProtoMessage()    {}
 func (*GetSchemaRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{26}
+	return fileDescriptor_f41247b323a1ab2e, []int{35}
 }
 
 func (m *GetSchemaRequest) XXX_Unmarshal(b []byte) error {
@@ -1320,7 +2160,7 @@ func (m *GetSchemaResponse) Reset()         { *m = GetSchemaResponse{} }
 func (m *GetSchemaResponse) String() string { return proto.CompactTextString(m) }
 func (*GetSchemaResponse) ProtoMessage()    {}
 func (*GetSchemaResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{27}
+	return fileDescriptor_f41247b323a1ab2e, []int{36}
 }
 
 func (m *GetSchemaResponse) XXX_Unmarshal(b []byte) error {
@@ -1360,7 +2200,7 @@ func (m *GetShardRequest) Reset()         { *m = GetShardRequest{} }
 func (m *GetShardRequest) String() string { return proto.CompactTextString(m) }
 func (*GetShardRequest) ProtoMessage()    {}
 func (*GetShardRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{28}
+	return fileDescriptor_f41247b323a1ab2e, []int{37}
 }
 
 func (m *GetShardRequest) XXX_Unmarshal(b []byte) error {
@@ -1406,7 +2246,7 @@ func (m *GetShardResponse) Reset()         { *m = GetShardResponse{} }
 func (m *GetShardResponse) String() string { return proto.CompactTextString(m) }
 func (*GetShardResponse) ProtoMessage()    {}
 func (*GetShardResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{29}
+	return fileDescriptor_f41247b323a1ab2e, []int{38}
 }
 
 func (m *GetShardResponse) XXX_Unmarshal(b []byte) error {
@@ -1445,7 +2285,7 @@ func (m *GetSrvVSchemaRequest) Reset()         { *m = GetSrvVSchemaRequest{} }
 func (m *GetSrvVSchemaRequest) String() string { return proto.CompactTextString(m) }
 func (*GetSrvVSchemaRequest) ProtoMessage()    {}
 func (*GetSrvVSchemaRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{30}
+	return fileDescriptor_f41247b323a1ab2e, []int{39}
 }
 
 func (m *GetSrvVSchemaRequest) XXX_Unmarshal(b []byte) error {
@@ -1484,7 +2324,7 @@ func (m *GetSrvVSchemaResponse) Reset()         { *m = GetSrvVSchemaResponse{} }
 func (m *GetSrvVSchemaResponse) String() string { return proto.CompactTextString(m) }
 func (*GetSrvVSchemaResponse) ProtoMessage()    {}
 func (*GetSrvVSchemaResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{31}
+	return fileDescriptor_f41247b323a1ab2e, []int{40}
 }
 
 func (m *GetSrvVSchemaResponse) XXX_Unmarshal(b []byte) error {
@@ -1523,7 +2363,7 @@ func (m *GetTabletRequest) Reset()         { *m = GetTabletRequest{} }
 func (m *GetTabletRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTabletRequest) ProtoMessage()    {}
 func (*GetTabletRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{32}
+	return fileDescriptor_f41247b323a1ab2e, []int{41}
 }
 
 func (m *GetTabletRequest) XXX_Unmarshal(b []byte) error {
@@ -1562,7 +2402,7 @@ func (m *GetTabletResponse) Reset()         { *m = GetTabletResponse{} }
 func (m *GetTabletResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTabletResponse) ProtoMessage()    {}
 func (*GetTabletResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{33}
+	return fileDescriptor_f41247b323a1ab2e, []int{42}
 }
 
 func (m *GetTabletResponse) XXX_Unmarshal(b []byte) error {
@@ -1608,7 +2448,7 @@ func (m *GetTabletsRequest) Reset()         { *m = GetTabletsRequest{} }
 func (m *GetTabletsRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTabletsRequest) ProtoMessage()    {}
 func (*GetTabletsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{34}
+	return fileDescriptor_f41247b323a1ab2e, []int{43}
 }
 
 func (m *GetTabletsRequest) XXX_Unmarshal(b []byte) error {
@@ -1661,7 +2501,7 @@ func (m *GetTabletsResponse) Reset()         { *m = GetTabletsResponse{} }
 func (m *GetTabletsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTabletsResponse) ProtoMessage()    {}
 func (*GetTabletsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{35}
+	return fileDescriptor_f41247b323a1ab2e, []int{44}
 }
 
 func (m *GetTabletsResponse) XXX_Unmarshal(b []byte) error {
@@ -1700,7 +2540,7 @@ func (m *GetVSchemaRequest) Reset()         { *m = GetVSchemaRequest{} }
 func (m *GetVSchemaRequest) String() string { return proto.CompactTextString(m) }
 func (*GetVSchemaRequest) ProtoMessage()    {}
 func (*GetVSchemaRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{36}
+	return fileDescriptor_f41247b323a1ab2e, []int{45}
 }
 
 func (m *GetVSchemaRequest) XXX_Unmarshal(b []byte) error {
@@ -1739,7 +2579,7 @@ func (m *GetVSchemaResponse) Reset()         { *m = GetVSchemaResponse{} }
 func (m *GetVSchemaResponse) String() string { return proto.CompactTextString(m) }
 func (*GetVSchemaResponse) ProtoMessage()    {}
 func (*GetVSchemaResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{37}
+	return fileDescriptor_f41247b323a1ab2e, []int{46}
 }
 
 func (m *GetVSchemaResponse) XXX_Unmarshal(b []byte) error {
@@ -1767,6 +2607,92 @@ func (m *GetVSchemaResponse) GetVSchema() *vschema.Keyspace {
 	return nil
 }
 
+type GetWorkflowsRequest struct {
+	Keyspace             string   `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	ActiveOnly           bool     `protobuf:"varint,2,opt,name=active_only,json=activeOnly,proto3" json:"active_only,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetWorkflowsRequest) Reset()         { *m = GetWorkflowsRequest{} }
+func (m *GetWorkflowsRequest) String() string { return proto.CompactTextString(m) }
+func (*GetWorkflowsRequest) ProtoMessage()    {}
+func (*GetWorkflowsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{47}
+}
+
+func (m *GetWorkflowsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetWorkflowsRequest.Unmarshal(m, b)
+}
+func (m *GetWorkflowsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetWorkflowsRequest.Marshal(b, m, deterministic)
+}
+func (m *GetWorkflowsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetWorkflowsRequest.Merge(m, src)
+}
+func (m *GetWorkflowsRequest) XXX_Size() int {
+	return xxx_messageInfo_GetWorkflowsRequest.Size(m)
+}
+func (m *GetWorkflowsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetWorkflowsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetWorkflowsRequest proto.InternalMessageInfo
+
+func (m *GetWorkflowsRequest) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
+	}
+	return ""
+}
+
+func (m *GetWorkflowsRequest) GetActiveOnly() bool {
+	if m != nil {
+		return m.ActiveOnly
+	}
+	return false
+}
+
+type GetWorkflowsResponse struct {
+	Workflows            []*Workflow `protobuf:"bytes,1,rep,name=workflows,proto3" json:"workflows,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *GetWorkflowsResponse) Reset()         { *m = GetWorkflowsResponse{} }
+func (m *GetWorkflowsResponse) String() string { return proto.CompactTextString(m) }
+func (*GetWorkflowsResponse) ProtoMessage()    {}
+func (*GetWorkflowsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{48}
+}
+
+func (m *GetWorkflowsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetWorkflowsResponse.Unmarshal(m, b)
+}
+func (m *GetWorkflowsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetWorkflowsResponse.Marshal(b, m, deterministic)
+}
+func (m *GetWorkflowsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetWorkflowsResponse.Merge(m, src)
+}
+func (m *GetWorkflowsResponse) XXX_Size() int {
+	return xxx_messageInfo_GetWorkflowsResponse.Size(m)
+}
+func (m *GetWorkflowsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetWorkflowsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetWorkflowsResponse proto.InternalMessageInfo
+
+func (m *GetWorkflowsResponse) GetWorkflows() []*Workflow {
+	if m != nil {
+		return m.Workflows
+	}
+	return nil
+}
+
 type RemoveKeyspaceCellRequest struct {
 	Keyspace string `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
 	Cell     string `protobuf:"bytes,2,opt,name=cell,proto3" json:"cell,omitempty"`
@@ -1786,7 +2712,7 @@ func (m *RemoveKeyspaceCellRequest) Reset()         { *m = RemoveKeyspaceCellReq
 func (m *RemoveKeyspaceCellRequest) String() string { return proto.CompactTextString(m) }
 func (*RemoveKeyspaceCellRequest) ProtoMessage()    {}
 func (*RemoveKeyspaceCellRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{38}
+	return fileDescriptor_f41247b323a1ab2e, []int{49}
 }
 
 func (m *RemoveKeyspaceCellRequest) XXX_Unmarshal(b []byte) error {
@@ -1845,7 +2771,7 @@ func (m *RemoveKeyspaceCellResponse) Reset()         { *m = RemoveKeyspaceCellRe
 func (m *RemoveKeyspaceCellResponse) String() string { return proto.CompactTextString(m) }
 func (*RemoveKeyspaceCellResponse) ProtoMessage()    {}
 func (*RemoveKeyspaceCellResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{39}
+	return fileDescriptor_f41247b323a1ab2e, []int{50}
 }
 
 func (m *RemoveKeyspaceCellResponse) XXX_Unmarshal(b []byte) error {
@@ -1886,7 +2812,7 @@ func (m *RemoveShardCellRequest) Reset()         { *m = RemoveShardCellRequest{}
 func (m *RemoveShardCellRequest) String() string { return proto.CompactTextString(m) }
 func (*RemoveShardCellRequest) ProtoMessage()    {}
 func (*RemoveShardCellRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{40}
+	return fileDescriptor_f41247b323a1ab2e, []int{51}
 }
 
 func (m *RemoveShardCellRequest) XXX_Unmarshal(b []byte) error {
@@ -1952,7 +2878,7 @@ func (m *RemoveShardCellResponse) Reset()         { *m = RemoveShardCellResponse
 func (m *RemoveShardCellResponse) String() string { return proto.CompactTextString(m) }
 func (*RemoveShardCellResponse) ProtoMessage()    {}
 func (*RemoveShardCellResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{41}
+	return fileDescriptor_f41247b323a1ab2e, []int{52}
 }
 
 func (m *RemoveShardCellResponse) XXX_Unmarshal(b []byte) error {
@@ -1973,340 +2899,222 @@ func (m *RemoveShardCellResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_RemoveShardCellResponse proto.InternalMessageInfo
 
-type Keyspace struct {
-	Name                 string             `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Keyspace             *topodata.Keyspace `protobuf:"bytes,2,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
-	XXX_unrecognized     []byte             `json:"-"`
-	XXX_sizecache        int32              `json:"-"`
+type ReparentTabletRequest struct {
+	// Tablet is the alias of the tablet that should be reparented under the
+	// current shard primary.
+	Tablet               *topodata.TabletAlias `protobuf:"bytes,1,opt,name=tablet,proto3" json:"tablet,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *Keyspace) Reset()         { *m = Keyspace{} }
-func (m *Keyspace) String() string { return proto.CompactTextString(m) }
-func (*Keyspace) ProtoMessage()    {}
-func (*Keyspace) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{42}
+func (m *ReparentTabletRequest) Reset()         { *m = ReparentTabletRequest{} }
+func (m *ReparentTabletRequest) String() string { return proto.CompactTextString(m) }
+func (*ReparentTabletRequest) ProtoMessage()    {}
+func (*ReparentTabletRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{53}
 }
 
-func (m *Keyspace) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Keyspace.Unmarshal(m, b)
+func (m *ReparentTabletRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ReparentTabletRequest.Unmarshal(m, b)
 }
-func (m *Keyspace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Keyspace.Marshal(b, m, deterministic)
+func (m *ReparentTabletRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ReparentTabletRequest.Marshal(b, m, deterministic)
 }
-func (m *Keyspace) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Keyspace.Merge(m, src)
+func (m *ReparentTabletRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReparentTabletRequest.Merge(m, src)
 }
-func (m *Keyspace) XXX_Size() int {
-	return xxx_messageInfo_Keyspace.Size(m)
+func (m *ReparentTabletRequest) XXX_Size() int {
+	return xxx_messageInfo_ReparentTabletRequest.Size(m)
 }
-func (m *Keyspace) XXX_DiscardUnknown() {
-	xxx_messageInfo_Keyspace.DiscardUnknown(m)
+func (m *ReparentTabletRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReparentTabletRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Keyspace proto.InternalMessageInfo
+var xxx_messageInfo_ReparentTabletRequest proto.InternalMessageInfo
 
-func (m *Keyspace) GetName() string {
+func (m *ReparentTabletRequest) GetTablet() *topodata.TabletAlias {
 	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-func (m *Keyspace) GetKeyspace() *topodata.Keyspace {
-	if m != nil {
-		return m.Keyspace
+		return m.Tablet
 	}
 	return nil
 }
 
-type FindAllShardsInKeyspaceRequest struct {
-	Keyspace             string   `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+type ReparentTabletResponse struct {
+	// Keyspace is the name of the keyspace the tablet was reparented in.
+	Keyspace string `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	// Shard is the name of the shard the tablet was reparented in.
+	Shard string `protobuf:"bytes,2,opt,name=shard,proto3" json:"shard,omitempty"`
+	// Primary is the alias of the tablet that the tablet was reparented under.
+	Primary              *topodata.TabletAlias `protobuf:"bytes,3,opt,name=primary,proto3" json:"primary,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *FindAllShardsInKeyspaceRequest) Reset()         { *m = FindAllShardsInKeyspaceRequest{} }
-func (m *FindAllShardsInKeyspaceRequest) String() string { return proto.CompactTextString(m) }
-func (*FindAllShardsInKeyspaceRequest) ProtoMessage()    {}
-func (*FindAllShardsInKeyspaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{43}
+func (m *ReparentTabletResponse) Reset()         { *m = ReparentTabletResponse{} }
+func (m *ReparentTabletResponse) String() string { return proto.CompactTextString(m) }
+func (*ReparentTabletResponse) ProtoMessage()    {}
+func (*ReparentTabletResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{54}
 }
 
-func (m *FindAllShardsInKeyspaceRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_FindAllShardsInKeyspaceRequest.Unmarshal(m, b)
+func (m *ReparentTabletResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ReparentTabletResponse.Unmarshal(m, b)
 }
-func (m *FindAllShardsInKeyspaceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_FindAllShardsInKeyspaceRequest.Marshal(b, m, deterministic)
+func (m *ReparentTabletResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ReparentTabletResponse.Marshal(b, m, deterministic)
 }
-func (m *FindAllShardsInKeyspaceRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_FindAllShardsInKeyspaceRequest.Merge(m, src)
+func (m *ReparentTabletResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ReparentTabletResponse.Merge(m, src)
 }
-func (m *FindAllShardsInKeyspaceRequest) XXX_Size() int {
-	return xxx_messageInfo_FindAllShardsInKeyspaceRequest.Size(m)
+func (m *ReparentTabletResponse) XXX_Size() int {
+	return xxx_messageInfo_ReparentTabletResponse.Size(m)
 }
-func (m *FindAllShardsInKeyspaceRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_FindAllShardsInKeyspaceRequest.DiscardUnknown(m)
+func (m *ReparentTabletResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ReparentTabletResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_FindAllShardsInKeyspaceRequest proto.InternalMessageInfo
+var xxx_messageInfo_ReparentTabletResponse proto.InternalMessageInfo
 
-func (m *FindAllShardsInKeyspaceRequest) GetKeyspace() string {
+func (m *ReparentTabletResponse) GetKeyspace() string {
 	if m != nil {
 		return m.Keyspace
 	}
 	return ""
 }
 
-type FindAllShardsInKeyspaceResponse struct {
-	Shards               map[string]*Shard `protobuf:"bytes,1,rep,name=shards,proto3" json:"shards,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
-}
-
-func (m *FindAllShardsInKeyspaceResponse) Reset()         { *m = FindAllShardsInKeyspaceResponse{} }
-func (m *FindAllShardsInKeyspaceResponse) String() string { return proto.CompactTextString(m) }
-func (*FindAllShardsInKeyspaceResponse) ProtoMessage()    {}
-func (*FindAllShardsInKeyspaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{44}
-}
-
-func (m *FindAllShardsInKeyspaceResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_FindAllShardsInKeyspaceResponse.Unmarshal(m, b)
-}
-func (m *FindAllShardsInKeyspaceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_FindAllShardsInKeyspaceResponse.Marshal(b, m, deterministic)
-}
-func (m *FindAllShardsInKeyspaceResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_FindAllShardsInKeyspaceResponse.Merge(m, src)
-}
-func (m *FindAllShardsInKeyspaceResponse) XXX_Size() int {
-	return xxx_messageInfo_FindAllShardsInKeyspaceResponse.Size(m)
-}
-func (m *FindAllShardsInKeyspaceResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_FindAllShardsInKeyspaceResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_FindAllShardsInKeyspaceResponse proto.InternalMessageInfo
-
-func (m *FindAllShardsInKeyspaceResponse) GetShards() map[string]*Shard {
-	if m != nil {
-		return m.Shards
-	}
-	return nil
-}
-
-type Shard struct {
-	Keyspace             string          `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
-	Name                 string          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Shard                *topodata.Shard `protobuf:"bytes,3,opt,name=shard,proto3" json:"shard,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
-	XXX_unrecognized     []byte          `json:"-"`
-	XXX_sizecache        int32           `json:"-"`
-}
-
-func (m *Shard) Reset()         { *m = Shard{} }
-func (m *Shard) String() string { return proto.CompactTextString(m) }
-func (*Shard) ProtoMessage()    {}
-func (*Shard) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{45}
-}
-
-func (m *Shard) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Shard.Unmarshal(m, b)
-}
-func (m *Shard) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Shard.Marshal(b, m, deterministic)
-}
-func (m *Shard) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Shard.Merge(m, src)
-}
-func (m *Shard) XXX_Size() int {
-	return xxx_messageInfo_Shard.Size(m)
-}
-func (m *Shard) XXX_DiscardUnknown() {
-	xxx_messageInfo_Shard.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Shard proto.InternalMessageInfo
-
-func (m *Shard) GetKeyspace() string {
-	if m != nil {
-		return m.Keyspace
-	}
-	return ""
-}
-
-func (m *Shard) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-func (m *Shard) GetShard() *topodata.Shard {
+func (m *ReparentTabletResponse) GetShard() string {
 	if m != nil {
 		return m.Shard
 	}
-	return nil
-}
-
-// TableMaterializeSttings contains the settings for one table.
-type TableMaterializeSettings struct {
-	TargetTable string `protobuf:"bytes,1,opt,name=target_table,json=targetTable,proto3" json:"target_table,omitempty"`
-	// source_expression is a select statement.
-	SourceExpression string `protobuf:"bytes,2,opt,name=source_expression,json=sourceExpression,proto3" json:"source_expression,omitempty"`
-	// create_ddl contains the DDL to create the target table.
-	// If empty, the target table must already exist.
-	// if "copy", the target table DDL is the same as the source table.
-	CreateDdl            string   `protobuf:"bytes,3,opt,name=create_ddl,json=createDdl,proto3" json:"create_ddl,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *TableMaterializeSettings) Reset()         { *m = TableMaterializeSettings{} }
-func (m *TableMaterializeSettings) String() string { return proto.CompactTextString(m) }
-func (*TableMaterializeSettings) ProtoMessage()    {}
-func (*TableMaterializeSettings) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{46}
-}
-
-func (m *TableMaterializeSettings) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_TableMaterializeSettings.Unmarshal(m, b)
-}
-func (m *TableMaterializeSettings) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_TableMaterializeSettings.Marshal(b, m, deterministic)
-}
-func (m *TableMaterializeSettings) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TableMaterializeSettings.Merge(m, src)
-}
-func (m *TableMaterializeSettings) XXX_Size() int {
-	return xxx_messageInfo_TableMaterializeSettings.Size(m)
-}
-func (m *TableMaterializeSettings) XXX_DiscardUnknown() {
-	xxx_messageInfo_TableMaterializeSettings.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TableMaterializeSettings proto.InternalMessageInfo
-
-func (m *TableMaterializeSettings) GetTargetTable() string {
-	if m != nil {
-		return m.TargetTable
-	}
 	return ""
 }
 
-func (m *TableMaterializeSettings) GetSourceExpression() string {
+func (m *ReparentTabletResponse) GetPrimary() *topodata.TabletAlias {
 	if m != nil {
-		return m.SourceExpression
-	}
-	return ""
-}
-
-func (m *TableMaterializeSettings) GetCreateDdl() string {
-	if m != nil {
-		return m.CreateDdl
-	}
-	return ""
-}
-
-// MaterializeSettings contains the settings for the Materialize command.
-type MaterializeSettings struct {
-	// workflow is the name of the workflow.
-	Workflow       string `protobuf:"bytes,1,opt,name=workflow,proto3" json:"workflow,omitempty"`
-	SourceKeyspace string `protobuf:"bytes,2,opt,name=source_keyspace,json=sourceKeyspace,proto3" json:"source_keyspace,omitempty"`
-	TargetKeyspace string `protobuf:"bytes,3,opt,name=target_keyspace,json=targetKeyspace,proto3" json:"target_keyspace,omitempty"`
-	// stop_after_copy specifies if vreplication should be stopped after copying.
-	StopAfterCopy bool                        `protobuf:"varint,4,opt,name=stop_after_copy,json=stopAfterCopy,proto3" json:"stop_after_copy,omitempty"`
-	TableSettings []*TableMaterializeSettings `protobuf:"bytes,5,rep,name=table_settings,json=tableSettings,proto3" json:"table_settings,omitempty"`
-	// optional parameters.
-	Cell                 string   `protobuf:"bytes,6,opt,name=cell,proto3" json:"cell,omitempty"`
-	TabletTypes          string   `protobuf:"bytes,7,opt,name=tablet_types,json=tabletTypes,proto3" json:"tablet_types,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *MaterializeSettings) Reset()         { *m = MaterializeSettings{} }
-func (m *MaterializeSettings) String() string { return proto.CompactTextString(m) }
-func (*MaterializeSettings) ProtoMessage()    {}
-func (*MaterializeSettings) Descriptor() ([]byte, []int) {
-	return fileDescriptor_f41247b323a1ab2e, []int{47}
-}
-
-func (m *MaterializeSettings) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_MaterializeSettings.Unmarshal(m, b)
-}
-func (m *MaterializeSettings) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_MaterializeSettings.Marshal(b, m, deterministic)
-}
-func (m *MaterializeSettings) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MaterializeSettings.Merge(m, src)
-}
-func (m *MaterializeSettings) XXX_Size() int {
-	return xxx_messageInfo_MaterializeSettings.Size(m)
-}
-func (m *MaterializeSettings) XXX_DiscardUnknown() {
-	xxx_messageInfo_MaterializeSettings.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MaterializeSettings proto.InternalMessageInfo
-
-func (m *MaterializeSettings) GetWorkflow() string {
-	if m != nil {
-		return m.Workflow
-	}
-	return ""
-}
-
-func (m *MaterializeSettings) GetSourceKeyspace() string {
-	if m != nil {
-		return m.SourceKeyspace
-	}
-	return ""
-}
-
-func (m *MaterializeSettings) GetTargetKeyspace() string {
-	if m != nil {
-		return m.TargetKeyspace
-	}
-	return ""
-}
-
-func (m *MaterializeSettings) GetStopAfterCopy() bool {
-	if m != nil {
-		return m.StopAfterCopy
-	}
-	return false
-}
-
-func (m *MaterializeSettings) GetTableSettings() []*TableMaterializeSettings {
-	if m != nil {
-		return m.TableSettings
+		return m.Primary
 	}
 	return nil
 }
 
-func (m *MaterializeSettings) GetCell() string {
+type TabletExternallyReparentedRequest struct {
+	// Tablet is the alias of the tablet that was promoted externally and should
+	// be updated to the shard primary in the topo.
+	Tablet               *topodata.TabletAlias `protobuf:"bytes,1,opt,name=tablet,proto3" json:"tablet,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *TabletExternallyReparentedRequest) Reset()         { *m = TabletExternallyReparentedRequest{} }
+func (m *TabletExternallyReparentedRequest) String() string { return proto.CompactTextString(m) }
+func (*TabletExternallyReparentedRequest) ProtoMessage()    {}
+func (*TabletExternallyReparentedRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{55}
+}
+
+func (m *TabletExternallyReparentedRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TabletExternallyReparentedRequest.Unmarshal(m, b)
+}
+func (m *TabletExternallyReparentedRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TabletExternallyReparentedRequest.Marshal(b, m, deterministic)
+}
+func (m *TabletExternallyReparentedRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TabletExternallyReparentedRequest.Merge(m, src)
+}
+func (m *TabletExternallyReparentedRequest) XXX_Size() int {
+	return xxx_messageInfo_TabletExternallyReparentedRequest.Size(m)
+}
+func (m *TabletExternallyReparentedRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_TabletExternallyReparentedRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TabletExternallyReparentedRequest proto.InternalMessageInfo
+
+func (m *TabletExternallyReparentedRequest) GetTablet() *topodata.TabletAlias {
 	if m != nil {
-		return m.Cell
+		return m.Tablet
+	}
+	return nil
+}
+
+type TabletExternallyReparentedResponse struct {
+	Keyspace             string                `protobuf:"bytes,1,opt,name=keyspace,proto3" json:"keyspace,omitempty"`
+	Shard                string                `protobuf:"bytes,2,opt,name=shard,proto3" json:"shard,omitempty"`
+	NewPrimary           *topodata.TabletAlias `protobuf:"bytes,3,opt,name=new_primary,json=newPrimary,proto3" json:"new_primary,omitempty"`
+	OldPrimary           *topodata.TabletAlias `protobuf:"bytes,4,opt,name=old_primary,json=oldPrimary,proto3" json:"old_primary,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *TabletExternallyReparentedResponse) Reset()         { *m = TabletExternallyReparentedResponse{} }
+func (m *TabletExternallyReparentedResponse) String() string { return proto.CompactTextString(m) }
+func (*TabletExternallyReparentedResponse) ProtoMessage()    {}
+func (*TabletExternallyReparentedResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_f41247b323a1ab2e, []int{56}
+}
+
+func (m *TabletExternallyReparentedResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TabletExternallyReparentedResponse.Unmarshal(m, b)
+}
+func (m *TabletExternallyReparentedResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TabletExternallyReparentedResponse.Marshal(b, m, deterministic)
+}
+func (m *TabletExternallyReparentedResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TabletExternallyReparentedResponse.Merge(m, src)
+}
+func (m *TabletExternallyReparentedResponse) XXX_Size() int {
+	return xxx_messageInfo_TabletExternallyReparentedResponse.Size(m)
+}
+func (m *TabletExternallyReparentedResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_TabletExternallyReparentedResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TabletExternallyReparentedResponse proto.InternalMessageInfo
+
+func (m *TabletExternallyReparentedResponse) GetKeyspace() string {
+	if m != nil {
+		return m.Keyspace
 	}
 	return ""
 }
 
-func (m *MaterializeSettings) GetTabletTypes() string {
+func (m *TabletExternallyReparentedResponse) GetShard() string {
 	if m != nil {
-		return m.TabletTypes
+		return m.Shard
 	}
 	return ""
+}
+
+func (m *TabletExternallyReparentedResponse) GetNewPrimary() *topodata.TabletAlias {
+	if m != nil {
+		return m.NewPrimary
+	}
+	return nil
+}
+
+func (m *TabletExternallyReparentedResponse) GetOldPrimary() *topodata.TabletAlias {
+	if m != nil {
+		return m.OldPrimary
+	}
+	return nil
 }
 
 func init() {
 	proto.RegisterType((*ExecuteVtctlCommandRequest)(nil), "vtctldata.ExecuteVtctlCommandRequest")
 	proto.RegisterType((*ExecuteVtctlCommandResponse)(nil), "vtctldata.ExecuteVtctlCommandResponse")
+	proto.RegisterType((*TableMaterializeSettings)(nil), "vtctldata.TableMaterializeSettings")
+	proto.RegisterType((*MaterializeSettings)(nil), "vtctldata.MaterializeSettings")
+	proto.RegisterType((*Keyspace)(nil), "vtctldata.Keyspace")
+	proto.RegisterType((*Shard)(nil), "vtctldata.Shard")
+	proto.RegisterType((*Workflow)(nil), "vtctldata.Workflow")
+	proto.RegisterMapType((map[string]*Workflow_ShardStream)(nil), "vtctldata.Workflow.ShardStreamsEntry")
+	proto.RegisterType((*Workflow_ReplicationLocation)(nil), "vtctldata.Workflow.ReplicationLocation")
+	proto.RegisterType((*Workflow_ShardStream)(nil), "vtctldata.Workflow.ShardStream")
+	proto.RegisterType((*Workflow_Stream)(nil), "vtctldata.Workflow.Stream")
+	proto.RegisterType((*Workflow_Stream_CopyState)(nil), "vtctldata.Workflow.Stream.CopyState")
 	proto.RegisterType((*ChangeTabletTypeRequest)(nil), "vtctldata.ChangeTabletTypeRequest")
 	proto.RegisterType((*ChangeTabletTypeResponse)(nil), "vtctldata.ChangeTabletTypeResponse")
 	proto.RegisterType((*CreateKeyspaceRequest)(nil), "vtctldata.CreateKeyspaceRequest")
@@ -2319,6 +3127,11 @@ func init() {
 	proto.RegisterType((*DeleteShardsResponse)(nil), "vtctldata.DeleteShardsResponse")
 	proto.RegisterType((*DeleteTabletsRequest)(nil), "vtctldata.DeleteTabletsRequest")
 	proto.RegisterType((*DeleteTabletsResponse)(nil), "vtctldata.DeleteTabletsResponse")
+	proto.RegisterType((*EmergencyReparentShardRequest)(nil), "vtctldata.EmergencyReparentShardRequest")
+	proto.RegisterType((*EmergencyReparentShardResponse)(nil), "vtctldata.EmergencyReparentShardResponse")
+	proto.RegisterType((*FindAllShardsInKeyspaceRequest)(nil), "vtctldata.FindAllShardsInKeyspaceRequest")
+	proto.RegisterType((*FindAllShardsInKeyspaceResponse)(nil), "vtctldata.FindAllShardsInKeyspaceResponse")
+	proto.RegisterMapType((map[string]*Shard)(nil), "vtctldata.FindAllShardsInKeyspaceResponse.ShardsEntry")
 	proto.RegisterType((*GetBackupsRequest)(nil), "vtctldata.GetBackupsRequest")
 	proto.RegisterType((*GetBackupsResponse)(nil), "vtctldata.GetBackupsResponse")
 	proto.RegisterType((*GetCellInfoNamesRequest)(nil), "vtctldata.GetCellInfoNamesRequest")
@@ -2344,128 +3157,171 @@ func init() {
 	proto.RegisterType((*GetTabletsResponse)(nil), "vtctldata.GetTabletsResponse")
 	proto.RegisterType((*GetVSchemaRequest)(nil), "vtctldata.GetVSchemaRequest")
 	proto.RegisterType((*GetVSchemaResponse)(nil), "vtctldata.GetVSchemaResponse")
+	proto.RegisterType((*GetWorkflowsRequest)(nil), "vtctldata.GetWorkflowsRequest")
+	proto.RegisterType((*GetWorkflowsResponse)(nil), "vtctldata.GetWorkflowsResponse")
 	proto.RegisterType((*RemoveKeyspaceCellRequest)(nil), "vtctldata.RemoveKeyspaceCellRequest")
 	proto.RegisterType((*RemoveKeyspaceCellResponse)(nil), "vtctldata.RemoveKeyspaceCellResponse")
 	proto.RegisterType((*RemoveShardCellRequest)(nil), "vtctldata.RemoveShardCellRequest")
 	proto.RegisterType((*RemoveShardCellResponse)(nil), "vtctldata.RemoveShardCellResponse")
-	proto.RegisterType((*Keyspace)(nil), "vtctldata.Keyspace")
-	proto.RegisterType((*FindAllShardsInKeyspaceRequest)(nil), "vtctldata.FindAllShardsInKeyspaceRequest")
-	proto.RegisterType((*FindAllShardsInKeyspaceResponse)(nil), "vtctldata.FindAllShardsInKeyspaceResponse")
-	proto.RegisterMapType((map[string]*Shard)(nil), "vtctldata.FindAllShardsInKeyspaceResponse.ShardsEntry")
-	proto.RegisterType((*Shard)(nil), "vtctldata.Shard")
-	proto.RegisterType((*TableMaterializeSettings)(nil), "vtctldata.TableMaterializeSettings")
-	proto.RegisterType((*MaterializeSettings)(nil), "vtctldata.MaterializeSettings")
+	proto.RegisterType((*ReparentTabletRequest)(nil), "vtctldata.ReparentTabletRequest")
+	proto.RegisterType((*ReparentTabletResponse)(nil), "vtctldata.ReparentTabletResponse")
+	proto.RegisterType((*TabletExternallyReparentedRequest)(nil), "vtctldata.TabletExternallyReparentedRequest")
+	proto.RegisterType((*TabletExternallyReparentedResponse)(nil), "vtctldata.TabletExternallyReparentedResponse")
 }
 
 func init() { proto.RegisterFile("vtctldata.proto", fileDescriptor_f41247b323a1ab2e) }
 
 var fileDescriptor_f41247b323a1ab2e = []byte{
-	// 1708 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x58, 0x4b, 0x6f, 0xdb, 0x56,
-	0x16, 0x06, 0x25, 0x4b, 0x96, 0x8e, 0x1e, 0xb6, 0x69, 0xd9, 0x56, 0x34, 0x49, 0xc6, 0xa1, 0x27,
-	0x8e, 0xe0, 0x99, 0x91, 0xf2, 0xc0, 0x0c, 0x82, 0x4c, 0x06, 0x88, 0x63, 0x3b, 0x81, 0xe3, 0x8c,
-	0xc7, 0xa5, 0x0d, 0x17, 0x68, 0x81, 0x12, 0x34, 0x75, 0x25, 0x13, 0xa6, 0x48, 0x86, 0xf7, 0x8a,
-	0x36, 0xb3, 0xe9, 0xa6, 0x5d, 0x14, 0xe8, 0x3f, 0xc8, 0xa6, 0xab, 0x2e, 0xbb, 0xcc, 0xb2, 0xbf,
-	0xad, 0xb8, 0x2f, 0x92, 0xa2, 0x24, 0xe7, 0xd5, 0x95, 0x79, 0xcf, 0xe3, 0x9e, 0xef, 0xdc, 0xf3,
-	0x94, 0x61, 0x21, 0x24, 0x16, 0x71, 0x7a, 0x26, 0x31, 0x3b, 0x7e, 0xe0, 0x11, 0x4f, 0x2d, 0xc7,
-	0x84, 0x56, 0xcd, 0xf1, 0x06, 0x23, 0x62, 0x3b, 0x9c, 0xd3, 0xaa, 0x0f, 0x23, 0xfc, 0xc6, 0xb1,
-	0x88, 0x3c, 0xaf, 0x11, 0xf3, 0xcc, 0x41, 0x64, 0x68, 0xba, 0xe6, 0x00, 0x05, 0xc9, 0x15, 0xad,
-	0x3a, 0xf1, 0x7c, 0x2f, 0x75, 0xae, 0x85, 0xd8, 0x3a, 0x47, 0x43, 0x79, 0xac, 0x86, 0x84, 0xd8,
-	0x43, 0xc4, 0x4f, 0xda, 0xd7, 0xd0, 0xda, 0xbb, 0x42, 0xd6, 0x88, 0xa0, 0x53, 0x6a, 0x78, 0xc7,
-	0x1b, 0x0e, 0x4d, 0xb7, 0xa7, 0xa3, 0x37, 0x23, 0x84, 0x89, 0xaa, 0xc2, 0x9c, 0x19, 0x0c, 0x70,
-	0x53, 0x59, 0xcf, 0xb7, 0xcb, 0x3a, 0xfb, 0x56, 0xef, 0x42, 0xdd, 0xb4, 0x88, 0xed, 0xb9, 0x06,
-	0xbd, 0xc6, 0x1b, 0x91, 0x66, 0x6e, 0x5d, 0x69, 0xe7, 0xf5, 0x1a, 0xa7, 0x9e, 0x70, 0xa2, 0xb6,
-	0x03, 0x7f, 0x99, 0x7a, 0x31, 0xf6, 0x3d, 0x17, 0x23, 0xf5, 0x6f, 0x50, 0x40, 0x21, 0x72, 0x49,
-	0x53, 0x59, 0x57, 0xda, 0x95, 0x87, 0xf5, 0x8e, 0x74, 0x76, 0x8f, 0x52, 0x75, 0xce, 0xd4, 0xde,
-	0x29, 0xb0, 0xb6, 0x73, 0x6e, 0xba, 0x03, 0x74, 0xc2, 0x9c, 0x3d, 0x89, 0x7c, 0x24, 0xb1, 0x3d,
-	0x86, 0x2a, 0x7f, 0x01, 0xc3, 0x74, 0x6c, 0x13, 0x8b, 0x8b, 0x56, 0x3a, 0xb1, 0xf7, 0x5c, 0x65,
-	0x9b, 0x32, 0xf5, 0x0a, 0x49, 0x0e, 0xea, 0x3f, 0x61, 0xbe, 0x77, 0x66, 0x90, 0xc8, 0x47, 0x0c,
-	0x7a, 0xfd, 0x61, 0x23, 0xab, 0xc4, 0xec, 0x14, 0x7b, 0x67, 0xf4, 0xaf, 0xba, 0x06, 0xf3, 0xbd,
-	0x20, 0x32, 0x82, 0x91, 0xdb, 0xcc, 0xaf, 0x2b, 0xed, 0x92, 0x5e, 0xec, 0x05, 0x91, 0x3e, 0x72,
-	0xb5, 0x5f, 0x15, 0x68, 0x4e, 0xa2, 0x13, 0x0e, 0xfe, 0x0b, 0x6a, 0x67, 0xa8, 0xef, 0x05, 0xc8,
-	0xe0, 0xa6, 0x05, 0xbe, 0xc5, 0xac, 0x29, 0xbd, 0xca, 0xc5, 0xf8, 0x49, 0x7d, 0x04, 0x55, 0xb3,
-	0x4f, 0x50, 0x20, 0xb5, 0x72, 0x33, 0xb4, 0x2a, 0x4c, 0x4a, 0x28, 0xdd, 0x86, 0xca, 0xa5, 0x89,
-	0x8d, 0x71, 0x94, 0xe5, 0x4b, 0x13, 0xef, 0x72, 0xa0, 0xef, 0xf3, 0xb0, 0xb2, 0x13, 0x20, 0x93,
-	0xa0, 0x03, 0x14, 0x61, 0xdf, 0xb4, 0x50, 0x2a, 0xc0, 0xae, 0x39, 0x44, 0x0c, 0x5c, 0x59, 0x67,
-	0xdf, 0x6a, 0x03, 0x0a, 0x7d, 0x2f, 0xb0, 0xf8, 0xe3, 0x94, 0x74, 0x7e, 0x50, 0xbb, 0xd0, 0x30,
-	0x1d, 0xc7, 0xbb, 0x34, 0xd0, 0xd0, 0x27, 0x91, 0x11, 0x1a, 0x3c, 0xa9, 0x84, 0xb1, 0x25, 0xc6,
-	0xdb, 0xa3, 0xac, 0xd3, 0x63, 0xc6, 0x50, 0xef, 0x43, 0x03, 0x9f, 0x9b, 0x41, 0xcf, 0x76, 0x07,
-	0x86, 0xe5, 0x39, 0xa3, 0xa1, 0x6b, 0x30, 0x53, 0x73, 0xcc, 0x94, 0x2a, 0x79, 0x3b, 0x8c, 0x75,
-	0x48, 0x0d, 0xbf, 0x9a, 0xd4, 0x60, 0x41, 0x2a, 0xb0, 0x20, 0x35, 0x93, 0x37, 0x90, 0x5e, 0xec,
-	0xf7, 0xd8, 0x93, 0x67, 0xee, 0x62, 0x41, 0x7b, 0x06, 0x55, 0x8c, 0x82, 0x10, 0xf5, 0x8c, 0x7e,
-	0xe0, 0x0d, 0x71, 0xb3, 0xb8, 0x9e, 0x6f, 0x57, 0x1e, 0xde, 0x9a, 0xbc, 0xa3, 0x73, 0xcc, 0xc4,
-	0x5e, 0x04, 0xde, 0x50, 0xaf, 0xe0, 0xf8, 0x1b, 0xab, 0x5b, 0x30, 0xc7, 0xac, 0xcf, 0x33, 0xeb,
-	0xab, 0x93, 0x9a, 0xcc, 0x36, 0x93, 0x51, 0x37, 0xa0, 0x76, 0x66, 0x62, 0x64, 0x5c, 0x08, 0x56,
-	0xb3, 0xc4, 0x9c, 0xac, 0x52, 0xa2, 0x14, 0x57, 0x1f, 0x40, 0x0d, 0xbb, 0xa6, 0x8f, 0xcf, 0x3d,
-	0xc2, 0x4a, 0xa7, 0x59, 0x66, 0xb1, 0xad, 0x76, 0x44, 0x41, 0xd2, 0xca, 0xd1, 0xab, 0x52, 0x84,
-	0x9e, 0xb4, 0x7d, 0x58, 0xcd, 0xc6, 0x4d, 0xa4, 0x57, 0x17, 0x4a, 0xb1, 0x31, 0x9e, 0x59, 0xcb,
-	0x9d, 0xa4, 0x97, 0xc4, 0xe2, 0xb1, 0x90, 0xf6, 0xb3, 0x02, 0x2a, 0xbf, 0xeb, 0x98, 0xbe, 0x96,
-	0x4c, 0x80, 0x56, 0xe6, 0x9e, 0x72, 0xa2, 0xa2, 0xde, 0x02, 0x60, 0x2f, 0xcb, 0xe3, 0x96, 0x63,
-	0xdc, 0x32, 0xa3, 0x1c, 0x8e, 0xe5, 0x49, 0x3e, 0x9d, 0x27, 0x77, 0xa1, 0x6e, 0xbb, 0x96, 0x33,
-	0xea, 0x21, 0xc3, 0x37, 0x03, 0x5a, 0xe1, 0x73, 0x8c, 0x5d, 0x13, 0xd4, 0x23, 0x46, 0xd4, 0x7e,
-	0x51, 0x60, 0x79, 0x0c, 0xce, 0x67, 0xfa, 0xa5, 0x6e, 0x42, 0x81, 0x41, 0x8a, 0x2b, 0x25, 0x91,
-	0xe6, 0x37, 0x73, 0x76, 0x9c, 0x8e, 0x86, 0xe9, 0x04, 0xc8, 0xec, 0x45, 0x06, 0xba, 0xb2, 0x31,
-	0xc1, 0x02, 0x3c, 0x4f, 0xa1, 0x6d, 0xce, 0xda, 0x63, 0x1c, 0xed, 0x2b, 0x58, 0xd9, 0x45, 0x0e,
-	0x9a, 0x2c, 0x9a, 0xeb, 0xde, 0xec, 0x26, 0x94, 0x03, 0x64, 0x8d, 0x02, 0x6c, 0x87, 0xb2, 0x80,
-	0x12, 0x82, 0xd6, 0x84, 0xd5, 0xec, 0x95, 0xdc, 0x6f, 0xed, 0x47, 0x05, 0x96, 0x39, 0x8b, 0xa1,
-	0xc6, 0xd2, 0x56, 0x1b, 0x8a, 0x0c, 0x1a, 0xef, 0xc1, 0xd3, 0xfc, 0x13, 0xfc, 0xeb, 0x2d, 0xab,
-	0x9b, 0xb0, 0x40, 0x5b, 0xaa, 0x61, 0xf7, 0x0d, 0x9a, 0xe4, 0xb6, 0x3b, 0x90, 0x71, 0xa1, 0xe4,
-	0xfd, 0xfe, 0x31, 0x27, 0x6a, 0xab, 0xd0, 0x18, 0x87, 0x21, 0xf0, 0x45, 0x92, 0xce, 0x5b, 0x4e,
-	0x8c, 0xef, 0x29, 0xd4, 0xd3, 0x5d, 0x18, 0x49, 0x9c, 0x33, 0xfa, 0x70, 0x2d, 0xd5, 0x87, 0x11,
-	0xa6, 0x75, 0xc3, 0x9b, 0x8a, 0x1f, 0xd8, 0x43, 0x33, 0x88, 0x04, 0xee, 0x2a, 0x23, 0x1e, 0x71,
-	0x9a, 0xb6, 0x26, 0xe3, 0x10, 0x9b, 0x16, 0x98, 0xf6, 0x60, 0xe9, 0x25, 0x22, 0xcf, 0x4d, 0xeb,
-	0x62, 0xe4, 0xe3, 0x8f, 0x09, 0x4e, 0x23, 0x9d, 0x2b, 0x65, 0x91, 0x19, 0xda, 0x2e, 0xa8, 0xe9,
-	0x6b, 0x44, 0x22, 0x76, 0x60, 0xfe, 0x8c, 0x93, 0x84, 0x47, 0x8d, 0x4e, 0x3c, 0x80, 0xb9, 0xec,
-	0xbe, 0xdb, 0xf7, 0x74, 0x29, 0xa4, 0xdd, 0x80, 0xb5, 0x97, 0x88, 0xec, 0x20, 0xc7, 0xa1, 0x74,
-	0x5a, 0x20, 0x12, 0x92, 0x76, 0x1f, 0x9a, 0x93, 0x2c, 0x61, 0xa6, 0x01, 0x05, 0x5a, 0x5d, 0x72,
-	0xc4, 0xf2, 0x83, 0xd6, 0x66, 0x90, 0xa4, 0x46, 0xaa, 0x59, 0x5b, 0xc8, 0x71, 0x64, 0xb3, 0xa6,
-	0xdf, 0xda, 0x0b, 0x58, 0x1e, 0x93, 0x8c, 0xcb, 0xa8, 0x4c, 0xd9, 0x86, 0xed, 0xf6, 0x3d, 0x51,
-	0x47, 0x6a, 0x12, 0x91, 0x58, 0xbc, 0x64, 0x89, 0x2f, 0x9a, 0x99, 0xe2, 0x1e, 0x2c, 0x82, 0x23,
-	0xd1, 0xbf, 0x57, 0x62, 0xcf, 0x12, 0x96, 0x30, 0xb3, 0x0f, 0xf3, 0xe3, 0x61, 0xef, 0xa6, 0xd2,
-	0x73, 0x86, 0x52, 0x47, 0x9c, 0xf7, 0x5c, 0x12, 0x44, 0xba, 0xd4, 0x6f, 0x1d, 0x41, 0x35, 0xcd,
-	0x50, 0x17, 0x21, 0x7f, 0x81, 0x22, 0xe1, 0x2b, 0xfd, 0x54, 0xb7, 0xa0, 0x10, 0x9a, 0xce, 0x08,
-	0x89, 0x4a, 0x6f, 0x8c, 0xfb, 0xc3, 0xcd, 0xe8, 0x5c, 0xe4, 0x49, 0xee, 0xb1, 0xa2, 0xad, 0xb0,
-	0xa7, 0x91, 0x95, 0x16, 0xfb, 0xb3, 0x0f, 0x8d, 0x71, 0xb2, 0xf0, 0xe5, 0x01, 0x94, 0x65, 0xa2,
-	0x48, 0x6f, 0xa6, 0xb6, 0x9e, 0x44, 0x4a, 0xbb, 0xcf, 0xc2, 0xf4, 0x09, 0xed, 0x41, 0x84, 0xeb,
-	0xcb, 0xbb, 0xf9, 0x0f, 0x39, 0x58, 0x7c, 0x89, 0x08, 0x1f, 0xb5, 0x5f, 0xbe, 0x11, 0xad, 0x42,
-	0x91, 0x1d, 0x71, 0x33, 0xc7, 0xd2, 0x50, 0x9c, 0x68, 0x33, 0x47, 0x57, 0xbc, 0x99, 0x0b, 0x7e,
-	0x9e, 0xf1, 0x6b, 0x82, 0x7a, 0xc2, 0xc5, 0x36, 0x40, 0x76, 0x77, 0x23, 0xb4, 0xd1, 0x25, 0x16,
-	0xad, 0xa5, 0x2a, 0x88, 0xa7, 0x94, 0xa6, 0xb6, 0x61, 0x91, 0xdd, 0xc1, 0xa6, 0x09, 0x36, 0x3c,
-	0xd7, 0x89, 0xd8, 0x64, 0x2f, 0xe9, 0xbc, 0x83, 0xb0, 0xba, 0xf8, 0xbf, 0xeb, 0x44, 0x89, 0x24,
-	0xb6, 0xdf, 0x4a, 0xc9, 0x62, 0x4a, 0xf2, 0x98, 0x92, 0xa9, 0xa4, 0x76, 0xc4, 0x3a, 0x80, 0x7c,
-	0x05, 0xf1, 0x98, 0xff, 0x81, 0xa2, 0xd8, 0x4d, 0xf8, 0x03, 0x6c, 0x74, 0x26, 0x37, 0x65, 0xae,
-	0xb2, 0x8b, 0xfa, 0xb6, 0x6b, 0xd3, 0xad, 0x55, 0x17, 0x2a, 0xda, 0x6b, 0x58, 0xa0, 0x37, 0xfe,
-	0x39, 0x23, 0x52, 0x7b, 0xc2, 0xa3, 0x34, 0x36, 0xe1, 0xe2, 0x81, 0xa5, 0x5c, 0x3b, 0xb0, 0xb4,
-	0x2d, 0x96, 0xa7, 0xc7, 0x41, 0x78, 0x3a, 0x1e, 0xe5, 0x69, 0x5d, 0xe0, 0x10, 0x56, 0x32, 0xb2,
-	0xf1, 0x16, 0x5a, 0xc5, 0x41, 0x98, 0x6c, 0x6b, 0x71, 0x72, 0x89, 0x9f, 0x04, 0x29, 0x15, 0xc0,
-	0xf1, 0xb7, 0xf6, 0x9a, 0xe1, 0x16, 0xab, 0xe6, 0x97, 0x66, 0x97, 0xf6, 0x5f, 0x16, 0x25, 0x79,
-	0x9b, 0x40, 0xd6, 0x16, 0x29, 0x37, 0x7b, 0x31, 0x16, 0x7c, 0xed, 0xdb, 0x94, 0xfa, 0xe7, 0xb7,
-	0x79, 0x4a, 0xa5, 0x6f, 0x25, 0x53, 0x98, 0x1f, 0xb4, 0x67, 0xac, 0x84, 0x33, 0x93, 0x45, 0xdd,
-	0x82, 0x79, 0x6e, 0x3c, 0x19, 0xbb, 0x59, 0x74, 0x52, 0x40, 0xeb, 0x32, 0x78, 0x99, 0x20, 0x5d,
-	0xd7, 0x03, 0x9e, 0x33, 0x93, 0xd9, 0x48, 0xfd, 0x03, 0x4a, 0x99, 0x28, 0x2d, 0xc5, 0x51, 0x8a,
-	0x1b, 0xc0, 0x7c, 0x28, 0x02, 0xf4, 0x3d, 0xdc, 0xd0, 0xd1, 0xd0, 0x0b, 0xe3, 0x45, 0x82, 0xb6,
-	0xc0, 0x8f, 0x79, 0x1b, 0x99, 0x3d, 0xb9, 0x24, 0x7b, 0x66, 0x2c, 0x72, 0x63, 0xfb, 0xc4, 0x5c,
-	0x76, 0x93, 0xb9, 0x09, 0xad, 0x69, 0x00, 0xc4, 0x64, 0x7e, 0xa7, 0xc0, 0x2a, 0x67, 0xb3, 0x94,
-	0xfe, 0x58, 0x70, 0x1f, 0x58, 0x38, 0x25, 0xf6, 0xfc, 0x34, 0xec, 0x73, 0x33, 0xb1, 0x17, 0xb2,
-	0xd8, 0x6f, 0xc0, 0xda, 0x04, 0x38, 0x01, 0xfc, 0x10, 0x4a, 0x07, 0xa9, 0xa7, 0x9a, 0xf8, 0x6d,
-	0xd4, 0x49, 0xa1, 0xcf, 0x65, 0xc7, 0xea, 0x94, 0x3e, 0xfd, 0x14, 0x6e, 0xbf, 0xb0, 0xdd, 0xde,
-	0xb6, 0xe3, 0xf0, 0x7d, 0x6a, 0xdf, 0xfd, 0x94, 0x69, 0xf1, 0xbb, 0x02, 0x7f, 0x9d, 0xa9, 0x2e,
-	0xf2, 0xe6, 0x30, 0xb3, 0x20, 0xfe, 0x3b, 0xd5, 0x4f, 0x3e, 0xa0, 0xcb, 0xfb, 0x8d, 0x18, 0xc4,
-	0xe2, 0x96, 0xd6, 0x01, 0x54, 0x52, 0xe4, 0x29, 0x63, 0x78, 0x73, 0x7c, 0x0c, 0x4f, 0xe9, 0x5f,
-	0xc9, 0x08, 0xfe, 0x0e, 0x0a, 0x8c, 0xf6, 0xa1, 0x94, 0x4c, 0xc5, 0x9b, 0xbf, 0xf3, 0x5d, 0x59,
-	0xc2, 0x79, 0x66, 0x64, 0x21, 0x79, 0xe4, 0xb1, 0x1e, 0xf9, 0x93, 0x02, 0x4d, 0x56, 0x8f, 0xff,
-	0x33, 0x09, 0x0a, 0x6c, 0xd3, 0xb1, 0xdf, 0xa2, 0x63, 0x44, 0x88, 0xed, 0x0e, 0xb0, 0x7a, 0x87,
-	0x36, 0xac, 0x60, 0x80, 0x08, 0x9f, 0x5d, 0xc2, 0x6e, 0x85, 0xd3, 0x98, 0x96, 0xfa, 0x77, 0x58,
-	0xc2, 0xde, 0x28, 0xb0, 0x90, 0x81, 0xae, 0xfc, 0x00, 0x61, 0x6c, 0x7b, 0xae, 0xc0, 0xb1, 0xc8,
-	0x19, 0x7b, 0x31, 0x9d, 0x66, 0xa7, 0xc5, 0x7e, 0xb1, 0x18, 0xbd, 0x9e, 0x4c, 0xc2, 0x32, 0xa7,
-	0xec, 0xf6, 0x1c, 0xed, 0xb7, 0x1c, 0x2c, 0x4f, 0x83, 0xd1, 0x82, 0xd2, 0xa5, 0x17, 0x5c, 0xf4,
-	0x1d, 0xef, 0x52, 0xba, 0x2e, 0xcf, 0xea, 0x3d, 0x58, 0x10, 0xf6, 0xc7, 0xb2, 0xaa, 0xac, 0xd7,
-	0x39, 0x39, 0xce, 0xc5, 0x7b, 0xb0, 0x20, 0x7c, 0x89, 0x05, 0x39, 0x80, 0x3a, 0x27, 0x1f, 0x24,
-	0x3f, 0x87, 0x16, 0x30, 0xf1, 0x7c, 0x83, 0xff, 0x13, 0xc1, 0xf2, 0xfc, 0x48, 0xee, 0xf9, 0x94,
-	0xbc, 0x4d, 0xa9, 0x3b, 0x9e, 0x1f, 0xa9, 0xaf, 0xc4, 0xde, 0x6e, 0x60, 0x81, 0xb3, 0x59, 0x60,
-	0xe9, 0xb3, 0x91, 0x0a, 0xe7, 0xac, 0x97, 0x15, 0x5b, 0x7c, 0xec, 0xa1, 0xac, 0xcb, 0x62, 0xaa,
-	0x2e, 0xef, 0xc4, 0xd3, 0x82, 0xfe, 0x40, 0xc6, 0xec, 0x57, 0x74, 0x59, 0x8e, 0x05, 0xfa, 0xcb,
-	0x19, 0x3f, 0x6f, 0x7f, 0xb3, 0x19, 0xda, 0x04, 0x61, 0xdc, 0xb1, 0xbd, 0x2e, 0xff, 0xea, 0x0e,
-	0xbc, 0x6e, 0x48, 0xba, 0xec, 0x5f, 0x53, 0xdd, 0x18, 0xc8, 0x59, 0x91, 0x11, 0x1e, 0xfd, 0x11,
-	0x00, 0x00, 0xff, 0xff, 0xc0, 0xb3, 0xd6, 0x9d, 0x2e, 0x13, 0x00, 0x00,
+	// 2404 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x59, 0x5b, 0x6f, 0x1b, 0xc7,
+	0xf5, 0xc7, 0xf2, 0x26, 0xf2, 0x90, 0xa2, 0xe4, 0x11, 0x25, 0x6d, 0xf8, 0x8f, 0x2f, 0x59, 0xc7,
+	0x8e, 0xfe, 0x6e, 0x4c, 0xda, 0x4a, 0x63, 0x04, 0x6e, 0xd2, 0xda, 0xd6, 0xc5, 0x90, 0xe3, 0xba,
+	0xea, 0x4a, 0x75, 0x80, 0x16, 0xe8, 0x76, 0xb4, 0x3b, 0xa2, 0x17, 0x5a, 0xee, 0x32, 0x3b, 0x43,
+	0x4a, 0x4c, 0x1f, 0xfa, 0xd2, 0x3e, 0x14, 0x28, 0xd0, 0x0f, 0x10, 0x14, 0xe8, 0x53, 0xd1, 0x4f,
+	0x10, 0xa0, 0x40, 0xd1, 0xc7, 0x7e, 0x87, 0x7e, 0x9b, 0x62, 0xae, 0x5c, 0x5e, 0x2d, 0x2b, 0x7d,
+	0xe2, 0xce, 0x99, 0x73, 0xe6, 0xfc, 0xe6, 0xdc, 0xe6, 0xcc, 0x10, 0x56, 0x06, 0xcc, 0x67, 0x51,
+	0x80, 0x19, 0x6e, 0xf5, 0xd2, 0x84, 0x25, 0xa8, 0x62, 0x08, 0xcd, 0xd5, 0x93, 0x30, 0x8e, 0x92,
+	0xce, 0x68, 0xb2, 0xb9, 0x1c, 0x25, 0x9d, 0x3e, 0x0b, 0x23, 0x35, 0xac, 0x77, 0x87, 0xf4, 0xeb,
+	0xc8, 0x67, 0x7a, 0xbc, 0xc9, 0xf0, 0x49, 0x44, 0x58, 0x17, 0xc7, 0xb8, 0x43, 0xd2, 0x8c, 0x5c,
+	0x9d, 0x25, 0xbd, 0x24, 0xbb, 0xce, 0x80, 0xfa, 0x6f, 0x48, 0x57, 0x0f, 0x6b, 0x03, 0xc6, 0xc2,
+	0x2e, 0x91, 0x23, 0xe7, 0x2b, 0x68, 0xee, 0x5d, 0x10, 0xbf, 0xcf, 0xc8, 0x6b, 0x0e, 0x65, 0x27,
+	0xe9, 0x76, 0x71, 0x1c, 0xb8, 0xe4, 0xeb, 0x3e, 0xa1, 0x0c, 0x21, 0x28, 0xe0, 0xb4, 0x43, 0x6d,
+	0xeb, 0x56, 0x7e, 0xab, 0xe2, 0x8a, 0x6f, 0x74, 0x07, 0xea, 0xd8, 0x67, 0x61, 0x12, 0x7b, 0x7c,
+	0x99, 0xa4, 0xcf, 0xec, 0xdc, 0x2d, 0x6b, 0x2b, 0xef, 0x2e, 0x4b, 0xea, 0xb1, 0x24, 0x3a, 0x3b,
+	0xf0, 0x7f, 0x33, 0x17, 0xa6, 0xbd, 0x24, 0xa6, 0x04, 0x7d, 0x08, 0x45, 0x32, 0x20, 0x31, 0xb3,
+	0xad, 0x5b, 0xd6, 0x56, 0x75, 0xbb, 0xde, 0xd2, 0x9b, 0xdd, 0xe3, 0x54, 0x57, 0x4e, 0x3a, 0x7f,
+	0xb4, 0xc0, 0x3e, 0xe6, 0xdb, 0xfc, 0x29, 0x66, 0x24, 0x0d, 0x71, 0x14, 0x7e, 0x43, 0x8e, 0x08,
+	0x63, 0x61, 0xdc, 0xa1, 0xe8, 0x03, 0xa8, 0x31, 0x9c, 0x76, 0x08, 0xf3, 0x84, 0x25, 0xc4, 0x4a,
+	0x15, 0xb7, 0x2a, 0x69, 0x42, 0x0a, 0xfd, 0x00, 0xae, 0xd1, 0xa4, 0x9f, 0xfa, 0xc4, 0x23, 0x17,
+	0xbd, 0x94, 0x50, 0x1a, 0x26, 0xb1, 0x80, 0x5b, 0x71, 0x57, 0xe5, 0xc4, 0x9e, 0xa1, 0xa3, 0xeb,
+	0x00, 0x7e, 0x4a, 0x30, 0x23, 0x5e, 0x10, 0x44, 0x76, 0x5e, 0x70, 0x55, 0x24, 0x65, 0x37, 0x88,
+	0x9c, 0xff, 0xe4, 0x60, 0x6d, 0x16, 0x8c, 0x26, 0x94, 0xcf, 0x93, 0xf4, 0xec, 0x34, 0x4a, 0xce,
+	0x15, 0x04, 0x33, 0x46, 0x1f, 0xc1, 0x8a, 0xd2, 0x7f, 0x46, 0x86, 0xb4, 0x87, 0x7d, 0xa2, 0xb4,
+	0xd7, 0x25, 0xf9, 0x4b, 0x45, 0xe5, 0x8c, 0x6a, 0x2f, 0x86, 0x51, 0x02, 0xa8, 0x4b, 0xb2, 0x61,
+	0xbc, 0x0b, 0x2b, 0x94, 0x25, 0x3d, 0x0f, 0x9f, 0x32, 0x92, 0x7a, 0x7e, 0xd2, 0x1b, 0xda, 0x85,
+	0x5b, 0xd6, 0x56, 0xd9, 0x5d, 0xe6, 0xe4, 0xa7, 0x9c, 0xba, 0x93, 0xf4, 0x86, 0xe8, 0x05, 0xd4,
+	0x85, 0x55, 0x3c, 0xaa, 0x70, 0xda, 0xc5, 0x5b, 0xf9, 0xad, 0xea, 0xf6, 0xed, 0xd6, 0x28, 0x06,
+	0xe7, 0x59, 0xd6, 0x5d, 0x16, 0xa2, 0x66, 0x87, 0x08, 0x0a, 0x3e, 0x89, 0x22, 0xbb, 0x24, 0x10,
+	0x89, 0x6f, 0x69, 0x7c, 0x1e, 0x7f, 0x1e, 0x1b, 0xf6, 0x08, 0xb5, 0x97, 0xb4, 0xf1, 0x39, 0xed,
+	0x98, 0x93, 0xd0, 0xff, 0xc3, 0x2a, 0xb9, 0x60, 0x24, 0x8d, 0x71, 0xe4, 0xf9, 0x51, 0x9f, 0x32,
+	0x92, 0xda, 0x65, 0xc1, 0xb6, 0xa2, 0xe9, 0x3b, 0x92, 0xec, 0xbc, 0x82, 0xb2, 0xd9, 0x21, 0x82,
+	0x42, 0x8c, 0xbb, 0xda, 0x9d, 0xe2, 0x1b, 0xb5, 0xa0, 0x3c, 0x66, 0xc0, 0xea, 0x36, 0x6a, 0x99,
+	0x28, 0xd7, 0x92, 0xae, 0xe1, 0x71, 0x7e, 0x0d, 0xc5, 0xa3, 0x37, 0x38, 0x0d, 0xb8, 0x73, 0x8c,
+	0xa0, 0x72, 0xce, 0xd9, 0xa4, 0xa2, 0x5c, 0x46, 0xd1, 0x1d, 0x28, 0x52, 0x2e, 0x28, 0xac, 0x5f,
+	0xdd, 0x5e, 0x19, 0x69, 0x11, 0xeb, 0xb9, 0x72, 0xd6, 0xf9, 0x7b, 0x05, 0xca, 0x5f, 0x69, 0x27,
+	0xcf, 0x02, 0xfc, 0x13, 0x28, 0x49, 0x0f, 0x2b, 0xb8, 0x1f, 0x65, 0xcc, 0xae, 0x05, 0x5b, 0x2e,
+	0xe9, 0x45, 0xa1, 0x8f, 0x79, 0xd6, 0xbc, 0x4c, 0xe4, 0xaf, 0xab, 0xc4, 0xf8, 0x02, 0xd2, 0xf3,
+	0x0a, 0xc9, 0xe5, 0x17, 0x90, 0x62, 0xe8, 0x21, 0xac, 0x77, 0xf1, 0x85, 0x37, 0xf0, 0xd2, 0x11,
+	0x93, 0x17, 0xe1, 0x8e, 0x08, 0x97, 0xbc, 0x8b, 0xba, 0xf8, 0xe2, 0x75, 0x56, 0x1e, 0x77, 0xd0,
+	0x0b, 0x58, 0x16, 0xdb, 0xf3, 0x28, 0x4b, 0x09, 0xee, 0xea, 0x90, 0xb9, 0x33, 0x4b, 0xb5, 0x30,
+	0xc7, 0x91, 0xe4, 0xdb, 0x8b, 0x59, 0x3a, 0x74, 0x6b, 0x34, 0x43, 0x6a, 0xfe, 0x06, 0xae, 0x4d,
+	0xb1, 0xa0, 0x55, 0xc8, 0x9f, 0x91, 0xa1, 0x32, 0x14, 0xff, 0x44, 0x9f, 0x42, 0x71, 0x80, 0xa3,
+	0xbe, 0x36, 0xd3, 0xcd, 0xb7, 0xa8, 0x72, 0x25, 0xf7, 0xe3, 0xdc, 0x67, 0x56, 0xf3, 0x00, 0xd6,
+	0x66, 0xec, 0x7f, 0xa1, 0xc7, 0x37, 0xa0, 0x24, 0x40, 0x52, 0x3b, 0x27, 0x0a, 0x9a, 0x1a, 0x35,
+	0xff, 0x61, 0x41, 0x35, 0xa3, 0x05, 0xfd, 0x10, 0x96, 0xb4, 0x09, 0x2c, 0x61, 0x82, 0xe6, 0x4c,
+	0x5c, 0x12, 0x92, 0x66, 0x45, 0xfb, 0x3c, 0x87, 0x45, 0x4a, 0xf8, 0x49, 0xcc, 0xd2, 0x24, 0x92,
+	0x6a, 0xaa, 0xdb, 0xd7, 0x27, 0xa2, 0x48, 0x26, 0x1e, 0xdb, 0x91, 0x5c, 0xae, 0x4c, 0x54, 0x3d,
+	0xa4, 0xe8, 0x63, 0x40, 0x21, 0xf5, 0x7a, 0x69, 0xd8, 0xc5, 0xe9, 0xd0, 0xa3, 0x24, 0x1d, 0x84,
+	0x71, 0x47, 0x84, 0x41, 0xd9, 0x5d, 0x0d, 0xe9, 0xa1, 0x9c, 0x38, 0x92, 0xf4, 0xe6, 0x5f, 0x0a,
+	0x50, 0x52, 0xb0, 0xeb, 0x90, 0x0b, 0x03, 0xb1, 0xe9, 0xbc, 0x9b, 0x0b, 0x03, 0xd4, 0xd0, 0xc1,
+	0x2c, 0x23, 0x5c, 0x0e, 0xd0, 0x7d, 0x1e, 0x59, 0x5c, 0xa1, 0x8a, 0xac, 0xf5, 0x11, 0x3a, 0x89,
+	0xeb, 0x69, 0x14, 0x62, 0xea, 0x2a, 0x26, 0xf4, 0x05, 0x2c, 0xcb, 0x93, 0xc9, 0x53, 0x01, 0x5d,
+	0x10, 0x52, 0x76, 0x2b, 0x73, 0x5e, 0x3d, 0x13, 0x9f, 0x47, 0x62, 0xde, 0xad, 0x9d, 0x64, 0x46,
+	0xdc, 0x1d, 0xbd, 0x84, 0x86, 0xdc, 0x35, 0x76, 0x51, 0xba, 0x43, 0x8f, 0xd1, 0x6d, 0x10, 0x45,
+	0xcb, 0x33, 0x0c, 0xb2, 0xc0, 0xd4, 0x38, 0xf1, 0x50, 0x33, 0xf1, 0x4d, 0x30, 0xcc, 0x88, 0xaa,
+	0x30, 0x72, 0x80, 0x36, 0x61, 0x29, 0x38, 0xf1, 0x44, 0xda, 0xc9, 0x92, 0x52, 0x0a, 0x4e, 0x5e,
+	0xf1, 0xc4, 0x7b, 0x0a, 0xeb, 0x2c, 0xc5, 0x31, 0xcd, 0x1c, 0x51, 0x94, 0xe1, 0x6e, 0xcf, 0xae,
+	0x08, 0xd8, 0xb5, 0x96, 0x3a, 0xfd, 0xf8, 0x31, 0xe5, 0x36, 0x32, 0xac, 0xc7, 0x9a, 0x13, 0xb5,
+	0xa1, 0xc6, 0x59, 0xbc, 0x7e, 0x2f, 0xc0, 0x8c, 0x04, 0x36, 0xcc, 0x90, 0xac, 0xf2, 0xcf, 0x5f,
+	0x48, 0x06, 0x64, 0xc3, 0x52, 0x97, 0x50, 0x8a, 0x3b, 0xc4, 0xae, 0x0a, 0x30, 0x7a, 0x88, 0xf6,
+	0xa0, 0xca, 0x4b, 0xb4, 0x27, 0x40, 0x53, 0xbb, 0x26, 0xc2, 0xe1, 0xc3, 0xf9, 0xc1, 0xd4, 0xe2,
+	0xb5, 0xfb, 0x88, 0x33, 0xbb, 0xe0, 0xeb, 0x4f, 0xda, 0x7c, 0x0c, 0x15, 0x33, 0xc1, 0x0d, 0x92,
+	0x3d, 0xef, 0xe4, 0x80, 0x1b, 0x24, 0xc2, 0x94, 0x79, 0xbd, 0x33, 0xe5, 0xed, 0x12, 0x1f, 0x1e,
+	0x9e, 0x39, 0xdf, 0x5a, 0xb0, 0xb9, 0xf3, 0x06, 0xc7, 0x1d, 0x72, 0x6c, 0x6a, 0xb3, 0x3e, 0xde,
+	0x3f, 0x33, 0x45, 0x1c, 0x73, 0x9f, 0xab, 0xb3, 0x78, 0x4e, 0x40, 0xa8, 0xda, 0x2e, 0x06, 0xe8,
+	0xbe, 0xb0, 0x3f, 0x2f, 0xfd, 0x42, 0x5d, 0x7d, 0xbb, 0x31, 0x29, 0x24, 0xf4, 0x94, 0x82, 0x13,
+	0xfe, 0x2b, 0xdc, 0x95, 0x0e, 0xbd, 0xb4, 0x1f, 0xab, 0x38, 0x2e, 0x05, 0xe9, 0xd0, 0xed, 0xc7,
+	0xce, 0xdf, 0x2c, 0xb0, 0xa7, 0xd1, 0xa9, 0x1e, 0xe1, 0x53, 0x58, 0x3e, 0x21, 0xa7, 0x49, 0x4a,
+	0x3c, 0x15, 0xb0, 0x12, 0xdf, 0xea, 0xa4, 0x2a, 0xb7, 0x26, 0xd9, 0xe4, 0x08, 0x7d, 0x02, 0x35,
+	0x79, 0x3a, 0x2a, 0xa9, 0xdc, 0x1c, 0xa9, 0xaa, 0xe0, 0x52, 0x42, 0x37, 0xa0, 0x7a, 0x8e, 0xa9,
+	0x37, 0x8e, 0xb2, 0x72, 0x8e, 0xe9, 0xae, 0x04, 0xfa, 0x5d, 0x1e, 0xd6, 0x77, 0x44, 0x2f, 0x60,
+	0x8e, 0x9b, 0x51, 0x8f, 0x34, 0x55, 0xfe, 0x1b, 0x50, 0x3c, 0x4d, 0x74, 0xf5, 0x2f, 0xbb, 0x72,
+	0x80, 0xda, 0xd0, 0xc0, 0x51, 0x94, 0x9c, 0x7b, 0xa4, 0xdb, 0x63, 0x43, 0x6f, 0xe0, 0xc9, 0xbe,
+	0x4c, 0x29, 0xbb, 0x26, 0xe6, 0xf6, 0xf8, 0xd4, 0xeb, 0x23, 0x31, 0x81, 0x1e, 0x40, 0x43, 0xe4,
+	0x6c, 0x18, 0x77, 0x3c, 0x3f, 0x89, 0xfa, 0xdd, 0x58, 0x86, 0x7c, 0x41, 0xa8, 0x42, 0x7a, 0x6e,
+	0x47, 0x4c, 0x89, 0xf0, 0x7f, 0x31, 0x2d, 0x21, 0x9c, 0x54, 0x14, 0x4e, 0xb2, 0xa7, 0x0f, 0xcd,
+	0x83, 0x40, 0x98, 0x7c, 0x62, 0x2d, 0xe1, 0xb4, 0x27, 0x50, 0xe3, 0xc5, 0x87, 0x04, 0xde, 0x69,
+	0x9a, 0x74, 0xa9, 0x5d, 0x9a, 0x2c, 0x66, 0x7a, 0x8d, 0xd6, 0x91, 0x60, 0xdb, 0x4f, 0x93, 0xae,
+	0x5b, 0xa5, 0xe6, 0x9b, 0xa2, 0x7b, 0x50, 0x10, 0xda, 0x97, 0x84, 0xf6, 0x8d, 0x69, 0x49, 0xa1,
+	0x5b, 0xf0, 0xf0, 0x62, 0x70, 0x82, 0x69, 0xa6, 0x51, 0x92, 0x79, 0x5d, 0xe3, 0x44, 0xd3, 0x1b,
+	0x3c, 0x84, 0x65, 0x1a, 0xe3, 0x1e, 0x7d, 0x93, 0x30, 0x91, 0xda, 0x33, 0xb3, 0xba, 0xa6, 0x59,
+	0xf8, 0xc8, 0x39, 0x80, 0x8d, 0x49, 0xbf, 0xa9, 0xf0, 0x6a, 0x4f, 0x9c, 0x14, 0xd5, 0xed, 0xb5,
+	0x4c, 0x66, 0xce, 0xe8, 0x2a, 0xfe, 0x64, 0x01, 0x92, 0x6b, 0xc9, 0x66, 0x40, 0x05, 0xc0, 0xa2,
+	0x13, 0xe7, 0x3a, 0x80, 0x3c, 0x52, 0x33, 0x9d, 0x46, 0x45, 0x50, 0x5e, 0x8d, 0xc5, 0x49, 0x3e,
+	0x1b, 0x27, 0x77, 0xa0, 0x1e, 0xc6, 0x7e, 0xd4, 0x0f, 0x88, 0xd7, 0xc3, 0x29, 0x6f, 0x92, 0x55,
+	0x8b, 0xa7, 0xa8, 0x87, 0x82, 0xe8, 0xfc, 0xd5, 0x82, 0xb5, 0x31, 0x38, 0x57, 0xdc, 0x17, 0xba,
+	0x9b, 0x3d, 0x27, 0x78, 0xa6, 0x8c, 0xb8, 0xb3, 0x5d, 0x8f, 0x09, 0x47, 0x0f, 0x47, 0x29, 0xc1,
+	0xc1, 0xd0, 0x23, 0x17, 0x21, 0x65, 0x54, 0x81, 0x97, 0x21, 0xf4, 0x54, 0x4e, 0xed, 0x89, 0x19,
+	0xe7, 0xe7, 0xb0, 0xbe, 0x4b, 0x22, 0x32, 0x9d, 0x34, 0x8b, 0x6c, 0xf6, 0x3e, 0x54, 0x52, 0xe2,
+	0xf7, 0x53, 0x1a, 0x0e, 0x74, 0x02, 0x8d, 0x08, 0x8e, 0x0d, 0x1b, 0x93, 0x4b, 0xca, 0x7d, 0x3b,
+	0x7f, 0xb0, 0x60, 0x4d, 0x4e, 0x09, 0xd4, 0x54, 0xeb, 0xda, 0x32, 0xa7, 0xbe, 0x3c, 0xcc, 0xa7,
+	0xf7, 0xa7, 0xe6, 0x17, 0x6b, 0xe6, 0xad, 0x37, 0xbf, 0x95, 0x78, 0xe1, 0xa9, 0x39, 0x94, 0x95,
+	0x5f, 0x38, 0xf9, 0xe0, 0x54, 0x9d, 0xc8, 0xce, 0x06, 0x34, 0xc6, 0x61, 0x28, 0x7c, 0x43, 0x4d,
+	0x97, 0x25, 0xc7, 0xe0, 0xfb, 0x5c, 0xb5, 0xea, 0xaa, 0x0a, 0x13, 0x8d, 0x73, 0x4e, 0x1d, 0x5e,
+	0xce, 0xd4, 0x61, 0x42, 0x79, 0xde, 0xc8, 0xa2, 0xa2, 0x1a, 0x06, 0x85, 0xbb, 0x26, 0x88, 0xaa,
+	0x57, 0x70, 0x36, 0xb5, 0x1f, 0x8c, 0x6a, 0x85, 0xe9, 0xcf, 0x39, 0xb8, 0xbe, 0xd7, 0x25, 0x69,
+	0x87, 0xc4, 0xfe, 0xd0, 0x25, 0x32, 0xdc, 0x2e, 0x1d, 0xdd, 0xb3, 0x1b, 0x8c, 0x47, 0x50, 0x8d,
+	0xc9, 0x08, 0xcf, 0xc2, 0x2e, 0x03, 0x62, 0xa2, 0x41, 0xa2, 0x1f, 0xc3, 0x4a, 0xd8, 0x89, 0x79,
+	0xb9, 0x57, 0x2d, 0x2b, 0xb5, 0x0b, 0x8b, 0x0c, 0x51, 0x97, 0xdc, 0xaa, 0x09, 0xa4, 0x68, 0x17,
+	0xd6, 0xcf, 0x71, 0xc8, 0x8c, 0xb4, 0xb9, 0x9f, 0x16, 0x4d, 0x58, 0x8b, 0x22, 0xb1, 0xdb, 0x4f,
+	0x65, 0xab, 0xbc, 0xc6, 0xd9, 0xb5, 0xb8, 0xbe, 0xb7, 0xfe, 0xd3, 0x82, 0x1b, 0xf3, 0x2c, 0xa2,
+	0x12, 0xec, 0xdd, 0x4d, 0xf2, 0x04, 0x56, 0x7b, 0x69, 0xd2, 0x4d, 0x18, 0x09, 0x2e, 0x67, 0x97,
+	0x15, 0xcd, 0xae, 0x8d, 0x73, 0x17, 0x4a, 0xe2, 0x4a, 0xac, 0x6d, 0x32, 0x79, 0x61, 0x56, 0xb3,
+	0xce, 0xe7, 0x70, 0x63, 0x3f, 0x8c, 0x83, 0xa7, 0x51, 0x24, 0xa3, 0xef, 0x20, 0x7e, 0x87, 0xd4,
+	0x73, 0xfe, 0x65, 0xc1, 0xcd, 0xb9, 0xe2, 0x6a, 0xf7, 0xaf, 0x26, 0xd2, 0xe9, 0x51, 0x26, 0x9d,
+	0xde, 0x22, 0x2b, 0xd3, 0x4d, 0xdd, 0x17, 0x74, 0xf3, 0xfd, 0xa5, 0xea, 0xbd, 0xe7, 0xde, 0x11,
+	0xee, 0x8e, 0xdf, 0x11, 0x66, 0x94, 0x27, 0x73, 0x29, 0x70, 0xf6, 0xe0, 0xda, 0x73, 0xc2, 0x9e,
+	0x61, 0xff, 0xac, 0xdf, 0xa3, 0x57, 0x0e, 0x61, 0x67, 0x17, 0x50, 0x76, 0x19, 0xb5, 0xf3, 0x16,
+	0x2c, 0x9d, 0x48, 0x92, 0xda, 0x7a, 0xa3, 0x65, 0xde, 0x64, 0x24, 0xef, 0x41, 0x7c, 0x9a, 0xb8,
+	0x9a, 0xc9, 0x79, 0x0f, 0x36, 0x9f, 0x13, 0xb6, 0x43, 0xa2, 0x88, 0xd3, 0x79, 0xc1, 0xd7, 0x90,
+	0x9c, 0x07, 0x60, 0x4f, 0x4f, 0x29, 0x35, 0x0d, 0x28, 0xf2, 0xd3, 0x42, 0xbf, 0xba, 0xc8, 0x81,
+	0xb3, 0x25, 0x20, 0x69, 0x89, 0x4c, 0xf3, 0x21, 0xae, 0xe6, 0xd6, 0xe8, 0x6a, 0xee, 0xec, 0xc3,
+	0xda, 0x18, 0xa7, 0x39, 0x16, 0x2a, 0x7c, 0xda, 0x0b, 0xe3, 0xd3, 0x44, 0x9d, 0x0b, 0x99, 0x4b,
+	0xb4, 0x61, 0x2f, 0xfb, 0xea, 0x8b, 0x57, 0x5a, 0xb5, 0x0e, 0x55, 0xc5, 0x46, 0xa3, 0xff, 0xce,
+	0x32, 0x3b, 0x1b, 0x4d, 0x29, 0x35, 0x07, 0xb0, 0x34, 0x5e, 0xc6, 0xda, 0x19, 0x7f, 0xcd, 0x11,
+	0x6a, 0xa9, 0xb1, 0x0c, 0x0c, 0x2d, 0xdf, 0x3c, 0x84, 0x5a, 0x76, 0x62, 0x46, 0x68, 0xdc, 0x1b,
+	0x0f, 0x8d, 0xc6, 0xf8, 0x7e, 0xa4, 0x9a, 0x6c, 0x78, 0xac, 0x0b, 0xd3, 0xe8, 0xb0, 0x34, 0xfb,
+	0x39, 0x80, 0xc6, 0x38, 0x59, 0xed, 0xe5, 0x21, 0x54, 0x74, 0xa0, 0xe8, 0xdd, 0xcc, 0x3c, 0x4a,
+	0x47, 0x5c, 0xce, 0x03, 0xe1, 0xa6, 0x77, 0xc9, 0xb9, 0xfd, 0x31, 0x4c, 0x57, 0xef, 0x4e, 0x7e,
+	0x9f, 0x83, 0xd5, 0xe7, 0x84, 0xc9, 0xd6, 0xf1, 0xfb, 0x77, 0xf8, 0x1b, 0xea, 0x9a, 0x68, 0xee,
+	0xca, 0x72, 0xc4, 0x9b, 0x13, 0x72, 0x21, 0x9b, 0x13, 0x35, 0x9f, 0x17, 0xf3, 0xcb, 0x8a, 0x7a,
+	0x2c, 0xd9, 0x6e, 0x83, 0xee, 0x56, 0xbc, 0x41, 0x48, 0xce, 0xa9, 0x3a, 0x2a, 0x6b, 0x8a, 0xf8,
+	0x9a, 0xd3, 0xd0, 0x16, 0xac, 0xca, 0x47, 0x2a, 0x11, 0xe2, 0x5e, 0x12, 0x47, 0x43, 0x51, 0xac,
+	0xcb, 0xea, 0x4e, 0x2c, 0xf2, 0xe2, 0x67, 0x71, 0x34, 0x1c, 0x71, 0xd2, 0xf0, 0x1b, 0xcd, 0x59,
+	0xca, 0x70, 0x1e, 0x71, 0x32, 0xe7, 0x74, 0x0e, 0x45, 0x05, 0xd0, 0x56, 0x50, 0xc6, 0xfc, 0x11,
+	0x94, 0x54, 0xaf, 0x2d, 0x0d, 0x70, 0xbb, 0x35, 0xfd, 0x78, 0x2a, 0x45, 0x76, 0xc9, 0x69, 0x18,
+	0x87, 0xea, 0x29, 0x46, 0x50, 0x9c, 0x97, 0xb0, 0xc2, 0x57, 0xfc, 0xdf, 0xb4, 0x7c, 0xce, 0x63,
+	0xe9, 0xa5, 0xb1, 0x03, 0xc5, 0x34, 0x60, 0xd6, 0xc2, 0x06, 0xcc, 0xb9, 0x27, 0xe2, 0xf4, 0x28,
+	0x1d, 0xbc, 0x1e, 0xf7, 0xf2, 0xac, 0x2a, 0xf0, 0x0a, 0xd6, 0x27, 0x78, 0xcd, 0xad, 0xaa, 0x46,
+	0xd3, 0xc1, 0xe8, 0xf6, 0x61, 0x82, 0x4b, 0xbd, 0x12, 0x67, 0x44, 0x80, 0x9a, 0x6f, 0xe7, 0xa5,
+	0xc0, 0xad, 0xae, 0x4e, 0xdf, 0x37, 0xba, 0x9c, 0x2f, 0x84, 0x97, 0xf4, 0x6a, 0x0a, 0xd9, 0x96,
+	0x79, 0x99, 0x98, 0x77, 0xd1, 0x53, 0xf3, 0xce, 0xaf, 0x32, 0xe2, 0x57, 0x2f, 0xf3, 0x9c, 0xca,
+	0x6d, 0xa5, 0x43, 0x58, 0x0e, 0x9c, 0x27, 0x22, 0x85, 0x27, 0x3a, 0x25, 0x74, 0x0f, 0x96, 0xa4,
+	0xf2, 0x51, 0x1b, 0x39, 0x89, 0x4e, 0x33, 0x38, 0x6d, 0x01, 0x6f, 0xc2, 0x49, 0x8b, 0x6a, 0xc0,
+	0x33, 0xa1, 0x72, 0xd2, 0x53, 0x1f, 0x43, 0x79, 0xc2, 0x4b, 0xd7, 0x8c, 0x97, 0x4c, 0x01, 0x58,
+	0x1a, 0x28, 0x07, 0xb9, 0xa2, 0x8e, 0xe8, 0x07, 0x85, 0x4b, 0x59, 0xe5, 0x26, 0x54, 0xb1, 0xcf,
+	0xc2, 0x01, 0x91, 0x09, 0x25, 0x3b, 0x47, 0x90, 0x24, 0x91, 0x4c, 0xb2, 0x30, 0x66, 0xd6, 0x1c,
+	0x15, 0x46, 0xfd, 0xc6, 0x3d, 0xab, 0x30, 0x6a, 0x01, 0x77, 0xc4, 0xe5, 0xfc, 0x0e, 0xde, 0x73,
+	0x49, 0x37, 0x19, 0x98, 0xbe, 0x9d, 0x57, 0xe8, 0xcb, 0x80, 0xd4, 0xc1, 0x9d, 0xcb, 0xbc, 0x3e,
+	0xcf, 0xbe, 0x37, 0x8d, 0xb5, 0xef, 0x85, 0xc9, 0x8b, 0xc3, 0xfb, 0xd0, 0x9c, 0x05, 0x40, 0x35,
+	0xc2, 0xdf, 0x5a, 0xb0, 0x21, 0xa7, 0x45, 0xc6, 0x5d, 0x16, 0xdc, 0x5b, 0xee, 0x77, 0x1a, 0x7b,
+	0x7e, 0x16, 0xf6, 0xc2, 0x5c, 0xec, 0xc5, 0x49, 0xec, 0xef, 0xc1, 0xe6, 0x14, 0x38, 0x05, 0x7c,
+	0x1f, 0xd6, 0x75, 0x97, 0x3a, 0x9e, 0x9c, 0xf7, 0x27, 0xb2, 0x69, 0xf1, 0x3b, 0x9f, 0xf3, 0x5b,
+	0xbe, 0xff, 0xf1, 0x75, 0xae, 0xdc, 0xee, 0xb6, 0x61, 0xe9, 0x52, 0x5d, 0xae, 0xe6, 0x72, 0x5c,
+	0xf8, 0x40, 0xd2, 0xf7, 0xd4, 0x1f, 0x03, 0x91, 0x69, 0xbd, 0x49, 0x70, 0xc5, 0x0d, 0xfd, 0xdb,
+	0x02, 0x67, 0xd1, 0xa2, 0x57, 0xde, 0xdd, 0x55, 0xef, 0x37, 0x8f, 0xa0, 0x9a, 0x44, 0xa3, 0xfe,
+	0xbf, 0xb0, 0x50, 0x2e, 0x89, 0x74, 0xeb, 0xff, 0x6c, 0xeb, 0x97, 0x77, 0x07, 0x21, 0x23, 0x94,
+	0xb6, 0xc2, 0xa4, 0x2d, 0xbf, 0xda, 0x9d, 0xa4, 0x3d, 0x60, 0x6d, 0xf1, 0x17, 0x5e, 0xdb, 0xe4,
+	0xdd, 0x49, 0x49, 0x10, 0x3e, 0xf9, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb5, 0xf1, 0xb1, 0x1f,
+	0x68, 0x1c, 0x00, 0x00,
 }

@@ -30,6 +30,7 @@ import (
 	"vitess.io/vitess/go/vt/mysqlctl/mysqlctlproto"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topotools"
+	"vitess.io/vitess/go/vt/vtctl/workflow"
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
@@ -46,11 +47,18 @@ import (
 type VtctldServer struct {
 	ts  *topo.Server
 	tmc tmclient.TabletManagerClient
+	ws  *workflow.Server
 }
 
 // NewVtctldServer returns a new VtctldServer for the given topo server.
 func NewVtctldServer(ts *topo.Server) *VtctldServer {
-	return &VtctldServer{ts: ts, tmc: tmclient.NewTabletManagerClient()}
+	tmc := tmclient.NewTabletManagerClient()
+
+	return &VtctldServer{
+		ts:  ts,
+		tmc: tmc,
+		ws:  workflow.NewServer(ts, tmc),
+	}
 }
 
 // ChangeTabletType is part of the vtctlservicepb.VtctldServer interface.
@@ -608,6 +616,11 @@ func (s *VtctldServer) GetVSchema(ctx context.Context, req *vtctldatapb.GetVSche
 	return &vtctldatapb.GetVSchemaResponse{
 		VSchema: vschema,
 	}, nil
+}
+
+// GetWorkflows is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) GetWorkflows(ctx context.Context, req *vtctldatapb.GetWorkflowsRequest) (*vtctldatapb.GetWorkflowsResponse, error) {
+	return s.ws.GetWorkflows(ctx, req)
 }
 
 // RemoveKeyspaceCell is part of the vtctlservicepb.VtctldServer interface.
