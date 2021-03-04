@@ -85,6 +85,8 @@ service Vtctld {
   rpc GetTablets(vtctldata.GetTabletsRequest) returns (vtctldata.GetTabletsResponse) {};
   // GetVSchema returns the vschema for a keyspace.
   rpc GetVSchema(vtctldata.GetVSchemaRequest) returns (vtctldata.GetVSchemaResponse) {};
+  // GetWorkflows returns a list of workflows for the given keyspace.
+  rpc GetWorkflows(vtctldata.GetWorkflowsRequest) returns (vtctldata.GetWorkflowsResponse) {};
   // RemoveKeyspaceCell removes the specified cell from the Cells list for all
   // shards in the specified keyspace, as well as from the SrvKeyspace for that
   // keyspace in that cell.
