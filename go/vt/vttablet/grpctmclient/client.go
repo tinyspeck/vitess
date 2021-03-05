@@ -303,6 +303,17 @@ func (client *Client) ReloadSchema(ctx context.Context, tablet *topodatapb.Table
 	return err
 }
 
+// UpdateTabletControls is part of the tmclient.TabletManagerClient interface.
+func (client *Client) UpdateTabletControls(ctx context.Context, tablet *topodatapb.Tablet) error {
+	cc, c, err := client.dial(tablet)
+	if err != nil {
+		return err
+	}
+	defer cc.Close()
+	c.UpdateTabletControls(ctx, &tabletmanagerdatapb.UpdateTabletControlsRequest{})
+	return err
+}
+
 // PreflightSchema is part of the tmclient.TabletManagerClient interface.
 func (client *Client) PreflightSchema(ctx context.Context, tablet *topodatapb.Tablet, changes []string) ([]*tabletmanagerdatapb.SchemaChangeResult, error) {
 	cc, c, err := client.dial(tablet)

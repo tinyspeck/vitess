@@ -501,6 +501,10 @@ func tmRPCTestRunHealthCheckPanic(ctx context.Context, t *testing.T, client tmcl
 	expectHandleRPCPanic(t, "RunHealthCheck", false /*verbose*/, err)
 }
 
+func (fra *fakeRPCTM) UpdateTabletControls(ctx context.Context, tabletControls *tabletmanagerdatapb.TabletControl) error {
+	panic("implement me")
+}
+
 func tmRPCTestIgnoreHealthError(ctx context.Context, t *testing.T, client tmclient.TabletManagerClient, tablet *topodatapb.Tablet) {
 	err := client.IgnoreHealthError(ctx, tablet, testIgnoreHealthErrorValue)
 	if err != nil {
