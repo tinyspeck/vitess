@@ -265,14 +265,14 @@ func addDefaultWheres(planner QueryPlanner, where *sqlparser.Where) *sqlparser.W
 			Left: &sqlparser.ColName{
 				Name: sqlparser.NewColIdent(params.DBNameColumn),
 			},
-			Operator: sqlparser.EqualStr,
-			Right:    sqlparser.NewStrVal([]byte(params.DBName)),
+			Operator: sqlparser.EqualOp,
+			Right:    sqlparser.NewStrLiteral([]byte(params.DBName)),
 		}
 
 		switch newWhere {
 		case nil:
 			newWhere = &sqlparser.Where{
-				Type: sqlparser.WhereStr,
+				Type: sqlparser.WhereClause,
 				Expr: expr,
 			}
 		default:
@@ -288,8 +288,8 @@ func addDefaultWheres(planner QueryPlanner, where *sqlparser.Where) *sqlparser.W
 			Left: &sqlparser.ColName{
 				Name: sqlparser.NewColIdent(params.WorkflowColumn),
 			},
-			Operator: sqlparser.EqualStr,
-			Right:    sqlparser.NewStrVal([]byte(params.Workflow)),
+			Operator: sqlparser.EqualOp,
+			Right:    sqlparser.NewStrLiteral([]byte(params.Workflow)),
 		}
 
 		newWhere.Expr = &sqlparser.AndExpr{
