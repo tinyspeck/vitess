@@ -42,7 +42,6 @@ import (
 
 	replicationdatapb "vitess.io/vitess/go/vt/proto/replicationdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
-	"vitess.io/vitess/go/vt/proto/vtrpc"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 )
 
@@ -1297,7 +1296,7 @@ func (wr *Wrangler) TabletExternallyReparented(ctx context.Context, newMasterAli
 // error if the Before state of replication is nil.
 func replicaWasRunning(stopReplicationStatus *replicationdatapb.StopReplicationStatus) (bool, error) {
 	if stopReplicationStatus == nil || stopReplicationStatus.Before == nil {
-		return false, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT, "could not determine Before state of StopReplicationStatus %v", stopReplicationStatus)
+		return false, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "could not determine Before state of StopReplicationStatus %v", stopReplicationStatus)
 	}
 
 	return stopReplicationStatus.Before.IoThreadRunning || stopReplicationStatus.Before.SqlThreadRunning, nil
