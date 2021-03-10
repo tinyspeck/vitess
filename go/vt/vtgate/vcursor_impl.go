@@ -162,8 +162,8 @@ func newVCursorImpl(
 		return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "newVCursorImpl: transactions are supported only for master tablet types, current type: %v", tabletType)
 	}
 	var ts *topo.Server
-	// We can't apply DDL if this vtgate is filtering keyspaces because we
-	// don't have an accurate view of the TopoServer
+	// We don't have access to the underlying TopoServer if this vtgate is
+	// filtering keyspaces because we don't have an accurate view of the topo.
 	if serv != nil && !discovery.FilteringKeyspaces() {
 		ts, err = serv.GetTopoServer()
 		if err != nil {
