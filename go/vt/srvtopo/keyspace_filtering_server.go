@@ -18,7 +18,6 @@ package srvtopo
 
 import (
 	"fmt"
-	"runtime/debug"
 
 	"golang.org/x/net/context"
 
@@ -67,7 +66,6 @@ type keyspaceFilteringServer struct {
 // GetTopoServer returns an error; filtering srvtopo.Server consumers may not
 // access the underlying topo.Server.
 func (ksf keyspaceFilteringServer) GetTopoServer() (*topo.Server, error) {
-	debug.PrintStack()
 	return nil, ErrTopoServerNotAvailable
 }
 

@@ -38,6 +38,7 @@ import (
 	"golang.org/x/net/context"
 
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/discovery"
 	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/srvtopo"
@@ -161,7 +162,9 @@ func newVCursorImpl(
 		return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "newVCursorImpl: transactions are supported only for master tablet types, current type: %v", tabletType)
 	}
 	var ts *topo.Server
-	if false && serv != nil {
+	// We can't apply DDL if this vtgate is filtering keyspaces because we
+	// don't have an accurate view of the TopoServer
+	if serv != nil && !discovery.FilteringKeyspaces() {
 		ts, err = serv.GetTopoServer()
 		if err != nil {
 			return nil, err
@@ -488,7 +491,7 @@ func (vc *vcursorImpl) TabletType() topodatapb.TabletType {
 // SubmitOnlineDDL implements the VCursor interface
 func (vc *vcursorImpl) SubmitOnlineDDL(onlineDDl *schema.OnlineDDL) error {
 	if vc.topoServer == nil {
-		return vterrors.New(vtrpcpb.Code_INTERNAL, "Unable to apply DDL, missing vcursor toposerver")
+		return vterrors.New(vtrpcpb.Code_INTERNAL, "Unable to apply DDL, missing toposerver in vcursor")
 	}
 	conn, err := vc.topoServer.ConnForCell(vc.ctx, topo.GlobalCell)
 	if err != nil {
