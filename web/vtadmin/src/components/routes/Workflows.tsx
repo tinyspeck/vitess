@@ -45,10 +45,10 @@ export const Workflows = () => {
 
             return (
                 <tr key={`${row.cluster}-${row.keyspace}-${row.name}`}>
-                    <td>
+                    {/* <td>
                         <div className={cx(style.workflowStatePip, style[row.workflowState])} />
                         {row.workflowState}
-                    </td>
+                    </td> */}
                     <td>
                         <code className="font-weight-bold">{href ? <Link to={href}>{row.name}</Link> : row.name}</code>
                         <div className="text-color-secondary font-size-small">
@@ -103,7 +103,14 @@ export const Workflows = () => {
                     </Button>
                 </div>
                 <DataTable
-                    columns={['State', 'Name', 'Source', 'Target', 'Max Lag', 'Streams']}
+                    columns={[
+                        // 'State',
+                        'Name',
+                        'Source',
+                        'Target',
+                        'Max Lag',
+                        'Streams',
+                    ]}
                     data={rows}
                     renderRows={renderRows}
                 />
