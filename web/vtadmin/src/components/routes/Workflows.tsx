@@ -40,28 +40,15 @@ export const Workflows = () => {
                 <tr key={`${row.cluster}-${row.keyspace}-${row.name}`}>
                     <td>
                         <code className="font-weight-bold">{href ? <Link to={href}>{row.name}</Link> : row.name}</code>
+                        <div className="text-color-secondary">
+                            <code>{row.cluster}</code>
+                        </div>
                     </td>
-                    <td>
+                    {/* <td>
                         <code>{row.cluster}</code>
-                    </td>
-                    <td>
-                        {row.sources.length
-                            ? row.sources.map((s) => (
-                                  <div key={s}>
-                                      <code>{s}</code>
-                                  </div>
-                              ))
-                            : '-'}
-                    </td>
-                    <td>
-                        {row.targets.length
-                            ? row.targets.map((s) => (
-                                  <div key={s}>
-                                      <code>{s}</code>
-                                  </div>
-                              ))
-                            : '-'}
-                    </td>
+                    </td> */}
+                    <td>{row._workflow.workflow?.source?.keyspace || '-'}</td>
+                    <td>{row._workflow.workflow?.target?.keyspace}</td>
                     <td>{typeof row.maxLag === 'number' ? `${Number(row.maxLag).toLocaleString()} s` : '-'}</td>
                     <td>
                         {Object.entries(row.streams).map(([state, streams]) => (
@@ -82,7 +69,7 @@ export const Workflows = () => {
             <h1>Workflows</h1>
             <div className={style.container}>
                 <DataTable
-                    columns={['Name', 'Cluster', 'Source', 'Target', 'Max Lag', 'Streams']}
+                    columns={['Name', 'Source', 'Target', 'Max Lag', 'Streams']}
                     data={rows}
                     renderRows={renderRows}
                 />
@@ -125,4 +112,5 @@ const formatRow = (w: pb.IWorkflow) => ({
         }, [] as vtctldata.Workflow.IStream[]),
         'state'
     ),
+    _workflow: w,
 });
