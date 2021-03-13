@@ -46,6 +46,7 @@ export const Workflow = () => {
                     <h1>{name}</h1>
                 </code>
                 <div className={style.headingMeta}>
+                    <span>Workflow</span>
                     <span>
                         Cluster: <code>{clusterID}</code>
                     </span>
