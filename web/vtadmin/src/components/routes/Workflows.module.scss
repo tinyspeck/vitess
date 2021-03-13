@@ -8,3 +8,24 @@
   grid-template-columns: 1fr min-content;
   margin-bottom: 24px;
 }
+
+.workflowStatePip,
+.streamStatePip {
+  height: 8px;
+  width: 8px;
+  display: inline-block;
+  background-color: var(--textColorDisabled);
+  border-radius: 100px;
+  margin-right: 4px;
+  vertical-align: middle;
+
+  &.error { background-color: var(--colorError50); }
+  &.running { background-color: var(--colorSuccess50); }
+  &.copying { background-color: var(--colorSuccess50); }
+}
+
+.workflowStatePip {
+  height: 12px !important;
+  width: 12px !important;
+  margin-right: 8px !important;
+}
