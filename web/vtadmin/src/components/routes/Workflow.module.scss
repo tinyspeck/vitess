@@ -32,3 +32,28 @@
   // margin: 0;
   // padding: 0;
 }
+
+.tabs {
+  border-bottom: solid 1px var(--grey200);
+  display: flex;
+  margin-bottom: 48px;
+  width: 100%;
+}
+
+.tab {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: var(--textColorPrimary) !important;
+  cursor: pointer;
+  display: block;
+  font-weight: bold;
+  padding: 12px 24px;
+
+  &:hover {
+    background: var(--grey75);
+  }
+
+  &.activeTab {
+    border-bottom: solid 3px var(--colorPrimary);
+  }
+}
