@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 import * as React from 'react';
-import { useParams } from 'react-router';
-import { Link } from 'react-router-dom';
+import { Switch, useParams } from 'react-router';
+import { Link, NavLink, Route, useRouteMatch } from 'react-router-dom';
 
 import { useWorkflow } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { Code } from '../Code';
-import { vtadmin as pb, vtctldata } from '../../proto/vtadmin';
 import style from './Workflow.module.scss';
-import { DataTable } from '../dataTable/DataTable';
-import { orderBy } from 'lodash';
+import { Streams } from './workflow/Streams';
 
 interface RouteParams {
     clusterID: string;
@@ -33,61 +31,10 @@ interface RouteParams {
 
 export const Workflow = () => {
     const { clusterID, keyspace, name } = useParams<RouteParams>();
-    useDocumentTitle(name);
-
     const { data } = useWorkflow({ clusterID, keyspace, name });
-    const shardStreams = orderBy(
-        Object.values(data?.workflow?.shard_streams || {}).reduce((acc, ss) => {
-            (ss.streams || []).forEach((s) => acc.push(s));
-            return acc;
-        }, [] as vtctldata.Workflow.IStream[]),
-        ['state', 'shard', 'tablet.cell', 'tablet.uid']
-    );
+    let { path, url } = useRouteMatch();
 
-    const renderRows = (rows: typeof shardStreams) => {
-        return rows.map((row, rdx) => {
-            return (
-                <tr key={rdx}>
-                    <td>{row.state}</td>
-                    <td>
-                        <code>
-                            {keyspace}/{row.shard}
-                        </code>
-                    </td>
-                    <td>
-                        {row.tablet?.cell && row.tablet?.uid ? (
-                            <code>{`${row.tablet.cell}-${row.tablet.uid}`}</code>
-                        ) : (
-                            '-'
-                        )}
-                    </td>
-                    <td>
-                        <ol className={style.filterList}>
-                            {(row.binlog_source?.filter?.rules || []).map((rule, idx) => (
-                                <li key={idx}>
-                                    Filter: <code>{rule.filter}</code>, match: <code>{rule.match}</code>
-                                </li>
-                            ))}
-                        </ol>
-                    </td>
-                    <td>{row.time_updated?.seconds}</td>
-                    <td>{row.transaction_timestamp?.seconds}</td>
-                    <td>
-                        {typeof row.time_updated?.seconds === 'number' &&
-                        typeof row.transaction_timestamp?.seconds === 'number'
-                            ? `${row.time_updated.seconds - row.transaction_timestamp.seconds} s`
-                            : '-'}
-                    </td>
-                    <td style={{ maxWidth: 240 }}>
-                        <code>{row.position}</code>
-                    </td>
-                    <td style={{ maxWidth: 360 }}>
-                        <code>{row.message}</code>
-                    </td>
-                </tr>
-            );
-        });
-    };
+    useDocumentTitle(name);
 
     return (
         <div>
@@ -108,25 +55,26 @@ export const Workflow = () => {
                 </div>
             </header>
 
-            <DataTable
-                columns={[
-                    'State',
-                    'Shard',
-                    'Tablet',
-                    'Filter',
-                    'Time Updated',
-                    'Txn Timestamp',
-                    'Lag',
-                    'Position',
-                    'Message',
-                ]}
-                data={shardStreams}
-                renderRows={renderRows}
-            />
-
-            <div className={style.container}>
-                <Code code={JSON.stringify(data, null, 2)} />
+            <div className={style.tabs}>
+                <NavLink activeClassName={style.activeTab} className={style.tab} to={`${url}/streams`}>
+                    Streams
+                </NavLink>
+                <NavLink activeClassName={style.activeTab} className={style.tab} to={`${url}/json`}>
+                    JSON
+                </NavLink>
             </div>
+
+            <Switch>
+                <Route path={`${path}/streams`}>
+                    <Streams clusterID={clusterID} keyspace={keyspace} name={name} />
+                </Route>
+
+                <Route path={`${path}/json`}>
+                    <div className={style.container}>
+                        <Code code={JSON.stringify(data, null, 2)} />
+                    </div>
+                </Route>
+            </Switch>
         </div>
     );
 };

@@ -192,3 +192,7 @@ table tbody td {
 .text-color-secondary {
   color: var(--textColorSecondary);
 }
+
+.font-weight-bold {
+  font-weight: bold;
+}

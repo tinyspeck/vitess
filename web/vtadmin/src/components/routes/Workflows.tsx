@@ -39,7 +39,7 @@ export const Workflows = () => {
             return (
                 <tr key={`${row.cluster}-${row.keyspace}-${row.name}`}>
                     <td>
-                        <code>{href ? <Link to={href}>{row.name}</Link> : row.name}</code>
+                        <code className="font-weight-bold">{href ? <Link to={href}>{row.name}</Link> : row.name}</code>
                     </td>
                     <td>
                         <code>{row.cluster}</code>
