@@ -119,26 +119,28 @@ const formatRows = (data: pb.GetWorkflowsResponse | null | undefined, filter: st
     return orderBy(filtered, ['name', 'cluster', 'source', 'target']);
 };
 
-const formatRow = (w: pb.IWorkflow) => ({
-    cluster: w.cluster?.name,
-    clusterID: w.cluster?.id,
-    keyspace: w.keyspace,
-    maxLag: w.workflow?.max_v_replication_lag,
-    name: w.workflow?.name,
-    sources: w.workflow?.source?.keyspace
-        ? (w.workflow?.source?.shards || []).map((s) => `${w.workflow?.source?.keyspace}/${s}`).sort()
-        : [],
-    targets: w.workflow?.target?.keyspace
-        ? (w.workflow?.target?.shards || []).map((s) => `${w.workflow?.target?.keyspace}/${s}`).sort()
-        : [],
-    streams: groupBy(
-        Object.values(w.workflow?.shard_streams || {}).reduce((acc, ss) => {
-            (ss.streams || []).forEach((s) => {
-                acc.push(s);
-            });
-            return acc;
-        }, [] as vtctldata.Workflow.IStream[]),
-        'state'
-    ),
-    _workflow: w,
-});
+const formatRow = (w: pb.IWorkflow) => {
+    return {
+        cluster: w.cluster?.name,
+        clusterID: w.cluster?.id,
+        keyspace: w.keyspace,
+        maxLag: w.workflow?.max_v_replication_lag,
+        name: w.workflow?.name,
+        sources: w.workflow?.source?.keyspace
+            ? (w.workflow?.source?.shards || []).map((s) => `${w.workflow?.source?.keyspace}/${s}`).sort()
+            : [],
+        targets: w.workflow?.target?.keyspace
+            ? (w.workflow?.target?.shards || []).map((s) => `${w.workflow?.target?.keyspace}/${s}`).sort()
+            : [],
+        streams: groupBy(
+            Object.values(w.workflow?.shard_streams || {}).reduce((acc, ss) => {
+                (ss.streams || []).forEach((s) => {
+                    acc.push(s);
+                });
+                return acc;
+            }, [] as vtctldata.Workflow.IStream[]),
+            'state'
+        ),
+        _workflow: w,
+    };
+};
