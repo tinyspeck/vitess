@@ -185,6 +185,7 @@ table th {
 table tbody td {
   border: solid 1px var(--tableBorderColor);
   padding: var(--tableCellPadding);
+  vertical-align: top;
 }
 
 /* Utilities */
