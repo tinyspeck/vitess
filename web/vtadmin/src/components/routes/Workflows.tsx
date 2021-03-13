@@ -61,9 +61,6 @@ export const Workflows = () => {
                     </td>
                     <td>
                         <code>{row._workflow.workflow?.target?.keyspace}</code>
-                        <div className="text-color-secondary font-size-small">
-                            <code>{row.cluster}</code>
-                        </div>
                     </td>
                     <td>{typeof row.maxLag === 'number' ? `${Number(row.maxLag).toLocaleString()} s` : '-'}</td>
                     <td>
