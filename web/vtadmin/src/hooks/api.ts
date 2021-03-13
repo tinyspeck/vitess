@@ -7,6 +7,9 @@ import {
     FetchSchemaParams,
     fetchSchemas,
     fetchTablets,
+    fetchWorkflow,
+    FetchWorkflowParams,
+    fetchWorkflows,
 } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
 
@@ -15,6 +18,25 @@ export const useGates = () => useQuery<pb.VTGate[], Error>(['gates'], fetchGates
 export const useKeyspaces = () => useQuery<pb.Keyspace[], Error>(['keyspaces'], fetchKeyspaces);
 export const useSchemas = () => useQuery<pb.Schema[], Error>(['schemas'], fetchSchemas);
 export const useTablets = () => useQuery<pb.Tablet[], Error>(['tablets'], fetchTablets);
+export const useWorkflows = () =>
+    useQuery<pb.GetWorkflowsResponse, Error>(['workflows'], fetchWorkflows, {
+        refetchInterval: 1000,
+    });
+export const useWorkflowsList = () => {
+    const query = useWorkflows();
+    const { data, ...response } = query;
+
+    if (!data) return { data: undefined, ...response };
+
+    const workflows = Object.values(data.workflows_by_cluster || {}).reduce((acc, cw) => {
+        (cw.workflows || []).forEach((w) => {
+            acc.push(pb.Workflow.create(w));
+        });
+        return acc;
+    }, [] as pb.Workflow[]);
+
+    return { data: workflows, ...response };
+};
 
 export interface TableDefinition {
     cluster?: pb.Schema['cluster'];
@@ -64,5 +86,19 @@ export const useSchema = (params: FetchSchemaParams) => {
                     s.table_definitions.find((td) => td.name === params.table)
             );
         },
+    });
+};
+
+export const useWorkflow = (params: FetchWorkflowParams) => {
+    const queryClient = useQueryClient();
+    return useQuery<pb.IWorkflow, Error>(['workflow', params], () => fetchWorkflow(params), {
+        initialData: () => {
+            const workflows = queryClient.getQueryData<pb.GetWorkflowsResponse>('workflows');
+            const wc = workflows?.workflows_by_cluster[params.clusterID];
+            return (wc?.workflows || []).find(
+                (w) => w.keyspace === params.keyspace && w.workflow?.name === params.name
+            );
+        },
+        refetchInterval: 1000,
     });
 };
