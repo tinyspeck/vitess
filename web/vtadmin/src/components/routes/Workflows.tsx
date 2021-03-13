@@ -20,13 +20,18 @@ import { Link } from 'react-router-dom';
 import { useWorkflows } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { vtadmin as pb, vtctldata } from '../../proto/vtadmin';
+import { Button } from '../Button';
 import { DataTable } from '../dataTable/DataTable';
+import { Icons } from '../Icon';
+import { TextInput } from '../TextInput';
 import style from './Workflows.module.scss';
 
 export const Workflows = () => {
+    const { data } = useWorkflows();
+    const [filter, setFilter] = React.useState<string>('');
+
     useDocumentTitle('Workflows');
 
-    const { data } = useWorkflows();
     const rows = React.useMemo(() => formatRows(data), [data]);
 
     const renderRows = (rs: typeof rows) => {
@@ -44,11 +49,12 @@ export const Workflows = () => {
                             <code>{row.cluster}</code>
                         </div>
                     </td>
-                    {/* <td>
-                        <code>{row.cluster}</code>
-                    </td> */}
-                    <td>{row._workflow.workflow?.source?.keyspace || '-'}</td>
-                    <td>{row._workflow.workflow?.target?.keyspace}</td>
+                    <td>
+                        <code>{row._workflow.workflow?.source?.keyspace || '-'}</code>
+                    </td>
+                    <td>
+                        <code>{row._workflow.workflow?.target?.keyspace}</code>
+                    </td>
                     <td>{typeof row.maxLag === 'number' ? `${Number(row.maxLag).toLocaleString()} s` : '-'}</td>
                     <td>
                         {Object.entries(row.streams).map(([state, streams]) => (
@@ -68,6 +74,18 @@ export const Workflows = () => {
         <div>
             <h1>Workflows</h1>
             <div className={style.container}>
+                <div className={style.controls}>
+                    <TextInput
+                        autoFocus
+                        iconLeft={Icons.search}
+                        onChange={(e) => setFilter(e.target.value)}
+                        placeholder="Filter workflows"
+                        value={filter}
+                    />
+                    <Button disabled={!filter} onClick={() => setFilter('')} secondary>
+                        Clear filters
+                    </Button>
+                </div>
                 <DataTable
                     columns={['Name', 'Source', 'Target', 'Max Lag', 'Streams']}
                     data={rows}

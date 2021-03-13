@@ -182,8 +182,11 @@ table th {
   text-align: left;
 }
 
-table tbody td {
+table tbody tr {
   border: solid 1px var(--tableBorderColor);
+}
+
+table tbody td {
   padding: var(--tableCellPadding);
   vertical-align: top;
 }
