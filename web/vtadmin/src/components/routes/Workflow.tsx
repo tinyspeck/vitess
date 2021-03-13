@@ -15,7 +15,7 @@
  */
 import * as React from 'react';
 import { Switch, useParams } from 'react-router';
-import { Link, NavLink, Route, useRouteMatch } from 'react-router-dom';
+import { Link, NavLink, Redirect, Route, useRouteMatch } from 'react-router-dom';
 
 import { useWorkflow } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
@@ -74,6 +74,8 @@ export const Workflow = () => {
                         <Code code={JSON.stringify(data, null, 2)} />
                     </div>
                 </Route>
+
+                <Redirect exact from={`${path}/`} to={`${path}/streams`} />
             </Switch>
         </div>
     );
