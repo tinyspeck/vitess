@@ -1,8 +1,22 @@
+.backButton {
+  border-radius: 100px;
+  font-size: var(--fontSizeSmall);
+  font-weight: bold;
+  display: inline-block;
+  padding: 12px 12px;
+  transition: background 0.1s ease-in-out;
+
+  &:hover {
+    background: var(--grey200);
+  }
+}
+
 .header {
   margin: 4.8rem 0;
 }
 
 .header h1 {
+  display: block;
   margin: 2.4rem 0 0 0;
   padding: 0;
 }

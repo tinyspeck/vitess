@@ -49,7 +49,6 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
         <div className={style.container}>
             <div className={style.controls}>
                 <TextInput
-                    autoFocus
                     iconLeft={Icons.search}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder={`Filter streams in ${name}`}
