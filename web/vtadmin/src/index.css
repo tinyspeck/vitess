@@ -199,3 +199,7 @@ table tbody td {
 .font-weight-bold {
   font-weight: bold;
 }
+
+.font-size-small {
+  font-size: var(--fontSizeSmall);
+}
