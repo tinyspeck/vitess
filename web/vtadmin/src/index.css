@@ -203,3 +203,10 @@ table tbody td {
 .font-size-small {
   font-size: var(--fontSizeSmall);
 }
+
+.link-external::after {
+  content: '↪';
+  display: inline-block;
+  margin-left: 0.25em;
+  vertical-align: middle;
+}
