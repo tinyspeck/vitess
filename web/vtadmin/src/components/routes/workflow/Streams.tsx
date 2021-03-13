@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { filter, orderBy } from 'lodash-es';
+import { filter, invertBy, orderBy } from 'lodash-es';
 import * as React from 'react';
 
-import { useWorkflow } from '../../../hooks/api';
-import { vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
+import { useTablets, useWorkflow } from '../../../hooks/api';
+import { topodata, vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
 import { filterNouns } from '../../../util/filterNouns';
 import { Button } from '../../Button';
 import { DataTable } from '../../dataTable/DataTable';
@@ -34,6 +34,7 @@ interface Props {
 export const Streams = ({ clusterID, keyspace, name }: Props) => {
     const [filter, setFilter] = React.useState<string>('');
     const { data } = useWorkflow({ clusterID, keyspace, name });
+    const { data: tablets = [] } = useTablets();
 
     const rows = Object.values(data?.workflow?.shard_streams || {}).reduce((acc, ss) => {
         (ss.streams || []).forEach((s) => acc.push(s));
@@ -64,6 +65,9 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                     typeof ss.transaction_timestamp?.seconds === 'number'
                         ? ss.time_updated.seconds - ss.transaction_timestamp.seconds
                         : '-';
+                const tablet = tablets.find(
+                    (t) => t.tablet?.alias?.cell === ss.tablet?.cell && t.tablet?.alias?.uid === ss.tablet?.uid
+                );
 
                 return (
                     <div className={style.panel}>
@@ -93,6 +97,18 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                             <div>
                                 <div className={style.label}>Replication Lag</div>
                                 <code>{lag} seconds</code>
+                            </div>
+                        </div>
+
+                        {/* Tablet metadata */}
+                        <div className={style.row}>
+                            <div className={style.field}>
+                                <div className={style.label}>Tablet</div>
+                                <code>
+                                    {ss.tablet?.cell}-{ss.tablet?.uid} (
+                                    {tablet && tablet.tablet?.type && TABLET_TYPES[tablet.tablet.type]} -{' '}
+                                    {tablet && tablet.state && TABLET_STATES[tablet.state]})
+                                </code>
                             </div>
                         </div>
 
@@ -138,3 +154,15 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
         </div>
     );
 };
+
+// TABLET_TYPES maps numeric tablet types back to human readable strings.
+// Note that topodata.TabletType allows duplicate values: specifically,
+// both RDONLY (new name) and BATCH (old name) share the same numeric value.
+// So, we make the assumption that if there are duplicate keys, we will
+// always take the first value.
+const TABLET_TYPES = Object.entries(invertBy(topodata.TabletType)).reduce((acc, [k, vs]) => {
+    acc[k] = vs[0];
+    return acc;
+}, {} as { [k: string]: string });
+
+const TABLET_STATES = Object.keys(pb.Tablet.ServingState);
