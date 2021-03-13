@@ -13,12 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { orderBy } from 'lodash-es';
+import { filter, orderBy } from 'lodash-es';
 import * as React from 'react';
 
 import { useWorkflow } from '../../../hooks/api';
 import { vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
+import { filterNouns } from '../../../util/filterNouns';
+import { Button } from '../../Button';
 import { DataTable } from '../../dataTable/DataTable';
+import { Icons } from '../../Icon';
+import { TextInput } from '../../TextInput';
 import style from './Streams.module.scss';
 
 interface Props {
@@ -28,17 +32,32 @@ interface Props {
 }
 
 export const Streams = ({ clusterID, keyspace, name }: Props) => {
+    const [filter, setFilter] = React.useState<string>('');
     const { data } = useWorkflow({ clusterID, keyspace, name });
-    const shardStreams = orderBy(
-        Object.values(data?.workflow?.shard_streams || {}).reduce((acc, ss) => {
-            (ss.streams || []).forEach((s) => acc.push(s));
-            return acc;
-        }, [] as vtctldata.Workflow.IStream[]),
-        ['state', 'shard', 'tablet.cell', 'tablet.uid']
-    );
+
+    const rows = Object.values(data?.workflow?.shard_streams || {}).reduce((acc, ss) => {
+        (ss.streams || []).forEach((s) => acc.push(s));
+        return acc;
+    }, [] as vtctldata.Workflow.IStream[]);
+
+    const filtered = filterNouns(filter, rows);
+
+    const shardStreams = orderBy(filtered, ['state', 'shard', 'tablet.cell', 'tablet.uid']);
 
     return (
         <div className={style.container}>
+            <div className={style.controls}>
+                <TextInput
+                    autoFocus
+                    iconLeft={Icons.search}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder={`Filter streams in ${name}`}
+                    value={filter}
+                />
+                <Button disabled={!filter} onClick={() => setFilter('')} secondary>
+                    Clear filters
+                </Button>
+            </div>
             {shardStreams.map((ss) => {
                 const lag =
                     typeof ss.time_updated?.seconds === 'number' &&
@@ -98,12 +117,14 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                             </div>
                         </div>
 
-                        <div className={style.row}>
-                            <div className={style.field}>
-                                <div className={style.label}>Message</div>
-                                <code>{ss.message}</code>
+                        {ss.message && (
+                            <div className={style.row}>
+                                <div className={style.field}>
+                                    <div className={style.label}>Message</div>
+                                    <code>{ss.message}</code>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className={style.row}>
                             <div className={style.field}>
@@ -117,67 +138,3 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
         </div>
     );
 };
-
-//     const renderRows = (rows: typeof shardStreams) => {
-//         return rows.map((row, rdx) => {
-//             return (
-//                 <tr key={rdx}>
-//                     <td>{row.state}</td>
-//                     <td>
-//                         <code>
-//                             {keyspace}/{row.shard}
-//                         </code>
-//                     </td>
-//                     <td>
-//                         {row.tablet?.cell && row.tablet?.uid ? (
-//                             <code>{`${row.tablet.cell}-${row.tablet.uid}`}</code>
-//                         ) : (
-//                             '-'
-//                         )}
-//                     </td>
-//                     <td>
-//                         <ol className={style.filterList}>
-//                             {(row.binlog_source?.filter?.rules || []).map((rule, idx) => (
-//                                 <li key={idx}>
-//                                     Filter: <code>{rule.filter}</code>, match: <code>{rule.match}</code>
-//                                 </li>
-//                             ))}
-//                         </ol>
-//                     </td>
-//                     <td>{row.time_updated?.seconds}</td>
-//                     <td>{row.transaction_timestamp?.seconds}</td>
-//                     <td>
-//                         {typeof row.time_updated?.seconds === 'number' &&
-//                         typeof row.transaction_timestamp?.seconds === 'number'
-//                             ? `${row.time_updated.seconds - row.transaction_timestamp.seconds} s`
-//                             : '-'}
-//                     </td>
-//                     <td style={{ maxWidth: 240 }}>
-//                         <code>{row.position}</code>
-//                     </td>
-//                     <td style={{ maxWidth: 360 }}>
-//                         <code>{row.message}</code>
-//                     </td>
-//                 </tr>
-//             );
-//         });
-//     };
-
-//     return (
-//         <DataTable
-//             columns={[
-//                 'State',
-//                 'Shard',
-//                 'Tablet',
-//                 'Filter',
-//                 'Time Updated',
-//                 'Txn Timestamp',
-//                 'Lag',
-//                 'Position',
-//                 'Message',
-//             ]}
-//             data={shardStreams}
-//             renderRows={renderRows}
-//         />
-//     );
-// };
