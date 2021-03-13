@@ -22,6 +22,7 @@ import { filterNouns } from '../../../util/filterNouns';
 import { Button } from '../../Button';
 import { DataTable } from '../../dataTable/DataTable';
 import { Icons } from '../../Icon';
+import { TabletLink } from '../../links/TabletLink';
 import { TextInput } from '../../TextInput';
 import style from './Streams.module.scss';
 
@@ -103,11 +104,17 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                         <div className={style.row}>
                             <div className={style.field}>
                                 <div className={style.label}>Tablet</div>
-                                <code>
-                                    {ss.tablet?.cell}-{ss.tablet?.uid} (
-                                    {tablet && tablet.tablet?.type && TABLET_TYPES[tablet.tablet.type]} -{' '}
-                                    {tablet && tablet.state && TABLET_STATES[tablet.state]})
-                                </code>
+                                <TabletLink
+                                    cell={ss.tablet?.cell}
+                                    hostname={tablet?.tablet?.hostname}
+                                    uid={ss.tablet?.uid}
+                                >
+                                    <code>
+                                        {ss.tablet?.cell}-{ss.tablet?.uid} (
+                                        {tablet && tablet.tablet?.type && TABLET_TYPES[tablet.tablet.type]} -{' '}
+                                        {tablet && tablet.state && TABLET_STATES[tablet.state]})
+                                    </code>
+                                </TabletLink>
                             </div>
                         </div>
 
@@ -117,7 +124,7 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                                 <table className={style.filterTable}>
                                     <tbody>
                                         {(ss.binlog_source?.filter?.rules || []).map((f, fdx) => (
-                                            <tr>
+                                            <tr key={fdx}>
                                                 <td>{fdx + 1}.</td>
                                                 <td>
                                                     Filter: <code>{f.filter}</code>
