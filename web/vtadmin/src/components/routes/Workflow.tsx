@@ -39,12 +39,14 @@ export const Workflow = () => {
     return (
         <div>
             <header className={style.header}>
-                <p>
-                    <Link to="/workflows">← All workflows</Link>
-                </p>
-                <code>
-                    <h1>{name}</h1>
-                </code>
+                <Link className={style.backButton} to="/workflows">
+                    ← All workflows
+                </Link>
+
+                <h1>
+                    <code>{name}</code>
+                </h1>
+
                 <div className={style.headingMeta}>
                     <span>Workflow</span>
                     <span>
