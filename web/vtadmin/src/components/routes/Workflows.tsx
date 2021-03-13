@@ -16,6 +16,7 @@
 import { groupBy, orderBy } from 'lodash';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
+import cx from 'classnames';
 
 import { useWorkflows } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
@@ -45,6 +46,10 @@ export const Workflows = () => {
             return (
                 <tr key={`${row.cluster}-${row.keyspace}-${row.name}`}>
                     <td>
+                        <div className={cx(style.workflowStatePip, style[row.workflowState])} />
+                        {row.workflowState}
+                    </td>
+                    <td>
                         <code className="font-weight-bold">{href ? <Link to={href}>{row.name}</Link> : row.name}</code>
                         <div className="text-color-secondary font-size-small">
                             <code>{row.cluster}</code>
@@ -64,13 +69,17 @@ export const Workflows = () => {
                     </td>
                     <td>{typeof row.maxLag === 'number' ? `${Number(row.maxLag).toLocaleString()} s` : '-'}</td>
                     <td>
-                        {Object.entries(row.streams).map(([state, streams]) => (
-                            <div key={state}>
-                                <code>
-                                    {streams.length} {state.toLocaleLowerCase()}
-                                </code>
-                            </div>
-                        ))}
+                        {Object.entries(row.streams).map(([state, streams]) => {
+                            const pipClass = cx(style.streamStatePip, style[state.toLowerCase()]);
+                            return (
+                                <div key={state}>
+                                    {/* <div className={pipClass} /> */}
+                                    <code>
+                                        {streams.length} {state.toLocaleLowerCase()}
+                                    </code>
+                                </div>
+                            );
+                        })}
                     </td>
                 </tr>
             );
@@ -94,7 +103,7 @@ export const Workflows = () => {
                     </Button>
                 </div>
                 <DataTable
-                    columns={['Name', 'Source', 'Target', 'Max Lag', 'Streams']}
+                    columns={['State', 'Name', 'Source', 'Target', 'Max Lag', 'Streams']}
                     data={rows}
                     renderRows={renderRows}
                 />
@@ -125,6 +134,26 @@ const formatRows = (data: pb.GetWorkflowsResponse | null | undefined, filter: st
 };
 
 const formatRow = (w: pb.IWorkflow) => {
+    const streams = groupBy(
+        Object.values(w.workflow?.shard_streams || {}).reduce((acc, ss) => {
+            (ss.streams || []).forEach((s) => {
+                acc.push({
+                    ...s,
+                    state: s.state ? s.state.toLowerCase() : null,
+                });
+            });
+            return acc;
+        }, [] as vtctldata.Workflow.IStream[]),
+        'state'
+    );
+
+    let workflowState = 'stopped';
+    if (Array.isArray(streams.error)) {
+        workflowState = 'error';
+    } else if (Array.isArray(streams.running) || Array.isArray(streams.copying)) {
+        workflowState = 'running';
+    }
+
     return {
         cluster: w.cluster?.name,
         clusterID: w.cluster?.id,
@@ -137,15 +166,8 @@ const formatRow = (w: pb.IWorkflow) => {
         targets: w.workflow?.target?.keyspace
             ? (w.workflow?.target?.shards || []).map((s) => `${w.workflow?.target?.keyspace}/${s}`).sort()
             : [],
-        streams: groupBy(
-            Object.values(w.workflow?.shard_streams || {}).reduce((acc, ss) => {
-                (ss.streams || []).forEach((s) => {
-                    acc.push(s);
-                });
-                return acc;
-            }, [] as vtctldata.Workflow.IStream[]),
-            'state'
-        ),
+        streams,
+        workflowState,
         _workflow: w,
     };
 };
