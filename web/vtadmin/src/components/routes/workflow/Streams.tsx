@@ -36,66 +36,148 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
         }, [] as vtctldata.Workflow.IStream[]),
         ['state', 'shard', 'tablet.cell', 'tablet.uid']
     );
-    const renderRows = (rows: typeof shardStreams) => {
-        return rows.map((row, rdx) => {
-            return (
-                <tr key={rdx}>
-                    <td>{row.state}</td>
-                    <td>
-                        <code>
-                            {keyspace}/{row.shard}
-                        </code>
-                    </td>
-                    <td>
-                        {row.tablet?.cell && row.tablet?.uid ? (
-                            <code>{`${row.tablet.cell}-${row.tablet.uid}`}</code>
-                        ) : (
-                            '-'
-                        )}
-                    </td>
-                    <td>
-                        <ol className={style.filterList}>
-                            {(row.binlog_source?.filter?.rules || []).map((rule, idx) => (
-                                <li key={idx}>
-                                    Filter: <code>{rule.filter}</code>, match: <code>{rule.match}</code>
-                                </li>
-                            ))}
-                        </ol>
-                    </td>
-                    <td>{row.time_updated?.seconds}</td>
-                    <td>{row.transaction_timestamp?.seconds}</td>
-                    <td>
-                        {typeof row.time_updated?.seconds === 'number' &&
-                        typeof row.transaction_timestamp?.seconds === 'number'
-                            ? `${row.time_updated.seconds - row.transaction_timestamp.seconds} s`
-                            : '-'}
-                    </td>
-                    <td style={{ maxWidth: 240 }}>
-                        <code>{row.position}</code>
-                    </td>
-                    <td style={{ maxWidth: 360 }}>
-                        <code>{row.message}</code>
-                    </td>
-                </tr>
-            );
-        });
-    };
 
     return (
-        <DataTable
-            columns={[
-                'State',
-                'Shard',
-                'Tablet',
-                'Filter',
-                'Time Updated',
-                'Txn Timestamp',
-                'Lag',
-                'Position',
-                'Message',
-            ]}
-            data={shardStreams}
-            renderRows={renderRows}
-        />
+        <div className={style.container}>
+            {shardStreams.map((ss) => {
+                const lag =
+                    typeof ss.time_updated?.seconds === 'number' &&
+                    typeof ss.transaction_timestamp?.seconds === 'number'
+                        ? ss.time_updated.seconds - ss.transaction_timestamp.seconds
+                        : '-';
+
+                return (
+                    <div className={style.panel}>
+                        <div className={style.row}>
+                            <div className={style.field}>
+                                <div className={style.label}>State</div>
+                                {ss.state}
+                            </div>
+
+                            <div>
+                                <div className={style.label}>Stream ID</div>
+                                <code>{ss.id}</code>
+                            </div>
+
+                            <div>
+                                <div className={style.label}>Source Shard</div>
+                                <code>
+                                    {keyspace}/{ss.shard}
+                                </code>
+                            </div>
+                            <div>
+                                <div className={style.label}>Target Shard</div>
+                                <code>
+                                    {keyspace}/{ss.shard}
+                                </code>
+                            </div>
+                            <div>
+                                <div className={style.label}>Replication Lag</div>
+                                <code>{lag} seconds</code>
+                            </div>
+                        </div>
+
+                        <div className={style.row}>
+                            <div className={style.field}>
+                                <div className={style.label}>Filter Rules</div>
+                                <table className={style.filterTable}>
+                                    <tbody>
+                                        {(ss.binlog_source?.filter?.rules || []).map((f, fdx) => (
+                                            <tr>
+                                                <td>{fdx + 1}.</td>
+                                                <td>
+                                                    Filter: <code>{f.filter}</code>
+                                                </td>
+                                                <td>
+                                                    Match: <code>{f.match}</code>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className={style.row}>
+                            <div className={style.field}>
+                                <div className={style.label}>Message</div>
+                                <code>{ss.message}</code>
+                            </div>
+                        </div>
+
+                        <div className={style.row}>
+                            <div className={style.field}>
+                                <div className={style.label}>Position</div>
+                                <code>{ss.position}</code>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
     );
 };
+
+//     const renderRows = (rows: typeof shardStreams) => {
+//         return rows.map((row, rdx) => {
+//             return (
+//                 <tr key={rdx}>
+//                     <td>{row.state}</td>
+//                     <td>
+//                         <code>
+//                             {keyspace}/{row.shard}
+//                         </code>
+//                     </td>
+//                     <td>
+//                         {row.tablet?.cell && row.tablet?.uid ? (
+//                             <code>{`${row.tablet.cell}-${row.tablet.uid}`}</code>
+//                         ) : (
+//                             '-'
+//                         )}
+//                     </td>
+//                     <td>
+//                         <ol className={style.filterList}>
+//                             {(row.binlog_source?.filter?.rules || []).map((rule, idx) => (
+//                                 <li key={idx}>
+//                                     Filter: <code>{rule.filter}</code>, match: <code>{rule.match}</code>
+//                                 </li>
+//                             ))}
+//                         </ol>
+//                     </td>
+//                     <td>{row.time_updated?.seconds}</td>
+//                     <td>{row.transaction_timestamp?.seconds}</td>
+//                     <td>
+//                         {typeof row.time_updated?.seconds === 'number' &&
+//                         typeof row.transaction_timestamp?.seconds === 'number'
+//                             ? `${row.time_updated.seconds - row.transaction_timestamp.seconds} s`
+//                             : '-'}
+//                     </td>
+//                     <td style={{ maxWidth: 240 }}>
+//                         <code>{row.position}</code>
+//                     </td>
+//                     <td style={{ maxWidth: 360 }}>
+//                         <code>{row.message}</code>
+//                     </td>
+//                 </tr>
+//             );
+//         });
+//     };
+
+//     return (
+//         <DataTable
+//             columns={[
+//                 'State',
+//                 'Shard',
+//                 'Tablet',
+//                 'Filter',
+//                 'Time Updated',
+//                 'Txn Timestamp',
+//                 'Lag',
+//                 'Position',
+//                 'Message',
+//             ]}
+//             data={shardStreams}
+//             renderRows={renderRows}
+//         />
+//     );
+// };

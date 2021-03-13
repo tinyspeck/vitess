@@ -13,3 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+.container {
+  display: grid;
+  grid-gap: 16px;
+  max-width: 1200px;
+}
+
+.panel {
+  border: solid 1px var(--textColorDisabled);
+  border-radius: 6px;
+  padding: 24px 32px;
+  display: grid;
+  grid-gap: 24px;
+}
+
+.row {
+  display: grid;
+  grid-gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.label {
+  font-size: var(--fontSizeSmall);
+  font-weight: bold;
+  line-height: 2;
+}
+
+.filterTable {
+  margin-bottom: 0;
+  width: auto;
+
+  tr {
+    border: none;
+  }
+
+  td {
+    border: none;
+    padding: 12px;
+  }
+}
