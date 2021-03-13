@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import { useWorkflows } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { vtadmin as pb, vtctldata } from '../../proto/vtadmin';
+import { filterNouns } from '../../util/filterNouns';
 import { Button } from '../Button';
 import { DataTable } from '../dataTable/DataTable';
 import { Icons } from '../Icon';
@@ -32,7 +33,7 @@ export const Workflows = () => {
 
     useDocumentTitle('Workflows');
 
-    const rows = React.useMemo(() => formatRows(data), [data]);
+    const rows = React.useMemo(() => formatRows(data, filter), [data, filter]);
 
     const renderRows = (rs: typeof rows) => {
         return rows.map((row) => {
@@ -45,15 +46,24 @@ export const Workflows = () => {
                 <tr key={`${row.cluster}-${row.keyspace}-${row.name}`}>
                     <td>
                         <code className="font-weight-bold">{href ? <Link to={href}>{row.name}</Link> : row.name}</code>
-                        <div className="text-color-secondary">
+                        <div className="text-color-secondary font-size-small">
                             <code>{row.cluster}</code>
                         </div>
                     </td>
                     <td>
-                        <code>{row._workflow.workflow?.source?.keyspace || '-'}</code>
+                        {row._workflow.workflow?.source?.keyspace ? (
+                            <>
+                                <code>{row._workflow.workflow?.source?.keyspace || '-'}</code>
+                            </>
+                        ) : (
+                            '-'
+                        )}
                     </td>
                     <td>
                         <code>{row._workflow.workflow?.target?.keyspace}</code>
+                        <div className="text-color-secondary font-size-small">
+                            <code>{row.cluster}</code>
+                        </div>
                     </td>
                     <td>{typeof row.maxLag === 'number' ? `${Number(row.maxLag).toLocaleString()} s` : '-'}</td>
                     <td>
@@ -96,17 +106,20 @@ export const Workflows = () => {
     );
 };
 
-const formatRows = (data: pb.GetWorkflowsResponse | null | undefined) => {
-    return orderBy(
-        Object.values(data?.workflows_by_cluster || {}).reduce((acc, cws) => {
-            (cws.workflows || []).forEach((w) => {
-                acc.push(formatRow(w));
-            });
+const formatRows = (data: pb.GetWorkflowsResponse | null | undefined, filter: string) => {
+    if (!data) return [];
 
-            return acc;
-        }, [] as ReturnType<typeof formatRow>[]),
-        ['name', 'cluster']
-    );
+    const rows = Object.values(data?.workflows_by_cluster || {}).reduce((acc, cws) => {
+        (cws.workflows || []).forEach((w) => {
+            acc.push(formatRow(w));
+        });
+
+        return acc;
+    }, [] as ReturnType<typeof formatRow>[]);
+
+    const filtered = filterNouns(filter, rows);
+
+    return orderBy(filtered, ['name', 'cluster', 'source', 'target']);
 };
 
 const formatRow = (w: pb.IWorkflow) => ({
