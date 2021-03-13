@@ -116,7 +116,12 @@ const formatRows = (data: pb.GetWorkflowsResponse | null | undefined, filter: st
 
     const filtered = filterNouns(filter, rows);
 
-    return orderBy(filtered, ['name', 'cluster', 'source', 'target']);
+    return orderBy(filtered, [
+        'name',
+        'cluster',
+        '_workflow.workflow.source.keyspace',
+        '_workflow.workflow.source.keyspace',
+    ]);
 };
 
 const formatRow = (w: pb.IWorkflow) => {
