@@ -37,7 +37,10 @@ export const Workflow = () => {
 
     useDocumentTitle(name);
 
-    const numStreams = Object.values(data?.workflow?.shard_streams || {}).length;
+    const numStreams = Object.values(data?.workflow?.shard_streams || {}).reduce(
+        (acc, ss) => (acc += (ss.streams || []).length),
+        0
+    );
 
     return (
         <div>
