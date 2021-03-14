@@ -18,7 +18,7 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
     const sparklineRef = React.useRef(null);
 
     const [expanded, setExpanded] = React.useState<boolean>(false);
-    const [lagData, setLagData] = React.useState<number[]>([0.000001, ...times(29, () => 0)]);
+    const [lagData, setLagData] = React.useState<number[]>([...times(29, () => 0), 0.000001]);
 
     const lag =
         typeof stream.time_updated?.seconds === 'number' && typeof stream.transaction_timestamp?.seconds === 'number'
@@ -39,7 +39,7 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
     React.useEffect(() => {
         let nextLagData = [...lagData];
         nextLagData.push(lag);
-        nextLagData = nextLagData.slice(Math.max(nextLagData.length - 30, 1), 30);
+        nextLagData = nextLagData.slice(Math.max(nextLagData.length - 29, 1), 30);
         sparkline(sparklineRef.current, nextLagData);
         setLagData(nextLagData);
     }, [stream]);
