@@ -2,20 +2,17 @@
 .panel {
   border: solid 1px var(--textColorDisabled);
   border-radius: 6px;
-  padding: 24px 32px;
-  display: grid;
-  grid-gap: 24px;
-  cursor: pointer;
   transition: all 0.15s ease-in-out;
 
-  &:hover {
-    border-color: var(--colorPrimary);
-  }
+  // &:hover {
+  //   border-color: var(--colorPrimary);
+  // }
 }
 
 .inner {
   display: grid;
   grid-gap: 24px;
+  padding: 24px 32px 0 32px;
 }
 
 .row {
@@ -82,6 +79,15 @@
   fill: rgba(129, 135, 255, 0.25);
 }
 
-// .inner {
-//   cursor: initial;
-// }
+.toggle {
+  color: var(--textColorSecondary);
+  cursor: pointer;
+  font-size: var(--fontSizeSmall);
+  padding: 16px 32px;
+  text-align: right;
+  transition: all 0.1s ease-in-out;
+}
+
+.panel:hover .toggle:hover {
+  color: var(--colorPrimary);
+}

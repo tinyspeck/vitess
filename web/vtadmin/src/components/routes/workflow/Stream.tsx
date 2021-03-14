@@ -44,16 +44,8 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
         setLagData(nextLagData);
     }, [stream]);
 
-    const onClickContainer: React.MouseEventHandler<HTMLDivElement> = (e) => {
-        if (expanded && containerRef.current === e.target) {
-            setExpanded(false);
-        } else {
-            setExpanded(true);
-        }
-    };
-
     return (
-        <div className={style.panel} onClick={onClickContainer} ref={containerRef}>
+        <div className={style.panel} ref={containerRef}>
             <div className={style.inner}>
                 <div className={style.metaRow}>
                     <div className={style.field}>
@@ -138,6 +130,9 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
                         </div>
                     </>
                 )}
+            </div>
+            <div className={style.toggle} onClick={() => setExpanded(!expanded)}>
+                {expanded ? 'Hide' : 'Expand'}
             </div>
         </div>
     );
