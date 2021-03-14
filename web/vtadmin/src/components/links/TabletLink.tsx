@@ -29,7 +29,13 @@ export const TabletLink: React.FunctionComponent<Props> = ({ cell, children, hos
 
     const href = process.env.REACT_APP_TABLET_LINK_TEMPLATE.replace('{{hostname}}', hostname);
     return (
-        <a className="link-external" href={href} target="_blank" rel="noopen noreferrer">
+        <a
+            className="link-external"
+            href={href}
+            onClick={(e) => e.stopPropagation()}
+            target="_blank"
+            rel="noopen noreferrer"
+        >
             {children}
         </a>
     );

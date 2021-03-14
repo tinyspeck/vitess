@@ -204,9 +204,17 @@ table tbody td {
   font-size: var(--fontSizeSmall);
 }
 
+.link-external {
+  white-space: nowrap;
+}
+
 .link-external::after {
   content: '↪';
   display: inline-block;
   margin-left: 0.25em;
   vertical-align: middle;
+}
+
+.no-wrap {
+  white-space: nowrap;
 }
