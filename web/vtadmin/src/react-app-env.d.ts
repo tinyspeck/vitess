@@ -20,3 +20,8 @@ declare namespace NodeJS {
 }
 
 interface Window {}
+
+declare module '@fnando/sparkline' {
+    var x: any;
+    export = x;
+}

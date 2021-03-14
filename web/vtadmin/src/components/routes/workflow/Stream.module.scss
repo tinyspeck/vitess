@@ -24,6 +24,10 @@
   grid-template-columns: 1fr 1fr 1fr 2fr 1fr;
 }
 
+.field {
+  cursor: initial;
+}
+
 .label {
   color: var(--textColorSecondary);
   font-size: var(--fontSizeSmall);
@@ -63,3 +67,16 @@
     background-color: var(--colorSuccess50);
   }
 }
+
+.sparkline {
+  display: inline-block;
+}
+
+.sparkline svg {
+  stroke: var(--colorPrimary);
+  fill: rgba(129, 135, 255, 0.25);
+}
+
+// .inner {
+//   cursor: initial;
+// }
