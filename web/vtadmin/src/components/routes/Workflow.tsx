@@ -20,6 +20,7 @@ import { Link, NavLink, Redirect, Route, useRouteMatch } from 'react-router-dom'
 import { useWorkflow } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { Code } from '../Code';
+import { Tab, Tabs } from '../Tabs';
 import style from './Workflow.module.scss';
 import { Streams } from './workflow/Streams';
 
@@ -35,6 +36,8 @@ export const Workflow = () => {
     let { path, url } = useRouteMatch();
 
     useDocumentTitle(name);
+
+    const numStreams = Object.values(data?.workflow?.shard_streams || {}).length;
 
     return (
         <div>
@@ -58,14 +61,12 @@ export const Workflow = () => {
                 </div>
             </header>
 
-            <div className={style.tabs}>
-                <NavLink activeClassName={style.activeTab} className={style.tab} to={`${url}/streams`}>
+            <Tabs>
+                <Tab to={`${url}/streams`} count={numStreams}>
                     Streams
-                </NavLink>
-                <NavLink activeClassName={style.activeTab} className={style.tab} to={`${url}/json`}>
-                    JSON
-                </NavLink>
-            </div>
+                </Tab>
+                <Tab to={`${url}/json`}>JSON</Tab>
+            </Tabs>
 
             <Switch>
                 <Route path={`${path}/streams`}>
