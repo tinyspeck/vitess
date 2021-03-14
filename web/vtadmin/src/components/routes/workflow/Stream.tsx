@@ -56,13 +56,13 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
                     </div>
 
                     <div>
-                        <div className={style.label}>Source Shard</div>
+                        <div className={style.label}>Source</div>
                         <code>
                             {stream.binlog_source?.keyspace}/{stream.binlog_source?.shard}
                         </code>
                     </div>
                     <div>
-                        <div className={style.label}>Target Shard</div>
+                        <div className={style.label}>Target</div>
                         <code>
                             {keyspace}/{stream.shard}
                         </code>
