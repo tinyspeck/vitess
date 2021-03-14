@@ -29,7 +29,7 @@ import { TextInput } from '../TextInput';
 import style from './Workflows.module.scss';
 
 export const Workflows = () => {
-    const { data } = useWorkflows();
+    const { data } = useWorkflows({ refetchInterval: 1000 });
     const [filter, setFilter] = React.useState<string>('');
 
     useDocumentTitle('Workflows');

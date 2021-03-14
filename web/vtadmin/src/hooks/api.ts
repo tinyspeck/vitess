@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient, UseQueryOptions } from 'react-query';
 import {
     fetchClusters,
     fetchGates,
@@ -13,15 +13,25 @@ import {
 } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
 
-export const useClusters = () => useQuery<pb.Cluster[], Error>(['clusters'], fetchClusters);
-export const useGates = () => useQuery<pb.VTGate[], Error>(['gates'], fetchGates);
-export const useKeyspaces = () => useQuery<pb.Keyspace[], Error>(['keyspaces'], fetchKeyspaces);
-export const useSchemas = () => useQuery<pb.Schema[], Error>(['schemas'], fetchSchemas);
-export const useTablets = () => useQuery<pb.Tablet[], Error>(['tablets'], fetchTablets);
-export const useWorkflows = () =>
-    useQuery<pb.GetWorkflowsResponse, Error>(['workflows'], fetchWorkflows, {
-        refetchInterval: 1000,
-    });
+export const useClusters = (options?: UseQueryOptions<pb.Cluster[], Error, pb.Cluster[]> | undefined) =>
+    useQuery<pb.Cluster[], Error>(['clusters'], fetchClusters, options);
+
+export const useGates = (options?: UseQueryOptions<pb.VTGate[], Error, pb.VTGate[]> | undefined) =>
+    useQuery<pb.VTGate[], Error>(['gates'], fetchGates, options);
+
+export const useKeyspaces = (options?: UseQueryOptions<pb.Keyspace[], Error, pb.Keyspace[]> | undefined) =>
+    useQuery<pb.Keyspace[], Error>(['keyspaces'], fetchKeyspaces, options);
+
+export const useSchemas = (options?: UseQueryOptions<pb.Schema[], Error, pb.Schema[]> | undefined) =>
+    useQuery<pb.Schema[], Error>(['schemas'], fetchSchemas, options);
+
+export const useTablets = (options?: UseQueryOptions<pb.Tablet[], Error, pb.Tablet[]> | undefined) =>
+    useQuery<pb.Tablet[], Error>(['tablets'], fetchTablets, options);
+
+export const useWorkflows = (
+    options?: UseQueryOptions<pb.GetWorkflowsResponse, Error, pb.GetWorkflowsResponse> | undefined
+) => useQuery<pb.GetWorkflowsResponse, Error>(['workflows'], fetchWorkflows, options);
+
 export const useWorkflowsList = () => {
     const query = useWorkflows();
     const { data, ...response } = query;
@@ -89,7 +99,10 @@ export const useSchema = (params: FetchSchemaParams) => {
     });
 };
 
-export const useWorkflow = (params: FetchWorkflowParams) => {
+export const useWorkflow = (
+    params: FetchWorkflowParams,
+    options?: UseQueryOptions<pb.IWorkflow, Error, pb.IWorkflow> | undefined
+) => {
     const queryClient = useQueryClient();
     return useQuery<pb.IWorkflow, Error>(['workflow', params], () => fetchWorkflow(params), {
         initialData: () => {
@@ -99,6 +112,6 @@ export const useWorkflow = (params: FetchWorkflowParams) => {
                 (w) => w.keyspace === params.keyspace && w.workflow?.name === params.name
             );
         },
-        refetchInterval: 1000,
+        ...options,
     });
 };

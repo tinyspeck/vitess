@@ -31,7 +31,7 @@ interface RouteParams {
 
 export const Workflow = () => {
     const { clusterID, keyspace, name } = useParams<RouteParams>();
-    const { data } = useWorkflow({ clusterID, keyspace, name });
+    const { data } = useWorkflow({ clusterID, keyspace, name }, { refetchInterval: 1000 });
     let { path, url } = useRouteMatch();
 
     useDocumentTitle(name);
