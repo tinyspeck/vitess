@@ -1,0 +1,35 @@
+.tabs {
+  border-bottom: solid 1px var(--grey200);
+  display: flex;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.tab {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: var(--textColorPrimary) !important;
+  cursor: pointer;
+  display: block;
+  font-weight: bold;
+  padding: 16px 24px 12px 24px;
+
+  &:hover {
+    background: var(--grey75);
+  }
+
+  &.active {
+    border-bottom: solid 3px var(--colorPrimary);
+  }
+}
+
+.count {
+  background-color: var(--grey200);
+  border-radius: 100px;
+  color: var(--grey800);
+  display: inline-block;
+  font-size: var(--fontSizeSmall);
+  margin: 0 0 0 8px;
+  padding: 2px 8px;
+  vertical-align: text-bottom;
+}
