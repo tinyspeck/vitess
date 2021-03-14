@@ -34,7 +34,7 @@ interface Props {
 
 export const Streams = ({ clusterID, keyspace, name }: Props) => {
     const [filter, setFilter] = React.useState<string>('');
-    const { data } = useWorkflow({ clusterID, keyspace, name });
+    const { data } = useWorkflow({ clusterID, keyspace, name }, { refetchInterval: 1000 });
     const { data: tablets = [] } = useTablets();
 
     const rows = Object.values(data?.workflow?.shard_streams || {}).reduce((acc, ss) => {
