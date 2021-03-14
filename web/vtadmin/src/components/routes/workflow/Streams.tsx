@@ -69,6 +69,9 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                     (t) => t.tablet?.alias?.cell === ss.tablet?.cell && t.tablet?.alias?.uid === ss.tablet?.uid
                 );
 
+                const uad =
+                    typeof ss.time_updated?.seconds === 'number' ? new Date(ss.time_updated.seconds * 1000) : null;
+
                 return (
                     <div className={style.panel}>
                         <div className={style.row}>
@@ -77,15 +80,15 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                                 {ss.state}
                             </div>
 
-                            <div>
+                            {/* <div>
                                 <div className={style.label}>Stream ID</div>
                                 <code>{ss.id}</code>
-                            </div>
+                            </div> */}
 
                             <div>
                                 <div className={style.label}>Source Shard</div>
                                 <code>
-                                    {keyspace}/{ss.shard}
+                                    {ss.binlog_source?.keyspace}/{ss.binlog_source?.shard}
                                 </code>
                             </div>
                             <div>
@@ -94,6 +97,12 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                                     {keyspace}/{ss.shard}
                                 </code>
                             </div>
+
+                            <div>
+                                <div className={style.label}>Updated at</div>
+                                <code>{ss.time_updated?.seconds}</code>
+                            </div>
+
                             <div>
                                 <div className={style.label}>Replication Lag</div>
                                 <code>{lag} seconds</code>
