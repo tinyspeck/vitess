@@ -13,6 +13,11 @@
   }
 }
 
+.inner {
+  display: grid;
+  grid-gap: 24px;
+}
+
 .row {
   display: grid;
   grid-gap: 24px;
