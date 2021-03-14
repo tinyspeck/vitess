@@ -25,9 +25,11 @@
 }
 
 .label {
+  color: var(--textColorSecondary);
   font-size: var(--fontSizeSmall);
   font-weight: bold;
   line-height: 2;
+  margin-bottom: 4px;
 }
 
 .filterTable {
@@ -41,5 +43,23 @@
   td {
     border: none;
     padding: 12px;
+  }
+}
+
+.pip {
+  background: var(--grey400);
+  border-radius: 100px;
+  display: inline-block;
+  height: 10px;
+  margin-right: 2px;
+  width: 10px;
+  vertical-align: baseline;
+
+  &.error {
+    background-color: var(--colorError50);
+  }
+
+  &.ok {
+    background-color: var(--colorSuccess50);
   }
 }

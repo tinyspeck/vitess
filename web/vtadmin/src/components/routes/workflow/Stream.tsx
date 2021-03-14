@@ -1,5 +1,6 @@
 import { invertBy } from 'lodash-es';
 import * as React from 'react';
+import cx from 'classnames';
 
 import { topodata, vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
 import { TabletLink } from '../../links/TabletLink';
@@ -20,13 +21,20 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
             : '-';
 
     // const uad = typeof stream.time_updated?.seconds === 'number' ? new Date(stream.time_updated.seconds * 1000) : null;
+    const sts = stream.state ? stream.state.toLowerCase() : null;
+    const pipClass = cx(style.pip, {
+        [style.error]: sts === 'error',
+        [style.ok]: sts === 'running' || sts === 'copying',
+    });
 
     return (
         <div className={style.panel} onClick={() => setExpanded(!expanded)}>
             <div className={style.metaRow}>
                 <div className={style.field}>
                     <div className={style.label}>State</div>
-                    {stream.state}
+                    <div>
+                        <span className={pipClass} /> {stream.state}
+                    </div>
                 </div>
 
                 <div>
