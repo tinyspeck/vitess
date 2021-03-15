@@ -17,7 +17,8 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
     const containerRef = React.useRef(null);
     const sparklineRef = React.useRef(null);
 
-    const [expanded, setExpanded] = React.useState<boolean>(false);
+    const isError = !!stream.state && stream.state.toLowerCase() === 'error';
+    const [expanded, setExpanded] = React.useState<boolean>(isError);
     const [lagData, setLagData] = React.useState<number[]>([...times(29, () => 0), 0.000001]);
 
     const lag =
@@ -44,8 +45,12 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
         setLagData(nextLagData);
     }, [stream]);
 
+    const panelClass = cx(style.panel, {
+        [style.errorPanel]: isError,
+    });
+
     return (
-        <div className={style.panel} ref={containerRef}>
+        <div className={panelClass} ref={containerRef}>
             <div className={style.inner}>
                 <div className={style.metaRow}>
                     <div className={style.field}>
@@ -90,8 +95,22 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
                         <code>{lag} s</code>
                     </div>
                 </div>
+
                 {expanded && (
                     <>
+                        {/* Timestamps */}
+                        <div className={style.timestampRow}>
+                            <div className={style.field}>
+                                <div className={style.label}>Updated at</div>
+                                <div>{stream.time_updated?.seconds}</div>
+                            </div>
+                            <div className={style.field}>
+                                <div className={style.label}>Txn timestamp</div>
+                                <div>{stream.transaction_timestamp?.seconds}</div>
+                            </div>
+                        </div>
+
+                        {/* Message */}
                         {stream.message && (
                             <div className={style.row}>
                                 <div className={style.field}>
@@ -101,6 +120,7 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
                             </div>
                         )}
 
+                        {/* Filter rules */}
                         <div className={style.row}>
                             <div className={style.field}>
                                 <div className={style.label}>Filter Rules</div>
@@ -122,6 +142,7 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
                             </div>
                         </div>
 
+                        {/* Position */}
                         <div className={style.row}>
                             <div className={style.field}>
                                 <div className={style.label}>Position</div>
