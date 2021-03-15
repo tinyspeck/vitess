@@ -8,7 +8,7 @@ import style from './VTExplain.module.scss';
 import { vtadmin as pb } from '../../../proto/vtadmin';
 import { Label } from '../../inputs/Label';
 import { useQuery } from 'react-query';
-import { fetchVTExplain } from '../../../api/http';
+import { fetchVTExplain, HttpResponseNotOkError } from '../../../api/http';
 import { Code } from '../../Code';
 
 export const VTExplain = () => {
@@ -19,18 +19,28 @@ export const VTExplain = () => {
     const { data: clusters = [] } = useClusters();
     const { data: keyspaces = [] } = useKeyspaces();
 
-    const vtexplainQuery = useQuery(
+    const vtexplainQuery = useQuery<any, Error>(
         ['vtexplain', cluster, keyspace, sql],
         () => {
             return fetchVTExplain({ cluster: cluster?.id, keyspace: keyspace?.keyspace?.name, sql });
         },
-        { enabled: false }
+        {
+            enabled: false,
+            keepPreviousData: true,
+            retry: false,
+        }
     );
 
     const onSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
         e.preventDefault();
         console.log();
         vtexplainQuery.refetch();
+    };
+
+    const onReset = () => {
+        setCluster(null);
+        setKeyspace(null);
+        setSql(null);
     };
 
     const keyspacesForCluster = cluster ? keyspaces.filter((k) => k.cluster?.id === cluster.id) : [];
@@ -78,8 +88,8 @@ export const VTExplain = () => {
                             </Button>
                             <Button
                                 disabled={!cluster || !keyspace || !sql || vtexplainQuery.isFetching}
+                                onClick={onReset}
                                 secondary
-                                type="reset"
                             >
                                 Reset
                             </Button>
@@ -87,7 +97,13 @@ export const VTExplain = () => {
                     </form>
                 </div>
                 <div className={style.outputPanel}>
-                    <Code code={vtexplainQuery.data?.response} />
+                    <Code
+                        code={
+                            vtexplainQuery.data?.ok
+                                ? vtexplainQuery.data?.result.response
+                                : JSON.stringify(vtexplainQuery.data, null, 2)
+                        }
+                    />
                 </div>
             </div>
         </div>
