@@ -205,3 +205,12 @@ export const fetchWorkflow = async ({ clusterID, keyspace, name }: FetchWorkflow
 
     return pb.Workflow.create(result);
 };
+
+export const fetchVTExplain = async (req: pb.IVTExplainRequest) => {
+    const { result } = await vtfetch(`/api/vtexplain?cluster=${req.cluster}&keyspace=${req.keyspace}&sql=${req.sql}`);
+
+    const err = pb.VTExplainResponse.verify(result);
+    if (err) throw Error(err);
+
+    return pb.VTExplainResponse.create(result);
+};
