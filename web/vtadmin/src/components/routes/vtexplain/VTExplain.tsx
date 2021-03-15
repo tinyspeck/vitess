@@ -19,17 +19,18 @@ import { useURLQuery } from '../../../hooks/useURLQuery';
 export const VTExplain = () => {
     const urlQuery = useURLQuery();
 
+    const [hasInitialQuery, setHasInitialQuery] = React.useState<boolean>(false);
     const [clusterName, setClusterName] = React.useState<string | null | undefined>(urlQuery.query.cluster as string);
     const [keyspaceName, setKeyspaceName] = React.useState<string | null | undefined>(
         urlQuery.query.keyspace as string
     );
 
-    // const [cluster, setCluster] = React.useState<pb.Cluster | null | undefined>(null);
-    // const [keyspace, setKeyspace] = React.useState<pb.Keyspace | null | undefined>(null);
-    const [sql, setSql] = React.useState<string | null>(null);
+    const [sql, setSql] = React.useState<string | null | undefined>(urlQuery.query.sql as string);
 
-    const { data: clusters = [] } = useClusters();
-    const { data: keyspaces = [] } = useKeyspaces();
+    const { data: clusters = [], ...cq } = useClusters();
+    const { data: keyspaces = [], ...kq } = useKeyspaces();
+
+    const hasInitialized = !cq.isLoading && !kq.isLoading;
 
     const cluster = clusters.find((c) => c.name === clusterName) || null;
     const keyspacesForCluster = clusterName ? keyspaces.filter((k) => k.cluster?.name === clusterName) : [];
@@ -47,6 +48,13 @@ export const VTExplain = () => {
         }
     );
 
+    React.useEffect(() => {
+        if (!hasInitialQuery && hasInitialized && clusterName && keyspaceName && sql && cluster && keyspace) {
+            vtexplainQuery.refetch();
+            setHasInitialQuery(true);
+        }
+    }, [hasInitialized, hasInitialQuery, cluster, clusterName, keyspace, keyspaceName, sql]);
+
     const onChangeCluster = (c: pb.Cluster | null | undefined) => {
         setClusterName(c?.name);
         urlQuery.replaceQuery({ cluster: c?.name });
@@ -57,9 +65,13 @@ export const VTExplain = () => {
         urlQuery.replaceQuery({ keyspace: k?.keyspace?.name });
     };
 
+    const onChangeSql = (sql: string | null | undefined) => {
+        setSql(sql);
+        urlQuery.replaceQuery({ sql: sql || undefined });
+    };
+
     const onSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
         e.preventDefault();
-        console.log();
         vtexplainQuery.refetch();
     };
 
@@ -104,24 +116,38 @@ export const VTExplain = () => {
                             <Label label="VTExplain Query" />
                             <AceEditor
                                 className={style.editor}
-                                defaultValue={''}
+                                defaultValue={sql || ''}
                                 highlightActiveLine={false}
                                 minLines={12}
                                 maxLines={16}
                                 mode="mysql"
-                                onChange={(s) => setSql(s)}
+                                onChange={onChangeSql}
                                 theme="github"
                             />
                         </div>
                         <div className={style.buttonRow}>
                             <Button
-                                disabled={!clusterName || !keyspaceName || !sql || vtexplainQuery.isFetching}
+                                disabled={
+                                    !clusterName ||
+                                    !keyspaceName ||
+                                    !sql ||
+                                    vtexplainQuery.isFetching ||
+                                    kq.isLoading ||
+                                    cq.isLoading
+                                }
                                 type="submit"
                             >
                                 Run query
                             </Button>
                             <Button
-                                disabled={!clusterName || !keyspaceName || !sql || vtexplainQuery.isFetching}
+                                disabled={
+                                    !clusterName ||
+                                    !keyspaceName ||
+                                    !sql ||
+                                    vtexplainQuery.isFetching ||
+                                    kq.isLoading ||
+                                    cq.isLoading
+                                }
                                 onClick={onReset}
                                 secondary
                             >
