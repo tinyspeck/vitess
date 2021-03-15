@@ -7,6 +7,9 @@ import { Select } from '../../inputs/Select';
 import style from './VTExplain.module.scss';
 import { vtadmin as pb } from '../../../proto/vtadmin';
 import { Label } from '../../inputs/Label';
+import { useQuery } from 'react-query';
+import { fetchVTExplain } from '../../../api/http';
+import { Code } from '../../Code';
 
 export const VTExplain = () => {
     const [cluster, setCluster] = React.useState<pb.Cluster | null | undefined>(null);
@@ -16,8 +19,18 @@ export const VTExplain = () => {
     const { data: clusters = [] } = useClusters();
     const { data: keyspaces = [] } = useKeyspaces();
 
-    const onSubmit = () => {
+    const vtexplainQuery = useQuery(
+        ['vtexplain', cluster, keyspace, sql],
+        () => {
+            return fetchVTExplain({ cluster: cluster?.id, keyspace: keyspace?.keyspace?.name, sql });
+        },
+        { enabled: false }
+    );
+
+    const onSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
+        e.preventDefault();
         console.log();
+        vtexplainQuery.refetch();
     };
 
     const keyspacesForCluster = cluster ? keyspaces.filter((k) => k.cluster?.id === cluster.id) : [];
@@ -60,14 +73,22 @@ export const VTExplain = () => {
                             />
                         </div>
                         <div className={style.buttonRow}>
-                            <Button type="submit">Run query</Button>
-                            <Button secondary type="reset">
+                            <Button disabled={!cluster || !keyspace || !sql || vtexplainQuery.isFetching} type="submit">
+                                Run query
+                            </Button>
+                            <Button
+                                disabled={!cluster || !keyspace || !sql || vtexplainQuery.isFetching}
+                                secondary
+                                type="reset"
+                            >
                                 Reset
                             </Button>
                         </div>
                     </form>
                 </div>
-                <div className={style.outputPanel}>output</div>
+                <div className={style.outputPanel}>
+                    <Code code={vtexplainQuery.data?.response} />
+                </div>
             </div>
         </div>
     );
