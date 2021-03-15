@@ -75,12 +75,6 @@ export const VTExplain = () => {
         vtexplainQuery.refetch();
     };
 
-    const onReset = () => {
-        setClusterName(null);
-        setKeyspaceName(null);
-        setSql(null);
-    };
-
     return (
         <div>
             <h1>VTExplain</h1>
@@ -138,20 +132,6 @@ export const VTExplain = () => {
                                 type="submit"
                             >
                                 Run query
-                            </Button>
-                            <Button
-                                disabled={
-                                    !clusterName ||
-                                    !keyspaceName ||
-                                    !sql ||
-                                    vtexplainQuery.isFetching ||
-                                    kq.isLoading ||
-                                    cq.isLoading
-                                }
-                                onClick={onReset}
-                                secondary
-                            >
-                                Reset
                             </Button>
                         </div>
                     </form>
