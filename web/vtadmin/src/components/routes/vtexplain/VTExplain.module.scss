@@ -1,0 +1,30 @@
+.container {
+  display: grid;
+  grid-gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.formPanel,
+.outputPanel {
+  border: solid 1px var(--textColorDisabled);
+  border-radius: 6px;
+  padding: 24px;
+}
+
+.form {
+  display: grid;
+  grid-gap: 16px;
+}
+
+.buttonRow {
+  display: grid;
+  grid-gap: 8px;
+  grid-template-columns: min-content min-content;
+}
+
+.sqlInput {
+  display: block;
+  font-family: var(--fontFamilyMonospace);
+  height: 8rem;
+  width: 100%;
+}
