@@ -76,7 +76,7 @@ export const VTExplain = () => {
     };
 
     return (
-        <div>
+        <div className={style.layout}>
             <h1>VTExplain</h1>
             <div className={style.container}>
                 <div className={style.formPanel}>
@@ -137,13 +137,15 @@ export const VTExplain = () => {
                     </form>
                 </div>
                 <div className={style.outputPanel}>
-                    <Code
-                        code={
-                            vtexplainQuery.data?.ok
-                                ? vtexplainQuery.data?.result.response
-                                : JSON.stringify(vtexplainQuery.data, null, 2)
-                        }
-                    />
+                    <div className={style.codeContainer}>
+                        <Code
+                            code={
+                                vtexplainQuery.data?.ok
+                                    ? vtexplainQuery.data?.result.response
+                                    : JSON.stringify(vtexplainQuery.data, null, 2)
+                            }
+                        />
+                    </div>
                 </div>
             </div>
         </div>
