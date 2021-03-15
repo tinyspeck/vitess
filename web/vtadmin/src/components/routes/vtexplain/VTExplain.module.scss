@@ -51,3 +51,10 @@
   height: 8rem;
   width: 100%;
 }
+
+.editor {
+  border: solid 1px var(--grey200);
+  border-radius: 6px;
+  font-family: var(--fontFamilyMonospace) !important;
+  font-size: var(--fontSizeLarge) !important;
+}

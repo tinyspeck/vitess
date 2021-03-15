@@ -1,5 +1,9 @@
 import * as React from 'react';
 import { orderBy } from 'lodash-es';
+import AceEditor from 'react-ace';
+
+import 'ace-builds/src-noconflict/mode-mysql';
+import 'ace-builds/src-noconflict/theme-github';
 
 import { useClusters, useKeyspaces } from '../../../hooks/api';
 import { Button } from '../../Button';
@@ -76,10 +80,15 @@ export const VTExplain = () => {
                         </div>
                         <div className={style.formRow}>
                             <Label label="VTExplain Query" />
-                            <textarea
-                                className={style.sqlInput}
-                                onChange={(e) => setSql(e.target.value)}
-                                value={sql || ''}
+                            <AceEditor
+                                className={style.editor}
+                                defaultValue={''}
+                                highlightActiveLine={false}
+                                minLines={12}
+                                maxLines={16}
+                                mode="mysql"
+                                onChange={(s) => setSql(s)}
+                                theme="github"
                             />
                         </div>
                         <div className={style.buttonRow}>
