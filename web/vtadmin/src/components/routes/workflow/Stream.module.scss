@@ -7,6 +7,10 @@
   // &:hover {
   //   border-color: var(--colorPrimary);
   // }
+
+  &.errorPanel {
+    border-color: var(--colorError50);
+  }
 }
 
 .inner {
@@ -26,14 +30,19 @@
   grid-template-columns: 1fr 1fr 1fr 2fr 1fr;
 }
 
+.timestampRow {
+  display: grid;
+  grid-gap: 24px;
+  grid-template-columns: 1fr 1fr 4fr;
+}
+
 .field {
   cursor: initial;
 }
 
 .label {
-  color: var(--textColorSecondary);
   font-size: var(--fontSizeSmall);
-  font-weight: bold;
+  font-weight: 700;
   line-height: 2;
   margin-bottom: 4px;
 }
