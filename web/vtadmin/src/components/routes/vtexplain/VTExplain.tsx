@@ -14,17 +14,29 @@ import { Label } from '../../inputs/Label';
 import { useQuery } from 'react-query';
 import { fetchVTExplain, HttpResponseNotOkError } from '../../../api/http';
 import { Code } from '../../Code';
+import { useURLQuery } from '../../../hooks/useURLQuery';
 
 export const VTExplain = () => {
-    const [cluster, setCluster] = React.useState<pb.Cluster | null | undefined>(null);
-    const [keyspace, setKeyspace] = React.useState<pb.Keyspace | null | undefined>(null);
+    const urlQuery = useURLQuery();
+
+    const [clusterName, setClusterName] = React.useState<string | null | undefined>(urlQuery.query.cluster as string);
+    const [keyspaceName, setKeyspaceName] = React.useState<string | null | undefined>(
+        urlQuery.query.keyspace as string
+    );
+
+    // const [cluster, setCluster] = React.useState<pb.Cluster | null | undefined>(null);
+    // const [keyspace, setKeyspace] = React.useState<pb.Keyspace | null | undefined>(null);
     const [sql, setSql] = React.useState<string | null>(null);
 
     const { data: clusters = [] } = useClusters();
     const { data: keyspaces = [] } = useKeyspaces();
 
+    const cluster = clusters.find((c) => c.name === clusterName) || null;
+    const keyspacesForCluster = clusterName ? keyspaces.filter((k) => k.cluster?.name === clusterName) : [];
+    const keyspace = keyspacesForCluster.find((k) => k.keyspace?.name === keyspaceName);
+
     const vtexplainQuery = useQuery<any, Error>(
-        ['vtexplain', cluster, keyspace, sql],
+        ['vtexplain', clusterName, keyspaceName, sql],
         () => {
             return fetchVTExplain({ cluster: cluster?.id, keyspace: keyspace?.keyspace?.name, sql });
         },
@@ -35,6 +47,16 @@ export const VTExplain = () => {
         }
     );
 
+    const onChangeCluster = (c: pb.Cluster | null | undefined) => {
+        setClusterName(c?.name);
+        urlQuery.replaceQuery({ cluster: c?.name });
+    };
+
+    const onChangeKeyspace = (k: pb.Keyspace | null | undefined) => {
+        setKeyspaceName(k?.keyspace?.name);
+        urlQuery.replaceQuery({ keyspace: k?.keyspace?.name });
+    };
+
     const onSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
         e.preventDefault();
         console.log();
@@ -42,12 +64,10 @@ export const VTExplain = () => {
     };
 
     const onReset = () => {
-        setCluster(null);
-        setKeyspace(null);
+        setClusterName(null);
+        setKeyspaceName(null);
         setSql(null);
     };
-
-    const keyspacesForCluster = cluster ? keyspaces.filter((k) => k.cluster?.id === cluster.id) : [];
 
     return (
         <div>
@@ -60,22 +80,24 @@ export const VTExplain = () => {
                                 itemToString={(i) => i?.name || ''}
                                 items={orderBy(clusters, 'name')}
                                 label="Cluster"
-                                onChange={(c) => setCluster(c)}
+                                onChange={onChangeCluster}
                                 placeholder="Pick a cluster"
                                 renderItem={(i) => i?.name || ''}
-                                selectedItem={cluster}
+                                selectedItem={clusters.find((c) => c.name === clusterName) || null}
                             />
                         </div>
                         <div className={style.formRow}>
                             <Select
-                                disabled={!cluster}
+                                disabled={!clusterName}
                                 itemToString={(k) => k?.keyspace?.name || ''}
                                 items={orderBy(keyspacesForCluster, 'keyspace.name')}
                                 label="Keyspace"
-                                onChange={(k) => setKeyspace(k)}
+                                onChange={onChangeKeyspace}
                                 placeholder="Pick a keyspace"
                                 renderItem={(k) => k?.keyspace?.name || ''}
-                                selectedItem={keyspace}
+                                selectedItem={
+                                    keyspacesForCluster.find((k) => k.keyspace?.name === keyspaceName) || null
+                                }
                             />
                         </div>
                         <div className={style.formRow}>
@@ -92,11 +114,14 @@ export const VTExplain = () => {
                             />
                         </div>
                         <div className={style.buttonRow}>
-                            <Button disabled={!cluster || !keyspace || !sql || vtexplainQuery.isFetching} type="submit">
+                            <Button
+                                disabled={!clusterName || !keyspaceName || !sql || vtexplainQuery.isFetching}
+                                type="submit"
+                            >
                                 Run query
                             </Button>
                             <Button
-                                disabled={!cluster || !keyspace || !sql || vtexplainQuery.isFetching}
+                                disabled={!clusterName || !keyspaceName || !sql || vtexplainQuery.isFetching}
                                 onClick={onReset}
                                 secondary
                             >
