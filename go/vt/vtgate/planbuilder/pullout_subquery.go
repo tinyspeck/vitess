@@ -72,7 +72,7 @@ func (ps *pulloutSubquery) Primitive() engine.Primitive {
 }
 
 // PushLock satisfies the builder interface.
-func (ps *pulloutSubquery) PushLock(lock string) error {
+func (ps *pulloutSubquery) PushLock(lock sqlparser.Lock) error {
 	err := ps.subquery.PushLock(lock)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (ps *pulloutSubquery) PushOrderBy(orderBy sqlparser.OrderBy) (builder, erro
 // SetUpperLimit satisfies the builder interface.
 // This is a no-op because we actually call SetLimit for this primitive.
 // In the future, we may have to honor this call for subqueries.
-func (ps *pulloutSubquery) SetUpperLimit(count *sqlparser.SQLVal) {
+func (ps *pulloutSubquery) SetUpperLimit(count sqlparser.Expr) {
 	ps.underlying.SetUpperLimit(count)
 }
 

@@ -79,7 +79,7 @@ func newJoin(lpb, rpb *primitiveBuilder, ajoin *sqlparser.JoinTableExpr) error {
 	opcode := engine.NormalJoin
 	if ajoin != nil {
 		switch {
-		case ajoin.Join == sqlparser.LeftJoinStr:
+		case ajoin.Join == sqlparser.LeftJoinType:
 			opcode = engine.LeftJoin
 
 			// For left joins, we have to push the ON clause into the RHS.
@@ -135,7 +135,7 @@ func (jb *join) Primitive() engine.Primitive {
 }
 
 // PushLock satisfies the builder interface.
-func (jb *join) PushLock(lock string) error {
+func (jb *join) PushLock(lock sqlparser.Lock) error {
 	err := jb.Left.PushLock(lock)
 	if err != nil {
 		return err
@@ -232,7 +232,7 @@ func (jb *join) PushOrderBy(orderBy sqlparser.OrderBy) (builder, error) {
 	}
 
 	for _, order := range orderBy {
-		if node, ok := order.Expr.(*sqlparser.SQLVal); ok {
+		if node, ok := order.Expr.(*sqlparser.Literal); ok {
 			// This block handles constructs that use ordinals for 'ORDER BY'. For example:
 			// SELECT a, b, c FROM t1, t2 ORDER BY 1, 2, 3.
 			num, err := ResultFromNumber(jb.ResultColumns(), node)
@@ -282,7 +282,7 @@ func (jb *join) PushOrderBy(orderBy sqlparser.OrderBy) (builder, error) {
 // The call is ignored because results get multiplied
 // as they join with others. So, it's hard to reliably
 // predict if a limit push down will work correctly.
-func (jb *join) SetUpperLimit(_ *sqlparser.SQLVal) {
+func (jb *join) SetUpperLimit(_ sqlparser.Expr) {
 }
 
 // PushMisc satisfies the builder interface.

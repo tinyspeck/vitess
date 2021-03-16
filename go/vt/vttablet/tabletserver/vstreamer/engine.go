@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"sync"
 
+	"vitess.io/vitess/go/vt/servenv"
+
 	"vitess.io/vitess/go/acl"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/stats"
@@ -69,6 +71,19 @@ type Engine struct {
 	// stats variables
 	vschemaErrors  *stats.Counter
 	vschemaUpdates *stats.Counter
+
+	// vstreamer metrics
+	vstreamerPhaseTimings     *servenv.TimingsWrapper
+	vstreamerEventsStreamed   *stats.Counter
+	vstreamerPacketSize       *stats.GaugeFunc
+	vstreamerNumPackets       *stats.Counter
+	resultStreamerNumRows     *stats.Counter
+	resultStreamerNumPackets  *stats.Counter
+	rowStreamerNumRows        *stats.Counter
+	rowStreamerNumPackets     *stats.Counter
+	errorCounts               *stats.CountersWithSingleLabel
+	vstreamersCreated         *stats.Counter
+	vstreamersEndedWithErrors *stats.Counter
 }
 
 // NewEngine creates a new Engine.
@@ -89,6 +104,18 @@ func NewEngine(env tabletenv.Env, ts srvtopo.Server, se *schema.Engine, cell str
 
 		vschemaErrors:  env.Exporter().NewCounter("VSchemaErrors", "Count of VSchema errors"),
 		vschemaUpdates: env.Exporter().NewCounter("VSchemaUpdates", "Count of VSchema updates. Does not include errors"),
+
+		vstreamerPhaseTimings:     env.Exporter().NewTimings("VStreamerPhaseTiming", "Time taken for different phases during vstream copy", "phase-timing"),
+		vstreamerEventsStreamed:   env.Exporter().NewCounter("VStreamerEventsStreamed", "Count of events streamed in VStream API"),
+		vstreamerPacketSize:       env.Exporter().NewGaugeFunc("VStreamPacketSize", "Max packet size for sending vstreamer events", getPacketSize),
+		vstreamerNumPackets:       env.Exporter().NewCounter("VStreamerNumPackets", "Number of packets in vstreamer"),
+		resultStreamerNumPackets:  env.Exporter().NewCounter("ResultStreamerNumPackets", "Number of packets in result streamer"),
+		resultStreamerNumRows:     env.Exporter().NewCounter("ResultStreamerNumRows", "Number of rows sent in result streamer"),
+		rowStreamerNumPackets:     env.Exporter().NewCounter("RowStreamerNumPackets", "Number of packets in row streamer"),
+		rowStreamerNumRows:        env.Exporter().NewCounter("RowStreamerNumRows", "Number of rows sent in row streamer"),
+		vstreamersCreated:         env.Exporter().NewCounter("VStreamersCreated", "Count of vstreamers created"),
+		vstreamersEndedWithErrors: env.Exporter().NewCounter("VStreamersEndedWithErrors", "Count of vstreamers that ended with errors"),
+		errorCounts:               env.Exporter().NewCountersWithSingleLabel("VStreamerErrors", "Tracks errors in vstreamer", "type", "Catchup", "Copy", "Send", "TablePlan"),
 	}
 	env.Exporter().HandleFunc("/debug/tablet_vschema", vse.ServeHTTP)
 	return vse
@@ -204,7 +231,7 @@ func (vse *Engine) StreamRows(ctx context.Context, query string, lastpk []sqltyp
 		if !vse.isOpen {
 			return nil, 0, errors.New("VStreamer is not open")
 		}
-		rowStreamer := newRowStreamer(ctx, vse.env.Config().DB.AppWithDB(), vse.se, query, lastpk, vse.lvschema, send)
+		rowStreamer := newRowStreamer(ctx, vse.env.Config().DB.AppWithDB(), vse.se, query, lastpk, vse.lvschema, send, vse)
 		idx := vse.streamIdx
 		vse.rowStreamers[idx] = rowStreamer
 		vse.streamIdx++
@@ -238,7 +265,7 @@ func (vse *Engine) StreamResults(ctx context.Context, query string, send func(*b
 		if !vse.isOpen {
 			return nil, 0, errors.New("VStreamer is not open")
 		}
-		resultStreamer := newResultStreamer(ctx, vse.env.Config().DB.AppWithDB(), query, send)
+		resultStreamer := newResultStreamer(ctx, vse.env.Config().DB.AppWithDB(), query, send, vse)
 		idx := vse.streamIdx
 		vse.resultStreamers[idx] = resultStreamer
 		vse.streamIdx++
@@ -332,4 +359,8 @@ func (vse *Engine) setWatch() {
 		}
 		vse.vschemaUpdates.Add(1)
 	})
+}
+
+func getPacketSize() int64 {
+	return int64(*PacketSize)
 }

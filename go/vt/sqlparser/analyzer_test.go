@@ -241,7 +241,7 @@ func TestIsColName(t *testing.T) {
 		in:  &ColName{},
 		out: true,
 	}, {
-		in: newHexVal(""),
+		in: newHexLiteral(""),
 	}}
 	for _, tc := range testcases {
 		out := IsColName(tc.in)
@@ -256,32 +256,35 @@ func TestIsValue(t *testing.T) {
 		in  Expr
 		out bool
 	}{{
-		in:  newStrVal("aa"),
+		in:  newStrLiteral("aa"),
 		out: true,
 	}, {
-		in:  newHexVal("3131"),
+		in:  newHexLiteral("3131"),
 		out: true,
 	}, {
-		in:  newIntVal("1"),
+		in:  newIntLiteral("1"),
 		out: true,
 	}, {
-		in:  newValArg(":a"),
+		in:  newArgument(":a"),
 		out: true,
 	}, {
 		in:  &NullVal{},
 		out: false,
 	}}
 	for _, tc := range testcases {
-		out := IsValue(tc.in)
-		if out != tc.out {
-			t.Errorf("IsValue(%T): %v, want %v", tc.in, out, tc.out)
-		}
-		if tc.out {
-			// NewPlanValue should not fail for valid values.
-			if _, err := NewPlanValue(tc.in); err != nil {
-				t.Error(err)
+		t.Run(String(tc.in), func(t *testing.T) {
+			out := IsValue(tc.in)
+			if out != tc.out {
+				t.Errorf("IsValue(%T): %v, want %v", tc.in, out, tc.out)
 			}
-		}
+			if tc.out {
+				// NewPlanValue should not fail for valid values.
+				if _, err := NewPlanValue(tc.in); err != nil {
+					t.Error(err)
+				}
+			}
+
+		})
 	}
 }
 
@@ -293,7 +296,7 @@ func TestIsNull(t *testing.T) {
 		in:  &NullVal{},
 		out: true,
 	}, {
-		in: newStrVal(""),
+		in: newStrLiteral(""),
 	}}
 	for _, tc := range testcases {
 		out := IsNull(tc.in)
@@ -308,7 +311,7 @@ func TestIsSimpleTuple(t *testing.T) {
 		in  Expr
 		out bool
 	}{{
-		in:  ValTuple{newStrVal("aa")},
+		in:  ValTuple{newStrLiteral("aa")},
 		out: true,
 	}, {
 		in: ValTuple{&ColName{}},
@@ -338,43 +341,40 @@ func TestNewPlanValue(t *testing.T) {
 		out sqltypes.PlanValue
 		err string
 	}{{
-		in: &SQLVal{
-			Type: ValArg,
-			Val:  []byte(":valarg"),
-		},
+		in:  Argument(":valarg"),
 		out: sqltypes.PlanValue{Key: "valarg"},
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: IntVal,
 			Val:  []byte("10"),
 		},
 		out: sqltypes.PlanValue{Value: sqltypes.NewInt64(10)},
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: IntVal,
 			Val:  []byte("1111111111111111111111111111111111111111"),
 		},
 		err: "value out of range",
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: StrVal,
 			Val:  []byte("strval"),
 		},
 		out: sqltypes.PlanValue{Value: sqltypes.NewVarBinary("strval")},
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: BitVal,
 			Val:  []byte("01100001"),
 		},
 		err: "expression is too complex",
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: HexVal,
 			Val:  []byte("3131"),
 		},
 		out: sqltypes.PlanValue{Value: sqltypes.NewVarBinary("11")},
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: HexVal,
 			Val:  []byte("313"),
 		},
@@ -384,11 +384,8 @@ func TestNewPlanValue(t *testing.T) {
 		out: sqltypes.PlanValue{ListKey: "list"},
 	}, {
 		in: ValTuple{
-			&SQLVal{
-				Type: ValArg,
-				Val:  []byte(":valarg"),
-			},
-			&SQLVal{
+			Argument(":valarg"),
+			&Literal{
 				Type: StrVal,
 				Val:  []byte("strval"),
 			},
@@ -409,15 +406,15 @@ func TestNewPlanValue(t *testing.T) {
 		in:  &NullVal{},
 		out: sqltypes.PlanValue{},
 	}, {
-		in: &SQLVal{
+		in: &Literal{
 			Type: FloatVal,
 			Val:  []byte("2.1"),
 		},
 		out: sqltypes.PlanValue{Value: sqltypes.NewFloat64(2.1)},
 	}, {
 		in: &UnaryExpr{
-			Operator: Latin1Str,
-			Expr: &SQLVal{
+			Operator: Latin1Op,
+			Expr: &Literal{
 				Type: StrVal,
 				Val:  []byte("strval"),
 			},
@@ -425,8 +422,8 @@ func TestNewPlanValue(t *testing.T) {
 		out: sqltypes.PlanValue{Value: sqltypes.NewVarBinary("strval")},
 	}, {
 		in: &UnaryExpr{
-			Operator: UBinaryStr,
-			Expr: &SQLVal{
+			Operator: UBinaryOp,
+			Expr: &Literal{
 				Type: StrVal,
 				Val:  []byte("strval"),
 			},
@@ -434,8 +431,8 @@ func TestNewPlanValue(t *testing.T) {
 		out: sqltypes.PlanValue{Value: sqltypes.NewVarBinary("strval")},
 	}, {
 		in: &UnaryExpr{
-			Operator: Utf8mb4Str,
-			Expr: &SQLVal{
+			Operator: Utf8mb4Op,
+			Expr: &Literal{
 				Type: StrVal,
 				Val:  []byte("strval"),
 			},
@@ -443,8 +440,8 @@ func TestNewPlanValue(t *testing.T) {
 		out: sqltypes.PlanValue{Value: sqltypes.NewVarBinary("strval")},
 	}, {
 		in: &UnaryExpr{
-			Operator: Utf8Str,
-			Expr: &SQLVal{
+			Operator: Utf8Op,
+			Expr: &Literal{
 				Type: StrVal,
 				Val:  []byte("strval"),
 			},
@@ -452,8 +449,8 @@ func TestNewPlanValue(t *testing.T) {
 		out: sqltypes.PlanValue{Value: sqltypes.NewVarBinary("strval")},
 	}, {
 		in: &UnaryExpr{
-			Operator: MinusStr,
-			Expr: &SQLVal{
+			Operator: UMinusOp,
+			Expr: &Literal{
 				Type: FloatVal,
 				Val:  []byte("2.1"),
 			},
@@ -482,18 +479,18 @@ var mustMatch = utils.MustMatchFn(
 	[]string{".Conn"}, // ignored fields
 )
 
-func newStrVal(in string) *SQLVal {
-	return NewStrVal([]byte(in))
+func newStrLiteral(in string) *Literal {
+	return NewStrLiteral([]byte(in))
 }
 
-func newIntVal(in string) *SQLVal {
-	return NewIntVal([]byte(in))
+func newIntLiteral(in string) *Literal {
+	return NewIntLiteral([]byte(in))
 }
 
-func newHexVal(in string) *SQLVal {
-	return NewHexVal([]byte(in))
+func newHexLiteral(in string) *Literal {
+	return NewHexLiteral([]byte(in))
 }
 
-func newValArg(in string) *SQLVal {
-	return NewValArg([]byte(in))
+func newArgument(in string) Expr {
+	return NewArgument([]byte(in))
 }

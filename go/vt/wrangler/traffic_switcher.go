@@ -105,6 +105,9 @@ type trafficSwitcher struct {
 	targetKeyspace  string
 	tables          []string
 	sourceKSSchema  *vindexes.KeyspaceSchema
+	optCells        string //cells option passed to MoveTables/Reshard
+	optTabletTypes  string //tabletTypes option passed to MoveTables/Reshard
+
 }
 
 // tsTarget contains the metadata for each migration target.
@@ -132,6 +135,17 @@ func (wr *Wrangler) SwitchReads(ctx context.Context, targetKeyspace, workflow st
 	if err != nil {
 		wr.Logger().Errorf("buildTrafficSwitcher failed: %v", err)
 		return nil, err
+	}
+
+	//If journals exist notify user and fail
+	journalsExist, _, err := ts.checkJournals(ctx)
+	if err != nil {
+		wr.Logger().Errorf("checkJournals failed: %v", err)
+		return nil, err
+	}
+	if journalsExist {
+		wr.Logger().Errorf("Found a previous journal entry for %d", ts.id)
+		return nil, fmt.Errorf("found an entry from a previous run for migration id %d in _vt.resharding_journal, please review and delete it before proceeding", ts.id)
 	}
 
 	var sw iswitcher
@@ -232,6 +246,7 @@ func (wr *Wrangler) SwitchWrites(ctx context.Context, targetKeyspace, workflow s
 			sw.cancelMigration(ctx, sm)
 			return 0, sw.logs(), nil
 		}
+		ts.wr.Logger().Infof("Stopping streams")
 		sourceWorkflows, err = sw.stopStreams(ctx, sm)
 		if err != nil {
 			ts.wr.Logger().Errorf("stopStreams failed: %v", err)
@@ -243,24 +258,28 @@ func (wr *Wrangler) SwitchWrites(ctx context.Context, targetKeyspace, workflow s
 			sw.cancelMigration(ctx, sm)
 			return 0, nil, err
 		}
+		ts.wr.Logger().Infof("Stopping source writes")
 		if err := sw.stopSourceWrites(ctx); err != nil {
 			ts.wr.Logger().Errorf("stopSourceWrites failed: %v", err)
 			sw.cancelMigration(ctx, sm)
 			return 0, nil, err
 		}
 
+		ts.wr.Logger().Infof("Waiting for streams to catchup")
 		if err := sw.waitForCatchup(ctx, filteredReplicationWaitTime); err != nil {
 			ts.wr.Logger().Errorf("waitForCatchup failed: %v", err)
 			sw.cancelMigration(ctx, sm)
 			return 0, nil, err
 		}
 
+		ts.wr.Logger().Infof("Migrating streams")
 		if err := sw.migrateStreams(ctx, sm); err != nil {
 			ts.wr.Logger().Errorf("migrateStreams failed: %v", err)
 			sw.cancelMigration(ctx, sm)
 			return 0, nil, err
 		}
 
+		ts.wr.Logger().Infof("Creating reverse streams")
 		if err := sw.createReverseVReplication(ctx); err != nil {
 			ts.wr.Logger().Errorf("createReverseVReplication failed: %v", err)
 			sw.cancelMigration(ctx, sm)
@@ -371,7 +390,7 @@ func (wr *Wrangler) DropSources(ctx context.Context, targetKeyspace, workflow st
 }
 
 func (wr *Wrangler) buildTrafficSwitcher(ctx context.Context, targetKeyspace, workflow string) (*trafficSwitcher, error) {
-	targets, frozen, err := wr.buildTargets(ctx, targetKeyspace, workflow)
+	targets, frozen, optCells, optTabletTypes, err := wr.buildTargets(ctx, targetKeyspace, workflow)
 	if err != nil {
 		return nil, err
 	}
@@ -385,6 +404,8 @@ func (wr *Wrangler) buildTrafficSwitcher(ctx context.Context, targetKeyspace, wo
 		sources:         make(map[string]*tsSource),
 		targetKeyspace:  targetKeyspace,
 		frozen:          frozen,
+		optCells:        optCells,
+		optTabletTypes:  optTabletTypes,
 	}
 	ts.wr.Logger().Infof("Migration ID for workflow %s: %d", workflow, ts.id)
 
@@ -455,11 +476,11 @@ func (wr *Wrangler) buildTrafficSwitcher(ctx context.Context, targetKeyspace, wo
 	return ts, nil
 }
 
-func (wr *Wrangler) buildTargets(ctx context.Context, targetKeyspace, workflow string) (targets map[string]*tsTarget, frozen bool, err error) {
+func (wr *Wrangler) buildTargets(ctx context.Context, targetKeyspace, workflow string) (targets map[string]*tsTarget, frozen bool, optCells string, optTabletTypes string, err error) {
 	targets = make(map[string]*tsTarget)
 	targetShards, err := wr.ts.GetShardNames(ctx, targetKeyspace)
 	if err != nil {
-		return nil, false, err
+		return nil, false, "", "", err
 	}
 	// We check all target shards. All of them may not have a stream.
 	// For example, if we're splitting -80 to -40,40-80, only those
@@ -467,19 +488,19 @@ func (wr *Wrangler) buildTargets(ctx context.Context, targetKeyspace, workflow s
 	for _, targetShard := range targetShards {
 		targetsi, err := wr.ts.GetShard(ctx, targetKeyspace, targetShard)
 		if err != nil {
-			return nil, false, err
+			return nil, false, "", "", err
 		}
 		if targetsi.MasterAlias == nil {
 			// This can happen if bad inputs are given.
-			return nil, false, fmt.Errorf("shard %v:%v doesn't have a master set", targetKeyspace, targetShard)
+			return nil, false, "", "", fmt.Errorf("shard %v:%v doesn't have a master set", targetKeyspace, targetShard)
 		}
 		targetMaster, err := wr.ts.GetTablet(ctx, targetsi.MasterAlias)
 		if err != nil {
-			return nil, false, err
+			return nil, false, "", "", err
 		}
-		p3qr, err := wr.tmc.VReplicationExec(ctx, targetMaster.Tablet, fmt.Sprintf("select id, source, message from _vt.vreplication where workflow=%s and db_name=%s", encodeString(workflow), encodeString(targetMaster.DbName())))
+		p3qr, err := wr.tmc.VReplicationExec(ctx, targetMaster.Tablet, fmt.Sprintf("select id, source, message, cell, tablet_types from _vt.vreplication where workflow=%s and db_name=%s", encodeString(workflow), encodeString(targetMaster.DbName())))
 		if err != nil {
-			return nil, false, err
+			return nil, false, "", "", err
 		}
 		// If there's no vreplication stream, check the next target.
 		if len(p3qr.Rows) < 1 {
@@ -495,24 +516,26 @@ func (wr *Wrangler) buildTargets(ctx context.Context, targetKeyspace, workflow s
 		for _, row := range qr.Rows {
 			id, err := evalengine.ToInt64(row[0])
 			if err != nil {
-				return nil, false, err
+				return nil, false, "", "", err
 			}
 
 			var bls binlogdatapb.BinlogSource
 			if err := proto.UnmarshalText(row[1].ToString(), &bls); err != nil {
-				return nil, false, err
+				return nil, false, "", "", err
 			}
 			targets[targetShard].sources[uint32(id)] = &bls
 
 			if row[2].ToString() == frozenStr {
 				frozen = true
 			}
+			optCells = row[3].ToString()
+			optTabletTypes = row[4].ToString()
 		}
 	}
 	if len(targets) == 0 {
-		return nil, false, fmt.Errorf("no streams found in keyspace %s for: %s", targetKeyspace, workflow)
+		return nil, false, "", "", fmt.Errorf("no streams found in keyspace %s for: %s", targetKeyspace, workflow)
 	}
-	return targets, frozen, nil
+	return targets, frozen, optCells, optTabletTypes, nil
 }
 
 // hashStreams produces a reproducible hash based on the input parameters.
@@ -523,6 +546,7 @@ func hashStreams(targetKeyspace string, targets map[string]*tsTarget) int64 {
 			expanded = append(expanded, fmt.Sprintf("%s:%d", shard, uid))
 		}
 	}
+
 	sort.Strings(expanded)
 	hasher := fnv.New64()
 	hasher.Write([]byte(targetKeyspace))
@@ -669,34 +693,48 @@ func (ts *trafficSwitcher) switchShardReads(ctx context.Context, cells []string,
 	return ts.wr.ts.MigrateServedType(ctx, ts.sourceKeyspace, toShards, fromShards, servedType, cells)
 }
 
+func (wr *Wrangler) checkIfJournalExistsOnTablet(ctx context.Context, tablet *topodatapb.Tablet, migrationID int64) (*binlogdatapb.Journal, bool, error) {
+	var exists bool
+	journal := &binlogdatapb.Journal{}
+	query := fmt.Sprintf("select val from _vt.resharding_journal where id=%v", migrationID)
+	p3qr, err := wr.tmc.VReplicationExec(ctx, tablet, query)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(p3qr.Rows) != 0 {
+		qr := sqltypes.Proto3ToResult(p3qr)
+		if !exists {
+			if err := proto.UnmarshalText(qr.Rows[0][0].ToString(), journal); err != nil {
+				return nil, false, err
+			}
+			exists = true
+		}
+	}
+	return journal, exists, nil
+
+}
+
 // checkJournals returns true if at least one journal has been created.
 // If so, it also returns the list of sourceWorkflows that need to be switched.
 func (ts *trafficSwitcher) checkJournals(ctx context.Context) (journalsExist bool, sourceWorkflows []string, err error) {
 	var mu sync.Mutex
-	journal := &binlogdatapb.Journal{}
-	var exists bool
 	err = ts.forAllSources(func(source *tsSource) error {
-		statement := fmt.Sprintf("select val from _vt.resharding_journal where id=%v", ts.id)
-		p3qr, err := ts.wr.tmc.VReplicationExec(ctx, source.master.Tablet, statement)
+		mu.Lock()
+		defer mu.Unlock()
+		journal, exists, err := ts.wr.checkIfJournalExistsOnTablet(ctx, source.master.Tablet, ts.id)
 		if err != nil {
 			return err
 		}
-		if len(p3qr.Rows) != 0 {
-			qr := sqltypes.Proto3ToResult(p3qr)
-			mu.Lock()
-			defer mu.Unlock()
-
-			if !exists {
-				if err := proto.UnmarshalText(qr.Rows[0][0].ToString(), journal); err != nil {
-					return err
-				}
-				exists = true
+		if exists {
+			if journal.Id != 0 {
+				sourceWorkflows = journal.SourceWorkflows
 			}
 			source.journaled = true
+			journalsExist = true
 		}
 		return nil
 	})
-	return exists, journal.SourceWorkflows, err
+	return journalsExist, sourceWorkflows, err
 }
 
 func (ts *trafficSwitcher) stopSourceWrites(ctx context.Context) error {
@@ -734,14 +772,18 @@ func (ts *trafficSwitcher) waitForCatchup(ctx context.Context, filteredReplicati
 
 	var mu sync.Mutex
 	return ts.forAllUids(func(target *tsTarget, uid uint32) error {
+		ts.wr.Logger().Infof("uid: %d, target master %s, target position %s, shard %s", uid,
+			target.master.AliasString(), target.position, target.si.String())
 		bls := target.sources[uid]
 		source := ts.sources[bls.Shard]
-		ts.wr.Logger().Infof("waiting for keyspace:shard: %v:%v, position %v", ts.targetKeyspace, target.si.ShardName(), source.position)
+		ts.wr.Logger().Infof("waiting for keyspace:shard: %v:%v, source position %v, uid %d",
+			ts.targetKeyspace, target.si.ShardName(), source.position, uid)
 		if err := ts.wr.tmc.VReplicationWaitForPos(ctx, target.master.Tablet, int(uid), source.position); err != nil {
 			return err
 		}
-		ts.wr.Logger().Infof("position for keyspace:shard: %v:%v reached", ts.targetKeyspace, target.si.ShardName())
+		ts.wr.Logger().Infof("position for keyspace:shard: %v:%v reached, uid %d", ts.targetKeyspace, target.si.ShardName(), uid)
 		if _, err := ts.wr.tmc.VReplicationExec(ctx, target.master.Tablet, binlogplayer.StopVReplication(uid, "stopped for cutover")); err != nil {
+			log.Infof("error marking stopped for cutover on %s, uid %d", target.master.AliasString(), uid)
 			return err
 		}
 
@@ -753,7 +795,7 @@ func (ts *trafficSwitcher) waitForCatchup(ctx context.Context, filteredReplicati
 		}
 		var err error
 		target.position, err = ts.wr.tmc.MasterPosition(ctx, target.master.Tablet)
-		ts.wr.Logger().Infof("Position for uid %v: %v", uid, target.position)
+		ts.wr.Logger().Infof("Position for target master %s, uid %v: %v", target.master.AliasString(), uid, target.position)
 		return err
 	})
 }
@@ -833,7 +875,7 @@ func (ts *trafficSwitcher) createReverseVReplication(ctx context.Context) error 
 				if ts.sourceKSSchema.Keyspace.Sharded {
 					vtable, ok := ts.sourceKSSchema.Tables[rule.Match]
 					if !ok {
-						return fmt.Errorf("table %s not found in vschema", rule.Match)
+						return fmt.Errorf("table %s not found in vschema1", rule.Match)
 					}
 					// TODO(sougou): handle degenerate cases like sequence, etc.
 					// We currently assume the primary vindex is the best way to filter, which may not be true.
@@ -848,9 +890,35 @@ func (ts *trafficSwitcher) createReverseVReplication(ctx context.Context) error 
 		}
 
 		_, err := ts.wr.VReplicationExec(ctx, source.master.Alias, binlogplayer.CreateVReplicationState(ts.reverseWorkflow, reverseBls, target.position, binlogplayer.BlpStopped, source.master.DbName()))
-		return err
+		if err != nil {
+			return err
+		}
+
+		// if user has defined the cell/tablet_types parameters in the forward workflow, update the reverse workflow as well
+		updateQuery := ts.getReverseVReplicationUpdateQuery(target.master.Alias.Cell, source.master.Alias.Cell, source.master.DbName())
+		if updateQuery != "" {
+			_, err = ts.wr.VReplicationExec(ctx, source.master.Alias, updateQuery)
+			return err
+		}
+		return nil
 	})
 	return err
+}
+
+func (ts *trafficSwitcher) getReverseVReplicationUpdateQuery(targetCell string, sourceCell string, dbname string) string {
+	// we try to be clever to understand what user intends:
+	// if target's cell is present in cells but not source's cell we replace it with the source's cell
+	if ts.optCells != "" && targetCell != sourceCell && strings.Contains(ts.optCells+",", targetCell+",") &&
+		!strings.Contains(ts.optCells+",", sourceCell+",") {
+		ts.optCells = strings.Replace(ts.optCells, targetCell, sourceCell, 1)
+	}
+
+	if ts.optCells != "" || ts.optTabletTypes != "" {
+		query := fmt.Sprintf("update _vt.vreplication set cell = '%s', tablet_types = '%s' where workflow = '%s' and db_name = '%s'",
+			ts.optCells, ts.optTabletTypes, ts.reverseWorkflow, dbname)
+		return query
+	}
+	return ""
 }
 
 func (ts *trafficSwitcher) deleteReverseVReplication(ctx context.Context) error {

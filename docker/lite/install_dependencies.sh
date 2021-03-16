@@ -10,11 +10,21 @@ set -euo pipefail
 FLAVOR="$1"
 export DEBIAN_FRONTEND=noninteractive
 
-retry() {
-    for i in $(seq 1 10); do
-        if "$@"; then return; fi
+KEYSERVERS=(
+    ha.pool.sks-keyservers.net
+    keyserver.ubuntu.com
+    hkp://p80.pool.sks-keyservers.net:80
+    hkp://keyserver.ubuntu.com:80
+)
+
+add_apt_key() {
+    for i in {1..3}; do
+        for keyserver in "${KEYSERVERS[@]}"; do
+            if apt-key adv --no-tty --keyserver "${keyserver}" --recv-keys "$1"; then return; fi
+        done
     done
 }
+
 
 # Install base packages that are common to all flavors.
 BASE_PACKAGES=(
@@ -50,18 +60,38 @@ mysql56)
     )
     ;;
 mysql57)
+    mysql57_version=5.7.31
+    wget https://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/libmysqlclient20_${mysql57_version}-1debian9_amd64.deb -O /tmp/libmysqlclient20_${mysql57_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/mysql-community-client_${mysql57_version}-1debian9_amd64.deb -O /tmp/mysql-community-client_${mysql57_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/mysql-client_${mysql57_version}-1debian9_amd64.deb -O /tmp/mysql-client_${mysql57_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/mysql-community-server_${mysql57_version}-1debian9_amd64.deb -O /tmp/mysql-community-server_${mysql57_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-5.7/m/mysql-community/mysql-server_${mysql57_version}-1debian9_amd64.deb -O /tmp/mysql-server_${mysql57_version}-1debian9_amd64.deb
     PACKAGES=(
-        libmysqlclient20
-        mysql-client
-        mysql-server
+        /tmp/libmysqlclient20_${mysql57_version}-1debian9_amd64.deb
+        /tmp/mysql-community-client_${mysql57_version}-1debian9_amd64.deb
+        /tmp/mysql-client_${mysql57_version}-1debian9_amd64.deb
+        /tmp/mysql-community-server_${mysql57_version}-1debian9_amd64.deb
+        /tmp/mysql-server_${mysql57_version}-1debian9_amd64.deb
         percona-xtrabackup-24
     )
     ;;
 mysql80)
+    mysql8_version=8.0.21
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/libmysqlclient21_${mysql8_version}-1debian9_amd64.deb -O /tmp/libmysqlclient21_${mysql8_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/mysql-community-client-core_${mysql8_version}-1debian9_amd64.deb -O /tmp/mysql-community-client-core_${mysql8_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/mysql-community-client_${mysql8_version}-1debian9_amd64.deb -O /tmp/mysql-community-client_${mysql8_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/mysql-client_${mysql8_version}-1debian9_amd64.deb -O /tmp/mysql-client_${mysql8_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/mysql-community-server-core_${mysql8_version}-1debian9_amd64.deb -O /tmp/mysql-community-server-core_${mysql8_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/mysql-community-server_${mysql8_version}-1debian9_amd64.deb -O /tmp/mysql-community-server_${mysql8_version}-1debian9_amd64.deb
+    wget https://repo.mysql.com/apt/debian/pool/mysql-8.0/m/mysql-community/mysql-server_${mysql8_version}-1debian9_amd64.deb -O /tmp/mysql-server_${mysql8_version}-1debian9_amd64.deb
     PACKAGES=(
-        libmysqlclient21
-        mysql-client
-        mysql-server
+        /tmp/libmysqlclient21_${mysql8_version}-1debian9_amd64.deb
+        /tmp/mysql-community-client-core_${mysql8_version}-1debian9_amd64.deb
+        /tmp/mysql-community-client_${mysql8_version}-1debian9_amd64.deb
+        /tmp/mysql-client_${mysql8_version}-1debian9_amd64.deb
+        /tmp/mysql-community-server-core_${mysql8_version}-1debian9_amd64.deb
+        /tmp/mysql-community-server_${mysql8_version}-1debian9_amd64.deb
+        /tmp/mysql-server_${mysql8_version}-1debian9_amd64.deb
         percona-xtrabackup-80
     )
     ;;
@@ -81,7 +111,7 @@ percona57)
 percona80)
     PACKAGES=(
         libperconaserverclient21
-	    percona-server-rocksdb
+	      percona-server-rocksdb
         percona-server-server
         percona-server-tokudb
         percona-xtrabackup-80
@@ -102,16 +132,16 @@ esac
 case "${FLAVOR}" in
 mysql56|mysql57|mysql80)
     # repo.mysql.com
-    retry apt-key adv --no-tty --keyserver keyserver.ubuntu.com --recv-keys 8C718D3B5072E1F5
+    add_apt_key 8C718D3B5072E1F5
     ;;
 mariadb|mariadb103)
     # digitalocean.com
-    retry apt-key adv --no-tty --keyserver keyserver.ubuntu.com --recv-keys F1656F24C74CD1D8
+    add_apt_key F1656F24C74CD1D8
     ;;
 esac
 
 # All flavors (except mariadb*) include Percona XtraBackup (from repo.percona.com).
-retry apt-key adv --no-tty --keyserver keys.gnupg.net --recv-keys 9334A25F8507EFA5
+add_apt_key 9334A25F8507EFA5
 
 # Add extra apt repositories for MySQL.
 case "${FLAVOR}" in
@@ -171,7 +201,8 @@ esac
 # Install flavor-specific packages
 apt-get update
 apt-get install -y --no-install-recommends "${PACKAGES[@]}"
- 
- # Clean up files we won't need in the final image.
- rm -rf /var/lib/apt/lists/*
- rm -rf /var/lib/mysql/
+
+# Clean up files we won't need in the final image.
+rm -rf /var/lib/apt/lists/*
+rm -rf /var/lib/mysql/
+rm -rf /tmp/*.deb

@@ -95,6 +95,7 @@ type stateManager struct {
 	// Open must be done in forward order.
 	// Close must be done in reverse order.
 	// All Close functions must be called before Open.
+	hs          *healthStreamer
 	se          schemaEngine
 	rt          replTracker
 	vstreamer   subComponent
@@ -104,10 +105,9 @@ type stateManager struct {
 	txThrottler txThrottler
 	te          txEngine
 	messager    subComponent
-
-	// notify will be invoked by stateManager on every state change.
-	// The implementation is provided by healthStreamer.ChangeState.
-	notify func(topodatapb.TabletType, time.Time, time.Duration, error, bool)
+	ddle        onlineDDLExecutor
+	throttler   lagThrottler
+	tableGC     tableGarbageCollector
 
 	// hcticks starts on initialiazation and runs forever.
 	hcticks *timer.Timer
@@ -123,6 +123,7 @@ type stateManager struct {
 
 type (
 	schemaEngine interface {
+		EnsureConnectionAndDB(topodatapb.TabletType) error
 		Open() error
 		MakeNonMaster()
 		Close()
@@ -157,6 +158,21 @@ type (
 		Open() error
 		Close()
 	}
+
+	onlineDDLExecutor interface {
+		Open() error
+		Close()
+	}
+
+	lagThrottler interface {
+		Open() error
+		Close()
+	}
+
+	tableGarbageCollector interface {
+		Open() error
+		Close()
+	}
 )
 
 // Init performs the second phase of initialization.
@@ -180,7 +196,7 @@ func (sm *stateManager) Init(env tabletenv.Env, target querypb.Target) {
 func (sm *stateManager) SetServingType(tabletType topodatapb.TabletType, terTimestamp time.Time, state servingState, reason string) error {
 	defer sm.ExitLameduck()
 
-	// Start is idempotent.
+	sm.hs.Open()
 	sm.hcticks.Start(sm.Broadcast)
 
 	if tabletType == topodatapb.TabletType_RESTORE || tabletType == topodatapb.TabletType_BACKUP {
@@ -312,9 +328,9 @@ func (sm *stateManager) StopService() {
 	defer close(sm.setTimeBomb())
 
 	log.Info("Stopping TabletServer")
-	// Stop replica tracking because StopService is used by all tests.
-	sm.hcticks.Stop()
 	sm.SetServingType(sm.Target().TabletType, time.Time{}, StateNotConnected, "service stopped")
+	sm.hcticks.Stop()
+	sm.hs.Close()
 }
 
 // StartRequest validates the current state and target and registers
@@ -395,7 +411,7 @@ func (sm *stateManager) VerifyTarget(ctx context.Context, target *querypb.Target
 func (sm *stateManager) serveMaster() error {
 	sm.watcher.Close()
 
-	if err := sm.connect(); err != nil {
+	if err := sm.connect(topodatapb.TabletType_MASTER); err != nil {
 		return err
 	}
 
@@ -405,6 +421,9 @@ func (sm *stateManager) serveMaster() error {
 		return err
 	}
 	sm.messager.Open()
+	sm.throttler.Open()
+	sm.tableGC.Open()
+	sm.ddle.Open()
 	sm.setState(topodatapb.TabletType_MASTER, StateServing)
 	return nil
 }
@@ -414,7 +433,7 @@ func (sm *stateManager) unserveMaster() error {
 
 	sm.watcher.Close()
 
-	if err := sm.connect(); err != nil {
+	if err := sm.connect(topodatapb.TabletType_MASTER); err != nil {
 		return err
 	}
 
@@ -424,11 +443,14 @@ func (sm *stateManager) unserveMaster() error {
 }
 
 func (sm *stateManager) serveNonMaster(wantTabletType topodatapb.TabletType) error {
+	sm.ddle.Close()
+	sm.tableGC.Close()
+	sm.throttler.Close()
 	sm.messager.Close()
 	sm.tracker.Close()
 	sm.se.MakeNonMaster()
 
-	if err := sm.connect(); err != nil {
+	if err := sm.connect(wantTabletType); err != nil {
 		return err
 	}
 
@@ -446,7 +468,7 @@ func (sm *stateManager) unserveNonMaster(wantTabletType topodatapb.TabletType) e
 
 	sm.se.MakeNonMaster()
 
-	if err := sm.connect(); err != nil {
+	if err := sm.connect(wantTabletType); err != nil {
 		return err
 	}
 
@@ -456,8 +478,8 @@ func (sm *stateManager) unserveNonMaster(wantTabletType topodatapb.TabletType) e
 	return nil
 }
 
-func (sm *stateManager) connect() error {
-	if err := sm.qe.IsMySQLReachable(); err != nil {
+func (sm *stateManager) connect(tabletType topodatapb.TabletType) error {
+	if err := sm.se.EnsureConnectionAndDB(tabletType); err != nil {
 		return err
 	}
 	if err := sm.se.Open(); err != nil {
@@ -471,6 +493,9 @@ func (sm *stateManager) connect() error {
 }
 
 func (sm *stateManager) unserveCommon() {
+	sm.ddle.Close()
+	sm.tableGC.Close()
+	sm.throttler.Close()
 	sm.messager.Close()
 	sm.te.Close()
 	sm.qe.StopServing()
@@ -512,11 +537,12 @@ func (sm *stateManager) setTimeBomb() chan struct{} {
 func (sm *stateManager) setState(tabletType topodatapb.TabletType, state servingState) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
-
 	if tabletType == topodatapb.TabletType_UNKNOWN {
 		tabletType = sm.wantTabletType
 	}
-	log.Infof("TabletServer transition: %v -> %v", sm.stateStringLocked(sm.target.TabletType, sm.state), sm.stateStringLocked(tabletType, state))
+	log.Infof("TabletServer transition: %v -> %v for tablet %s:%s/%s",
+		sm.stateStringLocked(sm.target.TabletType, sm.state), sm.stateStringLocked(tabletType, state),
+		sm.target.Cell, sm.target.Keyspace, sm.target.Shard)
 	sm.handleGracePeriod(tabletType)
 	sm.target.TabletType = tabletType
 	if sm.state == StateNotConnected {
@@ -568,7 +594,7 @@ func (sm *stateManager) Broadcast() {
 	defer sm.mu.Unlock()
 
 	lag, err := sm.refreshReplHealthLocked()
-	sm.notify(sm.target.TabletType, sm.terTimestamp, lag, err, sm.isServingLocked())
+	sm.hs.ChangeState(sm.target.TabletType, sm.terTimestamp, lag, err, sm.isServingLocked())
 }
 
 func (sm *stateManager) refreshReplHealthLocked() (time.Duration, error) {

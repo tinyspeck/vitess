@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	execLimit = &sqlparser.Limit{Rowcount: sqlparser.NewValArg([]byte(":#maxLimit"))}
+	execLimit = &sqlparser.Limit{Rowcount: sqlparser.NewArgument([]byte(":#maxLimit"))}
 
 	// PassthroughDMLs will return plans that pass-through the DMLs without changing them.
 	PassthroughDMLs = false
@@ -64,11 +64,12 @@ const (
 	PlanSavepoint
 	PlanRelease
 	PlanSRollback
+	PlanShowTables
 	NumPlans
 )
 
 // Must exactly match order of plan constants.
-var planName = [NumPlans]string{
+var planName = []string{
 	"Select",
 	"SelectLock",
 	"Nextval",
@@ -88,6 +89,7 @@ var planName = [NumPlans]string{
 	"Savepoint",
 	"Release",
 	"RollbackSavepoint",
+	"ShowTables",
 }
 
 func (pt PlanType) String() string {
@@ -151,7 +153,7 @@ func (plan *Plan) TableName() sqlparser.TableIdent {
 }
 
 // Build builds a plan based on the schema.
-func Build(statement sqlparser.Statement, tables map[string]*schema.Table, isReservedConn bool) (plan *Plan, err error) {
+func Build(statement sqlparser.Statement, tables map[string]*schema.Table, isReservedConn bool, dbName string) (plan *Plan, err error) {
 	if !isReservedConn {
 		err = checkForPoolingUnsafeConstructs(statement)
 		if err != nil {
@@ -181,8 +183,16 @@ func Build(statement sqlparser.Statement, tables map[string]*schema.Table, isRes
 		// We have to use the original query at the time of execution.
 		plan = &Plan{PlanID: PlanDDL}
 	case *sqlparser.Show:
-		plan, err = &Plan{PlanID: PlanOtherRead}, nil
-	case *sqlparser.OtherRead:
+		if stmt.Type == sqlparser.KeywordString(sqlparser.TABLES) {
+			analyzeShowTables(stmt, dbName)
+			plan = &Plan{
+				PlanID:    PlanShowTables,
+				FullQuery: GenerateFullQuery(stmt),
+			}
+		} else {
+			plan, err = &Plan{PlanID: PlanOtherRead}, nil
+		}
+	case *sqlparser.OtherRead, *sqlparser.Explain:
 		plan, err = &Plan{PlanID: PlanOtherRead}, nil
 	case *sqlparser.OtherAdmin:
 		plan, err = &Plan{PlanID: PlanOtherAdmin}, nil
@@ -192,6 +202,11 @@ func Build(statement sqlparser.Statement, tables map[string]*schema.Table, isRes
 		plan, err = &Plan{PlanID: PlanRelease}, nil
 	case *sqlparser.SRollback:
 		plan, err = &Plan{PlanID: PlanSRollback}, nil
+	case *sqlparser.ShowTableStatus:
+		plan = &Plan{
+			PlanID:    PlanShowTables,
+			FullQuery: GenerateFullQuery(stmt),
+		}
 	default:
 		return nil, vterrors.New(vtrpcpb.Code_INVALID_ARGUMENT, "invalid SQL")
 	}
@@ -224,11 +239,11 @@ func BuildStreaming(sql string, tables map[string]*schema.Table, isReservedConn 
 
 	switch stmt := statement.(type) {
 	case *sqlparser.Select:
-		if stmt.Lock != "" {
+		if stmt.Lock != sqlparser.NoLock {
 			return nil, vterrors.New(vtrpcpb.Code_FAILED_PRECONDITION, "select with lock not allowed for streaming")
 		}
 		plan.Table = lookupTable(stmt.From, tables)
-	case *sqlparser.OtherRead, *sqlparser.Show, *sqlparser.Union:
+	case *sqlparser.OtherRead, *sqlparser.Show, *sqlparser.Union, *sqlparser.ShowTableStatus:
 		// pass
 	default:
 		return nil, vterrors.Errorf(vtrpcpb.Code_FAILED_PRECONDITION, "'%v' not allowed for streaming", sqlparser.String(stmt))

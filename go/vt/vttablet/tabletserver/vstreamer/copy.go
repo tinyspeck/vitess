@@ -37,6 +37,7 @@ func (uvs *uvstreamer) copy(ctx context.Context) error {
 		tableName := uvs.tablesToCopy[0]
 		log.V(2).Infof("Copystate not empty starting catchupAndCopy on table %s", tableName)
 		if err := uvs.catchupAndCopy(ctx, tableName); err != nil {
+			uvs.vse.errorCounts.Add("Copy", 1)
 			return err
 		}
 	}
@@ -50,6 +51,7 @@ func (uvs *uvstreamer) catchupAndCopy(ctx context.Context, tableName string) err
 	if !uvs.pos.IsZero() {
 		if err := uvs.catchup(ctx); err != nil {
 			log.Infof("catchupAndCopy: catchup returned %v", err)
+			uvs.vse.errorCounts.Add("Catchup", 1)
 			return err
 		}
 	}
@@ -64,10 +66,14 @@ func (uvs *uvstreamer) catchup(ctx context.Context) error {
 	uvs.setSecondsBehindMaster(math.MaxInt64)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	defer func() {
+		uvs.vse.vstreamerPhaseTimings.Record("catchup", time.Now())
+	}()
+
 	errch := make(chan error, 1)
 	go func() {
 		startPos := mysql.EncodePosition(uvs.pos)
-		vs := newVStreamer(ctx, uvs.cp, uvs.se, startPos, "", uvs.filter, uvs.getVSchema(), uvs.send2)
+		vs := newVStreamer(ctx, uvs.cp, uvs.se, startPos, "", uvs.filter, uvs.getVSchema(), uvs.send2, "catchup", uvs.vse)
 		uvs.setVs(vs)
 		errch <- vs.Stream()
 		uvs.setVs(nil)
@@ -112,6 +118,7 @@ func (uvs *uvstreamer) sendFieldEvent(ctx context.Context, gtid string, fieldEve
 	}}
 	log.V(2).Infof("Sending field event %v, gtid is %s", fieldEvent, gtid)
 	uvs.send(evs)
+
 	if err := uvs.setPosition(gtid, true); err != nil {
 		log.Infof("setPosition returned error %v", err)
 		return err
@@ -151,6 +158,7 @@ func (uvs *uvstreamer) sendEventsForRows(ctx context.Context, tableName string, 
 	evs = append(evs, &binlogdatapb.VEvent{
 		Type: binlogdatapb.VEventType_COMMIT,
 	})
+
 	if err := uvs.send(evs); err != nil {
 		log.Infof("send returned error %v", err)
 		return err
@@ -187,6 +195,10 @@ func getQRFromLastPK(fields []*querypb.Field, lastPK []sqltypes.Value) *querypb.
 func (uvs *uvstreamer) copyTable(ctx context.Context, tableName string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	defer func() {
+		uvs.vse.vstreamerPhaseTimings.Record("copy", time.Now())
+	}()
+
 	var newLastPK *sqltypes.Result
 	lastPK := getLastPKFromQR(uvs.plans[tableName].tablePK.Lastpk)
 	filter := uvs.plans[tableName].rule.Filter
@@ -255,6 +267,7 @@ func (uvs *uvstreamer) copyTable(ctx context.Context, tableName string) error {
 		return nil
 	})
 	if err != nil {
+		uvs.vse.errorCounts.Add("StreamRows", 1)
 		return err
 	}
 
@@ -274,9 +287,12 @@ func (uvs *uvstreamer) copyTable(ctx context.Context, tableName string) error {
 
 // processes events between when a table was caught up and when a snapshot is taken for streaming a batch of rows
 func (uvs *uvstreamer) fastForward(stopPos string) error {
+	defer func() {
+		uvs.vse.vstreamerPhaseTimings.Record("fastforward", time.Now())
+	}()
 	log.Infof("starting fastForward from %s upto pos %s", mysql.EncodePosition(uvs.pos), stopPos)
 	uvs.stopPos, _ = mysql.DecodePosition(stopPos)
-	vs := newVStreamer(uvs.ctx, uvs.cp, uvs.se, mysql.EncodePosition(uvs.pos), "", uvs.filter, uvs.getVSchema(), uvs.send2)
+	vs := newVStreamer(uvs.ctx, uvs.cp, uvs.se, mysql.EncodePosition(uvs.pos), "", uvs.filter, uvs.getVSchema(), uvs.send2, "fastforward", uvs.vse)
 	uvs.setVs(vs)
 	return vs.Stream()
 }

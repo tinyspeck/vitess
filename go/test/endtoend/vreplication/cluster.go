@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	debug              = false // set to true to always use local env vtdataroot for local debugging
 	originalVtdataroot string
 	vtdataroot         string
 )
@@ -91,7 +92,11 @@ func init() {
 func initGlobals() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	dirSuffix := 100000 + rand.Intn(999999-100000) // 6 digits
-	vtdataroot = path.Join(originalVtdataroot, fmt.Sprintf("vreple2e_%d", dirSuffix))
+	if debug {
+		vtdataroot = originalVtdataroot
+	} else {
+		vtdataroot = path.Join(originalVtdataroot, fmt.Sprintf("vreple2e_%d", dirSuffix))
+	}
 	globalConfig.tmpDir = vtdataroot + "/tmp"
 	if _, err := os.Stat(vtdataroot); os.IsNotExist(err) {
 		os.Mkdir(vtdataroot, 0700)
@@ -124,8 +129,8 @@ func InitCluster(t *testing.T, cellNames []string) *VitessCluster {
 		globalConfig.topoPort, globalConfig.hostname, globalConfig.tmpDir)
 	vc.Vtctld = vtctld
 	assert.NotNil(t, vc.Vtctld)
-	// use first cell as `-cell` and all cells as `-cells_to_watch`
-	vc.Vtctld.Setup(cellNames[0], "-cells_to_watch", strings.Join(cellNames, ","))
+	// use first cell as `-cell`
+	vc.Vtctld.Setup(cellNames[0])
 
 	vc.Vtctl = cluster.VtctlProcessInstance(globalConfig.topoPort, globalConfig.hostname)
 	assert.NotNil(t, vc.Vtctl)

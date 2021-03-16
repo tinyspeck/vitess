@@ -48,7 +48,7 @@ func (c *concatenate) First() builder {
 	panic("implement me")
 }
 
-func (c *concatenate) SetUpperLimit(count *sqlparser.SQLVal) {
+func (c *concatenate) SetUpperLimit(count sqlparser.Expr) {
 	// not doing anything by design
 }
 
@@ -111,7 +111,7 @@ func (c *concatenate) Primitive() engine.Primitive {
 }
 
 // PushLock satisfies the builder interface.
-func (c *concatenate) PushLock(lock string) error {
+func (c *concatenate) PushLock(lock sqlparser.Lock) error {
 	err := c.lhs.PushLock(lock)
 	if err != nil {
 		return err

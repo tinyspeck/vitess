@@ -47,7 +47,7 @@ func newMemorySort(bldr builder, orderBy sqlparser.OrderBy) (*memorySort, error)
 	for _, order := range orderBy {
 		colNumber := -1
 		switch expr := order.Expr.(type) {
-		case *sqlparser.SQLVal:
+		case *sqlparser.Literal:
 			var err error
 			if colNumber, err = ResultFromNumber(ms.ResultColumns(), expr); err != nil {
 				return nil, err
@@ -70,7 +70,7 @@ func newMemorySort(bldr builder, orderBy sqlparser.OrderBy) (*memorySort, error)
 		}
 		ob := engine.OrderbyParams{
 			Col:  colNumber,
-			Desc: order.Direction == sqlparser.DescScr,
+			Desc: order.Direction == sqlparser.DescOrder,
 		}
 		ms.eMemorySort.OrderBy = append(ms.eMemorySort.OrderBy, ob)
 	}
@@ -84,7 +84,7 @@ func (ms *memorySort) Primitive() engine.Primitive {
 }
 
 // PushLock satisfies the builder interface.
-func (ms *memorySort) PushLock(lock string) error {
+func (ms *memorySort) PushLock(lock sqlparser.Lock) error {
 	return ms.input.PushLock(lock)
 }
 
@@ -147,6 +147,6 @@ func (ms *memorySort) Wireup(bldr builder, jt *jointab) error {
 // SetUpperLimit satisfies the builder interface.
 // This is a no-op because we actually call SetLimit for this primitive.
 // In the future, we may have to honor this call for subqueries.
-func (ms *memorySort) SetUpperLimit(count *sqlparser.SQLVal) {
+func (ms *memorySort) SetUpperLimit(count sqlparser.Expr) {
 	ms.eMemorySort.UpperLimit, _ = sqlparser.NewPlanValue(count)
 }

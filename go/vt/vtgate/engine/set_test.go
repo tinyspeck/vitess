@@ -18,7 +18,6 @@ package engine
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,7 +31,7 @@ import (
 )
 
 func TestSetSystemVariableAsString(t *testing.T) {
-	setOp := SysVarSet{
+	setOp := SysVarReservedConn{
 		Name: "x",
 		Keyspace: &vindexes.Keyspace{
 			Name:    "ks",
@@ -75,12 +74,6 @@ func TestSetTable(t *testing.T) {
 		expectedError    string
 	}
 
-	intExpr := func(i int) evalengine.Expr {
-		s := strconv.FormatInt(int64(i), 10)
-		e, _ := evalengine.NewLiteralInt([]byte(s))
-		return e
-	}
-
 	tests := []testCase{
 		{
 			testName:         "nil set ops",
@@ -91,7 +84,7 @@ func TestSetTable(t *testing.T) {
 			setOps: []SetOp{
 				&UserDefinedVariable{
 					Name: "x",
-					Expr: intExpr(42),
+					Expr: evalengine.NewLiteralInt(42),
 				},
 			},
 			expectedQueryLog: []string{
@@ -173,7 +166,7 @@ func TestSetTable(t *testing.T) {
 			setOps: []SetOp{
 				&UserDefinedVariable{
 					Name: "x",
-					Expr: intExpr(1),
+					Expr: evalengine.NewLiteralInt(1),
 				},
 				&SysVarIgnore{
 					Name: "y",
@@ -205,7 +198,7 @@ func TestSetTable(t *testing.T) {
 		{
 			testName: "sysvar set without destination",
 			setOps: []SetOp{
-				&SysVarSet{
+				&SysVarReservedConn{
 					Name: "x",
 					Keyspace: &vindexes.Keyspace{
 						Name:    "ks",
@@ -223,7 +216,7 @@ func TestSetTable(t *testing.T) {
 		{
 			testName: "sysvar set not modifying setting",
 			setOps: []SetOp{
-				&SysVarSet{
+				&SysVarReservedConn{
 					Name: "x",
 					Keyspace: &vindexes.Keyspace{
 						Name:    "ks",
@@ -240,7 +233,7 @@ func TestSetTable(t *testing.T) {
 		{
 			testName: "sysvar set modifying setting",
 			setOps: []SetOp{
-				&SysVarSet{
+				&SysVarReservedConn{
 					Name: "x",
 					Keyspace: &vindexes.Keyspace{
 						Name:    "ks",
@@ -289,7 +282,7 @@ func TestSetTable(t *testing.T) {
 
 func TestSysVarSetErr(t *testing.T) {
 	setOps := []SetOp{
-		&SysVarSet{
+		&SysVarReservedConn{
 			Name: "x",
 			Keyspace: &vindexes.Keyspace{
 				Name:    "ks",

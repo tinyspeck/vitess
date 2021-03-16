@@ -45,7 +45,7 @@ func (e *Executor) newExecute(ctx context.Context, safeSession *SafeSession, sql
 	}
 
 	query, comments := sqlparser.SplitMarginComments(sql)
-	vcursor, err := newVCursorImpl(ctx, safeSession, comments, e, logStats, e.vm, e.VSchema(), e.resolver.resolver)
+	vcursor, err := newVCursorImpl(ctx, safeSession, comments, e, logStats, e.vm, e.VSchema(), e.resolver.resolver, e.serv)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -62,7 +62,7 @@ func (e *Executor) newExecute(ctx context.Context, safeSession *SafeSession, sql
 	if err == planbuilder.ErrPlanNotSupported {
 		return 0, nil, err
 	}
-	execStart := e.logPlanningFinished(logStats, sql)
+	execStart := e.logPlanningFinished(logStats, plan)
 
 	if err != nil {
 		safeSession.ClearWarnings()
@@ -77,7 +77,7 @@ func (e *Executor) newExecute(ctx context.Context, safeSession *SafeSession, sql
 	// will fall through and be handled through planning
 	switch plan.Type {
 	case sqlparser.StmtBegin:
-		qr, err := e.handleBegin(ctx, safeSession, vcursor.tabletType, logStats)
+		qr, err := e.handleBegin(ctx, safeSession, logStats)
 		return sqlparser.StmtBegin, qr, err
 	case sqlparser.StmtCommit:
 		qr, err := e.handleCommit(ctx, safeSession, logStats)
@@ -205,9 +205,11 @@ func (e *Executor) logExecutionEnd(logStats *LogStats, execStart time.Time, plan
 	return errCount
 }
 
-func (e *Executor) logPlanningFinished(logStats *LogStats, sql string) time.Time {
+func (e *Executor) logPlanningFinished(logStats *LogStats, plan *engine.Plan) time.Time {
 	execStart := time.Now()
-	logStats.StmtType = sqlparser.Preview(sql).String()
+	if plan != nil {
+		logStats.StmtType = plan.Type.String()
+	}
 	logStats.PlanTime = execStart.Sub(logStats.StartTime)
 	return execStart
 }

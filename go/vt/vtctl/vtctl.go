@@ -19,7 +19,6 @@ limitations under the License.
 package vtctl
 
 // The following comment section contains definitions for command arguments.
-// It is parsed to generate the vtctl documentation automatically.
 /*
 COMMAND ARGUMENT DEFINITIONS
 
@@ -94,8 +93,6 @@ import (
 	"sync"
 	"time"
 
-	querypb "vitess.io/vitess/go/vt/proto/query"
-
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
@@ -107,7 +104,9 @@ import (
 	"vitess.io/vitess/go/sync2"
 	hk "vitess.io/vitess/go/vt/hook"
 	"vitess.io/vitess/go/vt/key"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
+	"vitess.io/vitess/go/vt/schema"
 	"vitess.io/vitess/go/vt/schemamanager"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/topo"
@@ -316,7 +315,7 @@ var commands = []commandGroup{
 				"Start a Resharding process. Example: Reshard -cells='zone1,alias1' -tablet_types='master,replica,rdonly'  ks.workflow001 '0' '-80,80-'"},
 			{"MoveTables", commandMoveTables,
 				"[-cells=<cells>] [-tablet_types=<source_tablet_types>] -workflow=<workflow> <source_keyspace> <target_keyspace> <table_specs>",
-				`Move table(s) to another keyspace, table_specs is a list of tables or the tables section of the vschema for the target keyspace. Example: '{"t1":{"column_vindexes": [{""column": "id1", "name": "hash"}]}, "t2":{"column_vindexes": [{""column": "id2", "name": "hash"}]}}`},
+				`Move table(s) to another keyspace, table_specs is a list of tables or the tables section of the vschema for the target keyspace. Example: '{"t1":{"column_vindexes": [{"column": "id1", "name": "hash"}]}, "t2":{"column_vindexes": [{"column": "id2", "name": "hash"}]}}'.  In the case of an unsharded target keyspace the vschema for each table may be empty. Example: '{"t1":{}, "t2":{}}'.`},
 			{"DropSources", commandDropSources,
 				"[-dry_run] [-rename_tables] <keyspace.workflow>",
 				"After a MoveTables or Resharding workflow cleanup unused artifacts like source tables, source shards and blacklists"},
@@ -328,7 +327,7 @@ var commands = []commandGroup{
 				`Externalize a backfilled vindex.`},
 			{"Materialize", commandMaterialize,
 				`<json_spec>, example : '{"workflow": "aaa", "source_keyspace": "source", "target_keyspace": "target", "table_settings": [{"target_table": "customer", "source_expression": "select * from customer", "create_ddl": "copy"}]}'`,
-				"Performs materialization based on the json spec."},
+				"Performs materialization based on the json spec. Is used directly to form VReplication rules, with an optional step to copy table structure/DDL."},
 			{"SplitClone", commandSplitClone,
 				"<keyspace> <from_shards> <to_shards>",
 				"Start the SplitClone process to perform horizontal resharding. Example: SplitClone ks '0' '-80,80-'"},
@@ -377,6 +376,9 @@ var commands = []commandGroup{
 			{"ListTablets", commandListTablets,
 				"<tablet alias> ...",
 				"Lists specified tablets in an awk-friendly way."},
+			{"GenerateShardRanges", commandGenerateShardRanges,
+				"<num shards>",
+				"Generates shard ranges assuming a keyspace with N shards."},
 			{"Panic", commandPanic,
 				"",
 				"HIDDEN Triggers a panic on the server side, to test the handling."},
@@ -408,6 +410,17 @@ var commands = []commandGroup{
 			{"CopySchemaShard", commandCopySchemaShard,
 				"[-tables=<table1>,<table2>,...] [-exclude_tables=<table1>,<table2>,...] [-include-views] [-skip-verify] [-wait_replicas_timeout=10s] {<source keyspace/shard> || <source tablet alias>} <destination keyspace/shard>",
 				"Copies the schema from a source shard's master (or a specific tablet) to a destination shard. The schema is applied directly on the master of the destination shard, and it is propagated to the replicas through binlogs."},
+			{"OnlineDDL", commandOnlineDDL,
+				"<keyspace> <command> [<migration_uuid>]",
+				"Operates on online DDL (migrations). Examples:" +
+					" \nvtctl OnlineDDL test_keyspace show 82fa54ac_e83e_11ea_96b7_f875a4d24e90" +
+					" \nvtctl OnlineDDL test_keyspace show all" +
+					" \nvtctl OnlineDDL test_keyspace show running" +
+					" \nvtctl OnlineDDL test_keyspace show complete" +
+					" \nvtctl OnlineDDL test_keyspace show failed" +
+					" \nvtctl OnlineDDL test_keyspace retry 82fa54ac_e83e_11ea_96b7_f875a4d24e90" +
+					" \nvtctl OnlineDDL test_keyspace cancel 82fa54ac_e83e_11ea_96b7_f875a4d24e90",
+			},
 
 			{"ValidateVersionShard", commandValidateVersionShard,
 				"<keyspace/shard>",
@@ -478,7 +491,7 @@ var commands = []commandGroup{
 		"Workflow", []command{
 			{"Workflow", commandWorkflow,
 				"<ks.workflow> <action> --dry-run",
-				"Start/Stop/Delete Workflow on all target tablets in workflow. Example: Workflow merchant.morders Start",
+				"Start/Stop/Delete/Show/ListAll Workflow on all target tablets in workflow. Example: Workflow merchant.morders Start",
 			},
 		},
 	},
@@ -1891,9 +1904,9 @@ func commandReshard(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.F
 }
 
 func commandMoveTables(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
-	workflow := subFlags.String("workflow", "", "Workflow name. Will be used to later migrate traffic.")
+	workflow := subFlags.String("workflow", "", "Workflow name. Can be any descriptive string. Will be used to later migrate traffic via SwitchReads/SwitchWrites.")
 	cells := subFlags.String("cells", "", "Cell(s) or CellAlias(es) (comma-separated) to replicate from.")
-	tabletTypes := subFlags.String("tablet_types", "", "Source tablet types to replicate from.")
+	tabletTypes := subFlags.String("tablet_types", "", "Source tablet types to replicate from (e.g. master, replica, rdonly). Defaults to -vreplication_tablet_type parameter value for the tablet, which has the default value of replica.")
 	if err := subFlags.Parse(args); err != nil {
 		return err
 	}
@@ -1982,6 +1995,7 @@ func commandVDiff(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.Fla
 	tabletTypes := subFlags.String("tablet_types", "master,replica,rdonly", "Tablet types for source and target")
 	filteredReplicationWaitTime := subFlags.Duration("filtered_replication_wait_time", 30*time.Second, "Specifies the maximum time to wait, in seconds, for filtered replication to catch up on master migrations. The migration will be aborted on timeout.")
 	format := subFlags.String("format", "", "Format of report") //"json" or ""
+
 	if err := subFlags.Parse(args); err != nil {
 		return err
 	}
@@ -1995,6 +2009,9 @@ func commandVDiff(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.Fla
 	}
 
 	_, err = wr.VDiff(ctx, keyspace, workflow, *sourceCell, *targetCell, *tabletTypes, *filteredReplicationWaitTime, *format)
+	if err != nil {
+		log.Errorf("vdiff returning with error: %v", err)
+	}
 	return err
 }
 
@@ -2424,6 +2441,77 @@ func commandApplySchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *fl
 		schemamanager.NewPlainController(change, keyspace),
 		executor,
 	)
+}
+
+func commandOnlineDDL(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
+	if err := subFlags.Parse(args); err != nil {
+		return err
+	}
+	if subFlags.NArg() < 1 {
+		return fmt.Errorf("the <keyspace> argument is required for the OnlineDDL command")
+	}
+	keyspace := subFlags.Args()[0]
+	if subFlags.NArg() < 2 {
+		return fmt.Errorf("the <command> argument is required for the OnlineDDL command")
+	}
+	command := subFlags.Args()[1]
+	arg := ""
+	if subFlags.NArg() >= 3 {
+		arg = subFlags.Args()[2]
+	}
+	query := ""
+	uuid := ""
+	switch command {
+	case "show":
+		{
+			condition := ""
+			switch arg {
+			case "", "all":
+				condition = "migration_uuid like '%'"
+			case "recent":
+				condition = "requested_timestamp > now() - interval 1 week"
+			case
+				string(schema.OnlineDDLStatusCancelled),
+				string(schema.OnlineDDLStatusQueued),
+				string(schema.OnlineDDLStatusReady),
+				string(schema.OnlineDDLStatusRunning),
+				string(schema.OnlineDDLStatusComplete),
+				string(schema.OnlineDDLStatusFailed):
+				condition = fmt.Sprintf("migration_status='%s'", arg)
+			default:
+				uuid = arg
+				condition = fmt.Sprintf("migration_uuid='%s'", uuid)
+			}
+			query = fmt.Sprintf(`select
+				shard, mysql_schema, mysql_table, migration_uuid, strategy, started_timestamp, completed_timestamp, migration_status 
+				from _vt.schema_migrations where %s`, condition)
+		}
+	case "retry":
+		{
+			if arg == "" {
+				return fmt.Errorf("UUID required")
+			}
+			uuid = arg
+			query = fmt.Sprintf(`update _vt.schema_migrations set migration_status='retry' where migration_uuid='%s'`, uuid)
+		}
+	case "cancel":
+		{
+			if arg == "" {
+				return fmt.Errorf("UUID required")
+			}
+			uuid = arg
+			query = fmt.Sprintf(`update _vt.schema_migrations set migration_status='cancel' where migration_uuid='%s'`, uuid)
+		}
+	default:
+		return fmt.Errorf("Unknown OnlineDDL command: %s", command)
+	}
+
+	qr, err := wr.VExecResult(ctx, uuid, keyspace, query, false)
+	if err != nil {
+		return err
+	}
+	printQueryResult(loggerWriter{wr.Logger()}, qr)
+	return nil
 }
 
 func commandCopySchemaShard(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
@@ -2866,29 +2954,15 @@ func commandVExec(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.Fla
 	}
 	query := subFlags.Arg(1)
 
-	results, err := wr.VExec(ctx, workflow, keyspace, query, *dryRun)
+	qr, err := wr.VExecResult(ctx, workflow, keyspace, query, *dryRun)
 	if err != nil {
 		return err
 	}
 	if *dryRun {
 		return nil
 	}
-	if len(results) == 0 {
+	if qr == nil {
 		wr.Logger().Printf("no result returned\n")
-	}
-	var qr *sqltypes.Result
-	var numFields int
-	for _, result := range results {
-		numFields = len(result.Fields)
-		break
-	}
-	if numFields != 0 {
-		qr = queryResultForTabletResults(results)
-	} else {
-		qr = queryResultForRowsAffected(results)
-	}
-	if len(qr.Rows) == 0 {
-		return nil
 	}
 	if *json {
 		return printJSON(wr.Logger(), qr)
@@ -2897,83 +2971,133 @@ func commandVExec(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.Fla
 	return nil
 }
 
-// called for workflow stop/start/delete. Only rows affected are reported per tablet
-func queryResultForRowsAffected(results map[*topo.TabletInfo]*sqltypes.Result) *sqltypes.Result {
-	var qr = &sqltypes.Result{}
-	qr.RowsAffected = uint64(len(results))
-	qr.Fields = []*querypb.Field{{
-		Name: "Tablet",
-		Type: sqltypes.VarBinary,
-	}, {
-		Name: "RowsAffected",
-		Type: sqltypes.Uint64,
-	}}
-	var row2 []sqltypes.Value
-	for tablet, result := range results {
-		row2 = nil
-		row2 = append(row2, sqltypes.NewVarBinary(tablet.AliasString()))
-		row2 = append(row2, sqltypes.NewUint64(result.RowsAffected))
-		qr.Rows = append(qr.Rows, row2)
-	}
-	return qr
-}
-
-func queryResultForTabletResults(results map[*topo.TabletInfo]*sqltypes.Result) *sqltypes.Result {
-	var qr = &sqltypes.Result{}
-	qr.RowsAffected = uint64(len(results))
-	qr.Fields = []*querypb.Field{{
-		Name: "Tablet",
-		Type: sqltypes.VarBinary,
-	}}
-	var row2 []sqltypes.Value
-	for tablet, result := range results {
-		for _, row := range result.Rows {
-			if len(qr.Fields) == 1 {
-				qr.Fields = append(qr.Fields, result.Fields...)
-			}
-			row2 = nil
-			row2 = append(row2, sqltypes.NewVarBinary(tablet.AliasString()))
-			row2 = append(row2, row...)
-			qr.Rows = append(qr.Rows, row2)
-		}
-	}
-	return qr
-}
-
 func commandWorkflow(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
 	dryRun := subFlags.Bool("dry_run", false, "Does a dry run of Workflow and only reports the final query and list of masters on which the operation will be applied")
 	if err := subFlags.Parse(args); err != nil {
 		return err
 	}
 	if subFlags.NArg() != 2 {
-		return fmt.Errorf("usage: Workflow --dry-run keyspace.workflow start/stop/delete")
+		return fmt.Errorf("usage: Workflow --dry-run keyspace.workflow start/stop/delete/list/listall")
 	}
-	keyspace, workflow, err := splitKeyspaceWorkflow(subFlags.Arg(0))
-	if err != nil {
-		return err
+	keyspace := subFlags.Arg(0)
+	action := strings.ToLower(subFlags.Arg(1))
+	// Note: List is deprecated and replaced by show.
+	if action == "list" {
+		action = "show"
+	}
+	var workflow string
+	var err error
+	if action != "listall" {
+		keyspace, workflow, err = splitKeyspaceWorkflow(subFlags.Arg(0))
+		if err != nil {
+			return err
+		}
 	}
 	_, err = wr.TopoServer().GetKeyspace(ctx, keyspace)
 	if err != nil {
 		wr.Logger().Errorf("Keyspace %s not found", keyspace)
 	}
-	action := subFlags.Arg(1)
 
 	results, err := wr.WorkflowAction(ctx, workflow, keyspace, action, *dryRun)
 	if err != nil {
 		return err
 	}
-	if action == "list" {
+	if action == "show" || action == "listall" {
 		return nil
 	}
 	if len(results) == 0 {
 		wr.Logger().Printf("no result returned\n")
 		return nil
 	}
-	qr := queryResultForRowsAffected(results)
+	qr := wr.QueryResultForRowsAffected(results)
 
 	printQueryResult(loggerWriter{wr.Logger()}, qr)
 	return nil
+}
 
+func commandGenerateShardRanges(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
+	numShards := subFlags.Int("num_shards", 2, "Number of shards to generate shard ranges for.")
+
+	if err := subFlags.Parse(args); err != nil {
+		return err
+	}
+
+	shardRanges, err := generateShardRanges(*numShards)
+	if err != nil {
+		return err
+	}
+
+	return printJSON(wr.Logger(), shardRanges)
+}
+
+func generateShardRanges(shards int) ([]string, error) {
+	var format string
+	var maxShards int
+
+	switch {
+	case shards <= 0:
+		return nil, errors.New("shards must be greater than zero")
+	case shards <= 256:
+		format = "%02x"
+		maxShards = 256
+	case shards <= 65536:
+		format = "%04x"
+		maxShards = 65536
+	default:
+		return nil, errors.New("this tool does not support more than 65336 shards in a single keyspace")
+	}
+
+	rangeFormatter := func(start, end int) string {
+		var (
+			startKid string
+			endKid   string
+		)
+
+		if start != 0 {
+			startKid = fmt.Sprintf(format, start)
+		}
+
+		if end != maxShards {
+			endKid = fmt.Sprintf(format, end)
+		}
+
+		return fmt.Sprintf("%s-%s", startKid, endKid)
+	}
+
+	start := 0
+	end := 0
+
+	// If shards does not divide evenly into maxShards, then there is some lossiness,
+	// where each shard is smaller than it should technically be (if, for example, size == 25.6).
+	// If we choose to keep everything in ints, then we have two choices:
+	// 	- Have every shard in #numshards be a uniform size, tack on an additional shard
+	//	  at the end of the range to account for the loss. This is bad because if you ask for
+	//	  7 shards, you'll actually get 7 uniform shards with 1 small shard, for 8 total shards.
+	//	  It's also bad because one shard will have much different data distribution than the rest.
+	//	- Expand the final shard to include whatever is left in the keyrange. This will give the
+	//	  correct number of shards, which is good, but depending on how lossy each individual shard is,
+	//	  you could end with that final shard being significantly larger than the rest of the shards,
+	//	  so this doesn't solve the data distribution problem.
+	//
+	// By tracking the "real" end (both in the real number sense, and in the truthfulness of the value sense),
+	// we can re-truncate the integer end on each iteration, which spreads the lossiness more
+	// evenly across the shards.
+	//
+	// This implementation has no impact on shard numbers that are powers of 2, even at large numbers,
+	// which you can see in the tests.
+	size := float64(maxShards) / float64(shards)
+	realEnd := float64(0)
+	shardRanges := make([]string, 0, shards)
+
+	for i := 1; i <= shards; i++ {
+		realEnd = float64(i) * size
+
+		end = int(realEnd)
+		shardRanges = append(shardRanges, rangeFormatter(start, end))
+		start = end
+	}
+
+	return shardRanges, nil
 }
 
 func commandPanic(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {

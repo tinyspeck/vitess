@@ -80,7 +80,7 @@ type builder interface {
 	// SetUpperLimit is an optimization hint that tells that primitive
 	// that it does not need to return more than the specified number of rows.
 	// A primitive that cannot perform this can ignore the request.
-	SetUpperLimit(count *sqlparser.SQLVal)
+	SetUpperLimit(count sqlparser.Expr)
 
 	// PushMisc pushes miscelleaneous constructs to all the primitives.
 	PushMisc(sel *sqlparser.Select)
@@ -111,7 +111,7 @@ type builder interface {
 	SupplyWeightString(colNumber int) (weightcolNumber int, err error)
 
 	// PushLock pushes "FOR UPDATE", "LOCK IN SHARE MODE" down to all routes
-	PushLock(lock string) error
+	PushLock(lock sqlparser.Lock) error
 
 	// Primitive returns the underlying primitive.
 	// This function should only be called after Wireup is finished.
@@ -124,7 +124,7 @@ type builder interface {
 // info about tables.
 type ContextVSchema interface {
 	FindTable(tablename sqlparser.TableName) (*vindexes.Table, string, topodatapb.TabletType, key.Destination, error)
-	FindTablesOrVindex(tablename sqlparser.TableName) ([]*vindexes.Table, vindexes.Vindex, string, topodatapb.TabletType, key.Destination, error)
+	FindTableOrVindex(tablename sqlparser.TableName) (*vindexes.Table, vindexes.Vindex, string, topodatapb.TabletType, key.Destination, error)
 	DefaultKeyspace() (*vindexes.Keyspace, error)
 	TargetString() string
 	Destination() key.Destination
@@ -132,6 +132,7 @@ type ContextVSchema interface {
 	TargetDestination(qualifier string) (key.Destination, *vindexes.Keyspace, topodatapb.TabletType, error)
 	AnyKeyspace() (*vindexes.Keyspace, error)
 	FirstSortedKeyspace() (*vindexes.Keyspace, error)
+	SysVarSetEnabled() bool
 }
 
 //-------------------------------------------------------------------------
@@ -164,7 +165,7 @@ func (bc *builderCommon) ResultColumns() []*resultColumn {
 	return bc.input.ResultColumns()
 }
 
-func (bc *builderCommon) SetUpperLimit(count *sqlparser.SQLVal) {
+func (bc *builderCommon) SetUpperLimit(count sqlparser.Expr) {
 	bc.input.SetUpperLimit(count)
 }
 
@@ -280,7 +281,7 @@ func Build(query string, vschema ContextVSchema) (*engine.Plan, error) {
 var ErrPlanNotSupported = errors.New("plan building not supported")
 
 // BuildFromStmt builds a plan based on the AST provided.
-func BuildFromStmt(query string, stmt sqlparser.Statement, vschema ContextVSchema, bindVarNeeds sqlparser.BindVarNeeds) (*engine.Plan, error) {
+func BuildFromStmt(query string, stmt sqlparser.Statement, vschema ContextVSchema, bindVarNeeds *sqlparser.BindVarNeeds) (*engine.Plan, error) {
 	instruction, err := createInstructionFor(query, stmt, vschema)
 	if err != nil {
 		return nil, err
@@ -304,7 +305,7 @@ func buildRoutePlan(stmt sqlparser.Statement, vschema ContextVSchema, f func(sta
 func createInstructionFor(query string, stmt sqlparser.Statement, vschema ContextVSchema) (engine.Primitive, error) {
 	switch stmt := stmt.(type) {
 	case *sqlparser.Select:
-		return buildRoutePlan(stmt, vschema, buildSelectPlan)
+		return buildRoutePlan(stmt, vschema, buildSelectPlan(query))
 	case *sqlparser.Insert:
 		return buildRoutePlan(stmt, vschema, buildInsertPlan)
 	case *sqlparser.Update:
@@ -317,11 +318,14 @@ func createInstructionFor(query string, stmt sqlparser.Statement, vschema Contex
 		if sqlparser.IsVschemaDDL(stmt) {
 			return buildVSchemaDDLPlan(stmt, vschema)
 		}
+		if sqlparser.IsOnlineSchemaDDL(stmt, query) {
+			return buildOnlineDDLPlan(query, stmt, vschema)
+		}
 		return buildDDLPlan(query, stmt, vschema)
 	case *sqlparser.Use:
 		return buildUsePlan(stmt, vschema)
 	case *sqlparser.Explain:
-		if stmt.Type == sqlparser.VitessStr {
+		if stmt.Type == sqlparser.VitessType {
 			innerInstruction, err := createInstructionFor(query, stmt.Statement, vschema)
 			if err != nil {
 				return nil, err
@@ -340,7 +344,30 @@ func createInstructionFor(query string, stmt sqlparser.Statement, vschema Contex
 	case *sqlparser.Begin, *sqlparser.Commit, *sqlparser.Rollback, *sqlparser.Savepoint, *sqlparser.SRollback, *sqlparser.Release:
 		// Empty by design. Not executed by a plan
 		return nil, nil
+	case *sqlparser.ShowTableStatus:
+		return buildShowTableStatusPlan(stmt, vschema)
 	}
 
 	return nil, vterrors.Errorf(vtrpcpb.Code_INTERNAL, "BUG: unexpected statement type: %T", stmt)
+}
+
+func buildShowTableStatusPlan(stmt *sqlparser.ShowTableStatus, vschema ContextVSchema) (engine.Primitive, error) {
+	destination, keyspace, _, err := vschema.TargetDestination(stmt.DatabaseName)
+	if err != nil {
+		return nil, err
+	}
+	if destination == nil {
+		destination = key.DestinationAnyShard{}
+	}
+
+	// Remove Database Name from the query.
+	stmt.DatabaseName = ""
+
+	return &engine.Send{
+		Keyspace:          keyspace,
+		TargetDestination: destination,
+		Query:             sqlparser.String(stmt),
+		IsDML:             false,
+		SingleShardOnly:   true,
+	}, nil
 }

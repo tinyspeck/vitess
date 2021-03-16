@@ -125,13 +125,24 @@ func (tp *TxPool) transactionKiller() {
 	defer tp.env.LogError()
 	for _, conn := range tp.scp.GetOutdated(tp.Timeout(), "for tx killer rollback") {
 		log.Warningf("killing transaction (exceeded timeout: %v): %s", tp.Timeout(), conn.String())
-		if conn.IsTainted() {
+		switch {
+		case conn.IsTainted():
+			conn.Close()
 			tp.env.Stats().KillCounters.Add("ReservedConnection", 1)
-		}
-		if conn.IsInTransaction() {
+		case conn.IsInTransaction():
+			_, err := conn.Exec(context.Background(), "rollback", 1, false)
+			if err != nil {
+				conn.Close()
+			}
 			tp.env.Stats().KillCounters.Add("Transactions", 1)
 		}
-		conn.Close()
+		// For logging, as transaction is killed as the connection is closed.
+		if conn.IsTainted() && conn.IsInTransaction() {
+			tp.env.Stats().KillCounters.Add("Transactions", 1)
+		}
+		if conn.IsInTransaction() {
+			tp.txComplete(conn, tx.TxKill)
+		}
 		conn.Releasef("exceeded timeout: %v", tp.Timeout())
 	}
 }
@@ -228,6 +239,13 @@ func (tp *TxPool) Begin(ctx context.Context, options *querypb.ExecuteOptions, re
 			return nil, "", vterrors.Errorf(vtrpcpb.Code_RESOURCE_EXHAUSTED, "per-user transaction pool connection limit exceeded")
 		}
 		conn, err = tp.createConn(ctx, options)
+		defer func() {
+			if err != nil {
+				// The transaction limiter frees transactions on rollback or commit. If we fail to create the transaction,
+				// release immediately since there will be no rollback or commit.
+				tp.limiter.Release(immediateCaller, effectiveCaller)
+			}
+		}()
 	}
 	if err != nil {
 		return nil, "", err

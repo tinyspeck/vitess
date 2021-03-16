@@ -37,6 +37,13 @@ ifdef VT_EXTRA_BUILD_FLAGS
 export EXTRA_BUILD_FLAGS := $(VT_EXTRA_BUILD_FLAGS)
 endif
 
+# We now have CGO code in the build which throws warnings with newer gcc builds.
+# See: https://github.com/mattn/go-sqlite3/issues/803
+# Work around by dropping optimization level from default -O2.
+# Safe, since this code isn't performance critical.
+export CGO_CFLAGS := -O1
+
+# regenerate rice-box.go when any of the .cnf files change
 embed_config:
 	cd go/vt/mysqlctl
 	go run github.com/GeertJohan/go.rice/rice embed-go
@@ -47,7 +54,8 @@ ifndef NOBANNER
 	echo $$(date): Building source tree
 endif
 	bash ./build.env
-	go install $(EXTRA_BUILD_FLAGS) $(VT_GO_PARALLEL) -ldflags "$(shell tools/build_version_flags.sh)" ./go/...
+	go install $(EXTRA_BUILD_FLAGS) $(VT_GO_PARALLEL) -ldflags "$(shell tools/build_version_flags.sh)" ./go/... && \
+		(cd go/cmd/vttablet && go run github.com/GeertJohan/go.rice/rice append --exec=../../../bin/vttablet)
 
 debug:
 ifndef NOBANNER
@@ -61,7 +69,7 @@ endif
 install: build
 	# binaries
 	mkdir -p "$${PREFIX}/bin"
-	cp "$${VTROOT}/bin/"{mysqlctld,vtctld,vtctlclient,vtgate,vttablet,vtworker,vtbackup} "$${PREFIX}/bin/"
+	cp "$${VTROOT}/bin/"{mysqlctld,vtorc,vtctld,vtctlclient,vtgate,vttablet,vtworker,vtbackup} "$${PREFIX}/bin/"
 
 # install copies the files needed to run test Vitess using vtcombo into the given directory tree.
 # Usage: make install PREFIX=/path/to/install/root
@@ -155,14 +163,13 @@ ifndef NOBANNER
 	echo $$(date): Compiling proto definitions
 endif
 
-# TODO(sougou): find a better way around this temp hack.
-VTTOP=$(VTROOT)/../../..
 $(PROTO_GO_OUTS): install_protoc-gen-go proto/*.proto
 	for name in $(PROTO_SRC_NAMES); do \
-		cd $(VTTOP)/src && \
-		$(VTROOT)/bin/protoc --go_out=plugins=grpc:. -Ivitess.io/vitess/proto vitess.io/vitess/proto/$${name}.proto && \
-		goimports -w $(VTROOT)/go/vt/proto/$${name}/$${name}.pb.go; \
+		$(VTROOT)/bin/protoc --go_out=plugins=grpc:. -Iproto proto/$${name}.proto && \
+		goimports -w vitess.io/vitess/go/vt/proto/$${name}/$${name}.pb.go; \
 	done
+	cp -Rf vitess.io/vitess/go/vt/proto/* go/vt/proto
+	rm -rf vitess.io/vitess/go/vt/proto/
 
 # Helper targets for building Docker images.
 # Please read docker/README.md to understand the different available images.

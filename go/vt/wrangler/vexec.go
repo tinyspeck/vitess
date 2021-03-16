@@ -24,32 +24,47 @@ import (
 	"sync"
 	"time"
 
-	"vitess.io/vitess/go/vt/log"
+	"github.com/golang/protobuf/proto"
+	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/olekukonko/tablewriter"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/concurrency"
+	"vitess.io/vitess/go/vt/log"
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/evalengine"
 )
 
 const (
-	vreplicationTableName = "_vt.vreplication"
+	vexecTableQualifier       = "_vt"
+	vreplicationTableName     = "vreplication"
+	schemaMigrationsTableName = "schema_migrations"
 )
 
+// vexec is the construct by which we run a query against backend shards. vexec is created by user-facing
+// interface, like vtctl or vtgate.
+// vexec parses, analyzes and plans th equery, and maintains state of each such step's result.
 type vexec struct {
 	ctx      context.Context
 	workflow string
 	keyspace string
-	query    string
+	// query is vexec's input
+	query string
+	// stmt is parsed from the query
+	stmt sqlparser.Statement
+	// tableName is extracted from the query, and used to determine the plan
+	tableName string
+	// planner will plan and execute a (possibly rewritten) query on backend shards
+	planner vexecPlanner
+	// plannedQuery is the result of supplementing original query with extra conditionals
+	plannedQuery string
 
 	wr *Wrangler
 
-	plan    *vexecPlan
 	masters []*topo.TabletInfo
 }
 
@@ -63,7 +78,75 @@ func newVExec(ctx context.Context, workflow, keyspace, query string, wr *Wrangle
 	}
 }
 
-// VExec executes queries on _vt.vreplication on all masters in the target keyspace of the workflow
+// QueryResultForRowsAffected aggregates results into row-type results (fields + values)
+func (wr *Wrangler) QueryResultForRowsAffected(results map[*topo.TabletInfo]*sqltypes.Result) *sqltypes.Result {
+	var qr = &sqltypes.Result{}
+	qr.RowsAffected = uint64(len(results))
+	qr.Fields = []*querypb.Field{{
+		Name: "Tablet",
+		Type: sqltypes.VarBinary,
+	}, {
+		Name: "RowsAffected",
+		Type: sqltypes.Uint64,
+	}}
+	var row2 []sqltypes.Value
+	for tablet, result := range results {
+		row2 = nil
+		row2 = append(row2, sqltypes.NewVarBinary(tablet.AliasString()))
+		row2 = append(row2, sqltypes.NewUint64(result.RowsAffected))
+		qr.Rows = append(qr.Rows, row2)
+	}
+	return qr
+}
+
+// QueryResultForTabletResults aggregates given results into a "rows-affected" type result (no row data)
+func (wr *Wrangler) QueryResultForTabletResults(results map[*topo.TabletInfo]*sqltypes.Result) *sqltypes.Result {
+	var qr = &sqltypes.Result{}
+	qr.RowsAffected = uint64(len(results))
+	defaultFields := []*querypb.Field{{
+		Name: "Tablet",
+		Type: sqltypes.VarBinary,
+	}}
+	var row2 []sqltypes.Value
+	for tablet, result := range results {
+		if qr.Fields == nil {
+			qr.Fields = append(qr.Fields, defaultFields...)
+			qr.Fields = append(qr.Fields, result.Fields...)
+		}
+		for _, row := range result.Rows {
+			row2 = nil
+			row2 = append(row2, sqltypes.NewVarBinary(tablet.AliasString()))
+			row2 = append(row2, row...)
+			qr.Rows = append(qr.Rows, row2)
+		}
+	}
+	return qr
+}
+
+// VExecResult runs VExec and the naggregates the results into a single *sqltypes.Result
+func (wr *Wrangler) VExecResult(ctx context.Context, workflow, keyspace, query string, dryRun bool) (qr *sqltypes.Result, err error) {
+
+	results, err := wr.VExec(ctx, workflow, keyspace, query, dryRun)
+	if err != nil {
+		return nil, err
+	}
+	if dryRun {
+		return nil, nil
+	}
+	var numFields int
+	for _, result := range results {
+		numFields = len(result.Fields)
+		break
+	}
+	if numFields != 0 {
+		qr = wr.QueryResultForTabletResults(results)
+	} else {
+		qr = wr.QueryResultForRowsAffected(results)
+	}
+	return qr, nil
+}
+
+// VExec executes queries on a table on all masters in the target keyspace of the workflow
 func (wr *Wrangler) VExec(ctx context.Context, workflow, keyspace, query string, dryRun bool) (map[*topo.TabletInfo]*sqltypes.Result, error) {
 	results, err := wr.runVexec(ctx, workflow, keyspace, query, dryRun)
 	retResults := make(map[*topo.TabletInfo]*sqltypes.Result)
@@ -73,50 +156,47 @@ func (wr *Wrangler) VExec(ctx context.Context, workflow, keyspace, query string,
 	return retResults, err
 }
 
+// runVexec is th emain function that runs a dry or wet execution of 'query` on backend shards.
 func (wr *Wrangler) runVexec(ctx context.Context, workflow, keyspace, query string, dryRun bool) (map[*topo.TabletInfo]*querypb.QueryResult, error) {
 	vx := newVExec(ctx, workflow, keyspace, query, wr)
+
 	if err := vx.getMasters(); err != nil {
 		return nil, err
 	}
-	if _, err := vx.buildVExecPlan(); err != nil {
+	plan, err := vx.parseAndPlan(ctx)
+	if err != nil {
 		return nil, err
 	}
-	fullQuery := vx.plan.parsedQuery.Query
+	vx.plannedQuery = plan.parsedQuery.Query
 	if dryRun {
-		return nil, vx.outputDryRunInfo(wr)
+		return nil, vx.outputDryRunInfo(ctx)
 	}
-	return vx.exec(fullQuery)
+	return vx.exec()
 }
 
-func (vx *vexec) outputDryRunInfo(wr *Wrangler) error {
-	rsr, err := vx.wr.getStreams(vx.ctx, vx.workflow, vx.keyspace)
+// parseAndPlan parses and analyses the query, then generates a plan
+func (vx *vexec) parseAndPlan(ctx context.Context) (plan *vexecPlan, err error) {
+	if err := vx.parseQuery(); err != nil {
+		return nil, err
+	}
+	if err := vx.getPlanner(ctx); err != nil {
+		return nil, err
+	}
+	plan, err = vx.buildPlan(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	wr.Logger().Printf("Query: %s\nwill be run on the following streams in keyspace %s for workflow %s:\n\n",
-		vx.plan.parsedQuery.Query, vx.keyspace, vx.workflow)
-	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetHeader([]string{"Tablet", "ID", "BinLogSource", "State", "DBName", "Current GTID", "MaxReplicationLag"})
-	for _, master := range vx.masters {
-		key := fmt.Sprintf("%s/%s", master.Shard, master.AliasString())
-		for _, stream := range rsr.Statuses[key] {
-			table.Append([]string{key, fmt.Sprintf("%d", stream.ID), stream.Bls.String(), stream.State, stream.DBName, stream.Pos, fmt.Sprintf("%d", stream.MaxReplicationLag)})
-		}
-	}
-	table.SetAutoMergeCellsByColumnIndex([]int{0})
-	table.SetRowLine(true)
-	table.Render()
-	wr.Logger().Printf(tableString.String())
-	wr.Logger().Printf("\n\n")
-
-	return nil
+	return plan, nil
 }
 
-func (vx *vexec) exec(query string) (map[*topo.TabletInfo]*querypb.QueryResult, error) {
+func (vx *vexec) outputDryRunInfo(ctx context.Context) error {
+	return vx.planner.dryRun(ctx)
+}
+
+// exec runs our planned query on backend shard masters. It collects query results from all
+// shards and returns an aggregate (UNION ALL -like) result.
+func (vx *vexec) exec() (map[*topo.TabletInfo]*querypb.QueryResult, error) {
 	var wg sync.WaitGroup
-	workflow := vx.workflow
 	allErrors := &concurrency.AllErrorRecorder{}
 	results := make(map[*topo.TabletInfo]*querypb.QueryResult)
 	var mu sync.Mutex
@@ -126,19 +206,15 @@ func (vx *vexec) exec(query string) (map[*topo.TabletInfo]*querypb.QueryResult, 
 		wg.Add(1)
 		go func(ctx context.Context, master *topo.TabletInfo) {
 			defer wg.Done()
-			log.Infof("Running %s on %s\n", query, master.AliasString())
-			qr, err := vx.wr.VReplicationExec(ctx, master.Alias, query)
+			log.Infof("Running %s on %s\n", vx.plannedQuery, master.AliasString())
+			qr, err := vx.planner.exec(ctx, master.Alias, vx.plannedQuery)
 			log.Infof("Result is %s: %v", master.AliasString(), qr)
 			if err != nil {
 				allErrors.RecordError(err)
 			} else {
-				if qr.RowsAffected == 0 {
-					allErrors.RecordError(fmt.Errorf("\nno matching streams found for workflow %s, tablet %s, query %s", workflow, master.Alias, query))
-				} else {
-					mu.Lock()
-					results[master] = qr
-					mu.Unlock()
-				}
+				mu.Lock()
+				results[master] = qr
+				mu.Unlock()
 			}
 		}(ctx, master)
 	}
@@ -146,6 +222,18 @@ func (vx *vexec) exec(query string) (map[*topo.TabletInfo]*querypb.QueryResult, 
 	return results, allErrors.AggrError(vterrors.Aggregate)
 }
 
+// parseQuery parses the input query
+func (vx *vexec) parseQuery() (err error) {
+	if vx.stmt, err = sqlparser.Parse(vx.query); err != nil {
+		return err
+	}
+	if vx.tableName, err = extractTableName(vx.stmt); err != nil {
+		return err
+	}
+	return nil
+}
+
+// getMasters identifies master tablet for all shards relevant to our keyspace
 func (vx *vexec) getMasters() error {
 	var err error
 	shards, err := vx.wr.ts.GetShardNames(vx.ctx, vx.keyspace)
@@ -188,10 +276,22 @@ func (vx *vexec) getMasterForShard(shard string) (*topo.TabletInfo, error) {
 	return master, nil
 }
 
-// WorkflowAction can start/stop/delete or list strams in _vt.vreplication on all masters in the target keyspace of the workflow
+// WorkflowAction can start/stop/delete or list streams in _vt.vreplication on all masters in the target keyspace of the workflow.
 func (wr *Wrangler) WorkflowAction(ctx context.Context, workflow, keyspace, action string, dryRun bool) (map[*topo.TabletInfo]*sqltypes.Result, error) {
-	if action == "list" {
-		return nil, wr.listStreams(ctx, workflow, keyspace)
+	if action == "show" {
+		replStatus, err := wr.ShowWorkflow(ctx, workflow, keyspace)
+		if err != nil {
+			return nil, err
+		}
+		err = dumpStreamListAsJSON(replStatus, wr)
+		return nil, err
+	} else if action == "listall" {
+		workflows, err := wr.ListAllWorkflows(ctx, keyspace)
+		if err != nil {
+			return nil, err
+		}
+		wr.printWorkflowList(workflows)
+		return nil, err
 	}
 	results, err := wr.execWorkflowAction(ctx, workflow, keyspace, action, dryRun)
 	retResults := make(map[*topo.TabletInfo]*sqltypes.Result)
@@ -218,33 +318,42 @@ func (wr *Wrangler) getWorkflowActionQuery(action string) (string, error) {
 }
 
 func (wr *Wrangler) execWorkflowAction(ctx context.Context, workflow, keyspace, action string, dryRun bool) (map[*topo.TabletInfo]*querypb.QueryResult, error) {
-	var err error
 	query, err := wr.getWorkflowActionQuery(action)
 	if err != nil {
 		return nil, err
 	}
-	vx := newVExec(ctx, workflow, keyspace, query, wr)
-	err = vx.getMasters()
-	if err != nil {
-		return nil, err
-	}
-	if _, err := vx.buildVExecPlan(); err != nil {
-		return nil, err
-	}
-	fullQuery := vx.plan.parsedQuery.Query
-	if dryRun {
-		return nil, vx.outputDryRunInfo(wr)
-	}
-	results, err := vx.exec(fullQuery)
-	return results, err
+	return wr.runVexec(ctx, workflow, keyspace, query, dryRun)
 }
 
-type replicationStatusResult struct {
-	Workflow       string
-	SourceKeyspace string
-	TargetKeyspace string
+// ReplicationStatusResult represents the result of trying to get the replication status for a given workflow.
+type ReplicationStatusResult struct {
+	// Workflow represents the name of the workflow relevant to the related replication statuses.
+	Workflow string
+	// SourceLocation represents the keyspace and shards that we are vreplicating from.
+	SourceLocation ReplicationLocation
+	// TargetLocation represents the keyspace and shards that we are vreplicating into.
+	TargetLocation ReplicationLocation
+	// MaxVReplicationLag represents the maximum vreplication lag seen across all shards.
+	MaxVReplicationLag int64
 
-	Statuses map[string][]*replicationStatus
+	// Statuses is a map of <shard>/<master tablet alias> : ShardReplicationStatus (for the given shard).
+	ShardStatuses map[string]*ShardReplicationStatus
+}
+
+// ReplicationLocation represents a location that data is either replicating from, or replicating into.
+type ReplicationLocation struct {
+	Keyspace string
+	Shards   []string
+}
+
+// ShardReplicationStatus holds relevant vreplication related info for the given shard.
+type ShardReplicationStatus struct {
+	// MasterReplicationStatuses represents all of the replication statuses for the master tablets in the given shard.
+	MasterReplicationStatuses []*ReplicationStatus
+	// TabletControls represents the tablet controls for the tablets in the shard.
+	TabletControls []*topodatapb.Shard_TabletControl
+	// MasterIsServing indicates whether the master tablet of the given shard is currently serving write traffic.
+	MasterIsServing bool
 }
 
 type copyState struct {
@@ -252,25 +361,40 @@ type copyState struct {
 	LastPK string
 }
 
-type replicationStatus struct {
-	Shard             string
-	Tablet            string
-	ID                int64
-	Bls               binlogdatapb.BinlogSource
-	Pos               string
-	StopPos           string
-	State             string
+// ReplicationStatus includes data from the _vt.vreplication table, along with other useful relevant data.
+type ReplicationStatus struct {
+	// Shard represents the relevant shard name.
+	Shard string
+	// Tablet is the tablet alias that the ReplicationStatus came from.
+	Tablet string
+	// ID represents the id column from the _vt.vreplication table.
+	ID int64
+	// Bls represents the BinlogSource.
+	Bls binlogdatapb.BinlogSource
+	// Pos represents the pos column from the _vt.vreplication table.
+	Pos string
+	// StopPos represents the stop_pos column from the _vt.vreplication table.
+	StopPos string
+	// State represents the state column from the _vt.vreplication table.
+	State string
+	// MaxReplicationLag represents the max_replication_lag column from the _vt.vreplication table.
 	MaxReplicationLag int64
-	DBName            string
-	TimeUpdated       int64
-	Message           string
+	// DbName represents the db_name column from the _vt.vreplication table.
+	DBName string
+	// TransactionTimestamp represents the transaction_timestamp column from the _vt.vreplication table.
+	TransactionTimestamp int64
+	// TimeUpdated represents the time_updated column from the _vt.vreplication table.
+	TimeUpdated int64
+	// Message represents the message column from the _vt.vreplication table.
+	Message string
 
+	// CopyState represents the rows from the _vt.copy_state table.
 	CopyState []copyState
 }
 
-func (wr *Wrangler) getReplicationStatusFromRow(ctx context.Context, row []sqltypes.Value, master *topo.TabletInfo) (*replicationStatus, string, error) {
+func (wr *Wrangler) getReplicationStatusFromRow(ctx context.Context, row []sqltypes.Value, master *topo.TabletInfo) (*ReplicationStatus, string, error) {
 	var err error
-	var id, maxReplicationLag, timeUpdated int64
+	var id, maxReplicationLag, timeUpdated, transactionTimestamp int64
 	var state, dbName, pos, stopPos, message string
 	var bls binlogdatapb.BinlogSource
 	id, err = evalengine.ToInt64(row[0])
@@ -292,19 +416,24 @@ func (wr *Wrangler) getReplicationStatusFromRow(ctx context.Context, row []sqlty
 	if err != nil {
 		return nil, "", err
 	}
-	message = row[8].ToString()
-	status := &replicationStatus{
-		Shard:             master.Shard,
-		Tablet:            master.AliasString(),
-		ID:                id,
-		Bls:               bls,
-		Pos:               pos,
-		StopPos:           stopPos,
-		State:             state,
-		DBName:            dbName,
-		MaxReplicationLag: maxReplicationLag,
-		TimeUpdated:       timeUpdated,
-		Message:           message,
+	transactionTimestamp, err = evalengine.ToInt64(row[8])
+	if err != nil {
+		return nil, "", err
+	}
+	message = row[9].ToString()
+	status := &ReplicationStatus{
+		Shard:                master.Shard,
+		Tablet:               master.AliasString(),
+		ID:                   id,
+		Bls:                  bls,
+		Pos:                  pos,
+		StopPos:              stopPos,
+		State:                state,
+		DBName:               dbName,
+		MaxReplicationLag:    maxReplicationLag,
+		TransactionTimestamp: transactionTimestamp,
+		TimeUpdated:          timeUpdated,
+		Message:              message,
 	}
 	status.CopyState, err = wr.getCopyState(ctx, master, id)
 	if err != nil {
@@ -315,45 +444,99 @@ func (wr *Wrangler) getReplicationStatusFromRow(ctx context.Context, row []sqlty
 	return status, bls.Keyspace, nil
 }
 
-func (wr *Wrangler) getStreams(ctx context.Context, workflow, keyspace string) (*replicationStatusResult, error) {
-	var rsr replicationStatusResult
-	rsr.Statuses = make(map[string][]*replicationStatus)
+func (wr *Wrangler) getStreams(ctx context.Context, workflow, keyspace string) (*ReplicationStatusResult, error) {
+	var rsr ReplicationStatusResult
+	rsr.ShardStatuses = make(map[string]*ShardReplicationStatus)
 	rsr.Workflow = workflow
-	rsr.TargetKeyspace = keyspace
 	var results map[*topo.TabletInfo]*querypb.QueryResult
-	query := "select id, source, pos, stop_pos, max_replication_lag, state, db_name, time_updated, message from _vt.vreplication"
+	query := "select id, source, pos, stop_pos, max_replication_lag, state, db_name, time_updated, transaction_timestamp, message from _vt.vreplication"
 	results, err := wr.runVexec(ctx, workflow, keyspace, query, false)
 	if err != nil {
 		return nil, err
 	}
+
+	// We set a topo timeout since we contact topo for the shard record.
+	ctx, cancel := context.WithTimeout(ctx, *topo.RemoteOperationTimeout)
+	defer cancel()
+	var sourceKeyspace string
+	sourceShards := sets.NewString()
+	targetShards := sets.NewString()
 	for master, result := range results {
-		var rsrStatus []*replicationStatus
+		var rsrStatus []*ReplicationStatus
 		qr := sqltypes.Proto3ToResult(result)
 		for _, row := range qr.Rows {
-			status, sourceKeyspace, err := wr.getReplicationStatusFromRow(ctx, row, master)
-			fmt.Printf("getReplicationStatusFromRow status for master %s is %v\n", master.AliasString(), status)
+			status, sk, err := wr.getReplicationStatusFromRow(ctx, row, master)
 			if err != nil {
 				return nil, err
 			}
-			rsr.SourceKeyspace = sourceKeyspace
-
+			sourceKeyspace = sk
+			sourceShards.Insert(status.Bls.Shard)
 			rsrStatus = append(rsrStatus, status)
+
+			transactionTimestamp := time.Unix(status.TransactionTimestamp, 0)
+			replicationLag := time.Since(transactionTimestamp)
+			if replicationLag.Seconds() > float64(rsr.MaxVReplicationLag) {
+				rsr.MaxVReplicationLag = int64(replicationLag.Seconds())
+			}
 		}
-		rsr.Statuses[fmt.Sprintf("%s/%s", master.Shard, master.AliasString())] = rsrStatus
+		si, err := wr.ts.GetShard(ctx, keyspace, master.Shard)
+		if err != nil {
+			return nil, err
+		}
+		targetShards.Insert(si.ShardName())
+		rsr.ShardStatuses[fmt.Sprintf("%s/%s", master.Shard, master.AliasString())] = &ShardReplicationStatus{
+			MasterReplicationStatuses: rsrStatus,
+			TabletControls:            si.TabletControls,
+			MasterIsServing:           si.IsMasterServing,
+		}
 	}
+	rsr.SourceLocation = ReplicationLocation{
+		Keyspace: sourceKeyspace,
+		Shards:   sourceShards.List(),
+	}
+	rsr.TargetLocation = ReplicationLocation{
+		Keyspace: keyspace,
+		Shards:   targetShards.List(),
+	}
+
 	return &rsr, nil
 }
 
-func (wr *Wrangler) listStreams(ctx context.Context, workflow, keyspace string) error {
+// ListAllWorkflows will return a list of all active workflows for the given keyspace.
+func (wr *Wrangler) ListAllWorkflows(ctx context.Context, keyspace string) ([]string, error) {
+	query := "select distinct workflow from _vt.vreplication where state <> 'Stopped'"
+	results, err := wr.runVexec(ctx, "", keyspace, query, false)
+	if err != nil {
+		return nil, err
+	}
+	workflowsSet := sets.NewString()
+	for _, result := range results {
+		if len(result.Rows) == 0 {
+			continue
+		}
+		qr := sqltypes.Proto3ToResult(result)
+		for _, row := range qr.Rows {
+			for _, value := range row {
+				// Even though we query for distinct, we must de-dup because we query per master tablet.
+				workflowsSet.Insert(value.ToString())
+			}
+		}
+	}
+	workflows := workflowsSet.List()
+	return workflows, nil
+}
+
+// ShowWorkflow will return all of the relevant replication related information for the given workflow.
+func (wr *Wrangler) ShowWorkflow(ctx context.Context, workflow, keyspace string) (*ReplicationStatusResult, error) {
 	replStatus, err := wr.getStreams(ctx, workflow, keyspace)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := dumpStreamListAsJSON(replStatus, wr); err != nil {
-		return err
+	if len(replStatus.ShardStatuses) == 0 {
+		return nil, fmt.Errorf("no streams found for workflow %s in keyspace %s", workflow, keyspace)
 	}
 
-	return nil
+	return replStatus, nil
 }
 
 func updateState(message, state string, cs []copyState, timeUpdated int64) string {
@@ -367,7 +550,7 @@ func updateState(message, state string, cs []copyState, timeUpdated int64) strin
 	return state
 }
 
-func dumpStreamListAsJSON(replStatus *replicationStatusResult, wr *Wrangler) error {
+func dumpStreamListAsJSON(replStatus *ReplicationStatusResult, wr *Wrangler) error {
 	text, err := json.MarshalIndent(replStatus, "", "\t")
 	if err != nil {
 		return err
@@ -376,17 +559,25 @@ func dumpStreamListAsJSON(replStatus *replicationStatusResult, wr *Wrangler) err
 	return nil
 }
 
+func (wr *Wrangler) printWorkflowList(workflows []string) {
+	list := strings.Join(workflows, ", ")
+	wr.Logger().Printf("Workflows: %v", list)
+}
+
 func (wr *Wrangler) getCopyState(ctx context.Context, tablet *topo.TabletInfo, id int64) ([]copyState, error) {
 	var cs []copyState
-	query := fmt.Sprintf(`select table_name, lastpk from _vt.copy_state where vrepl_id = %d`, id)
+	query := fmt.Sprintf("select table_name, lastpk from _vt.copy_state where vrepl_id = %d", id)
 	qr, err := wr.VReplicationExec(ctx, tablet.Alias, query)
 	if err != nil {
 		return nil, err
 	}
-	if qr != nil {
-		for _, row := range qr.Rows {
-			table := string(row.Values[0])
-			lastPK := string(row.Values[1])
+
+	result := sqltypes.Proto3ToResult(qr)
+	if result != nil {
+		for _, row := range result.Rows {
+			// These fields are varbinary, but close enough
+			table := row[0].ToString()
+			lastPK := row[1].ToString()
 			copyState := copyState{
 				Table:  table,
 				LastPK: lastPK,

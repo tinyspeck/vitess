@@ -83,7 +83,7 @@ func (vf *vindexFunc) Primitive() engine.Primitive {
 }
 
 // PushLock satisfies the builder interface.
-func (vf *vindexFunc) PushLock(lock string) error {
+func (vf *vindexFunc) PushLock(lock sqlparser.Lock) error {
 	return nil
 }
 
@@ -109,7 +109,7 @@ func (vf *vindexFunc) PushFilter(pb *primitiveBuilder, filter sqlparser.Expr, wh
 	if !ok {
 		return errors.New("unsupported: where clause for vindex function must be of the form id = <val> (not a comparison)")
 	}
-	if comparison.Operator != sqlparser.EqualStr {
+	if comparison.Operator != sqlparser.EqualOp {
 		return errors.New("unsupported: where clause for vindex function must be of the form id = <val> (not equality)")
 	}
 	colname, ok := comparison.Left.(*sqlparser.ColName)
@@ -177,7 +177,7 @@ func (vf *vindexFunc) PushOrderBy(orderBy sqlparser.OrderBy) (builder, error) {
 }
 
 // SetUpperLimit satisfies the builder interface.
-func (vf *vindexFunc) SetUpperLimit(_ *sqlparser.SQLVal) {
+func (vf *vindexFunc) SetUpperLimit(_ sqlparser.Expr) {
 }
 
 // PushMisc satisfies the builder interface.

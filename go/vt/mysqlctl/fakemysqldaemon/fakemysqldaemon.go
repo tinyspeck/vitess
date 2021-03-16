@@ -48,6 +48,14 @@ type FakeMysqlDaemon struct {
 	// Running is used by Start / Shutdown
 	Running bool
 
+	// StartupTime is used to simulate mysqlds that take some time to respond
+	// to a "start" command. It is used by Start.
+	StartupTime time.Duration
+
+	// ShutdownTime is used to simulate mysqlds that take some time to respond
+	// to a "stop" request (i.e. a wedged systemd unit). It is used by Shutdown.
+	ShutdownTime time.Duration
+
 	// MysqlPort will be returned by GetMysqlPort(). Set to -1 to
 	// return an error.
 	MysqlPort sync2.AtomicInt32
@@ -64,6 +72,9 @@ type FakeMysqlDaemon struct {
 	// CurrentMasterPosition is returned by MasterPosition
 	// and ReplicationStatus
 	CurrentMasterPosition mysql.Position
+
+	// CurrentMasterFilePosition is used to determine the executed file based positioning of the master.
+	CurrentMasterFilePosition mysql.Position
 
 	// ReplicationStatusError is used by ReplicationStatus
 	ReplicationStatusError error
@@ -178,6 +189,15 @@ func (fmd *FakeMysqlDaemon) Start(ctx context.Context, cnf *mysqlctl.Mycnf, mysq
 	if fmd.Running {
 		return fmt.Errorf("fake mysql daemon already running")
 	}
+
+	if fmd.StartupTime > 0 {
+		select {
+		case <-time.After(fmd.StartupTime):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	fmd.Running = true
 	return nil
 }
@@ -187,6 +207,15 @@ func (fmd *FakeMysqlDaemon) Shutdown(ctx context.Context, cnf *mysqlctl.Mycnf, w
 	if !fmd.Running {
 		return fmt.Errorf("fake mysql daemon not running")
 	}
+
+	if fmd.ShutdownTime > 0 {
+		select {
+		case <-time.After(fmd.ShutdownTime):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
 	fmd.Running = false
 	return nil
 }
@@ -225,8 +254,10 @@ func (fmd *FakeMysqlDaemon) ReplicationStatus() (mysql.ReplicationStatus, error)
 		return mysql.ReplicationStatus{}, fmd.ReplicationStatusError
 	}
 	return mysql.ReplicationStatus{
-		Position:            fmd.CurrentMasterPosition,
-		SecondsBehindMaster: fmd.SecondsBehindMaster,
+		Position:             fmd.CurrentMasterPosition,
+		FilePosition:         fmd.CurrentMasterFilePosition,
+		FileRelayLogPosition: fmd.CurrentMasterFilePosition,
+		SecondsBehindMaster:  fmd.SecondsBehindMaster,
 		// implemented as AND to avoid changing all tests that were
 		// previously using Replicating = false
 		IOThreadRunning:  fmd.Replicating && fmd.IOThreadRunning,
@@ -242,7 +273,8 @@ func (fmd *FakeMysqlDaemon) MasterStatus(ctx context.Context) (mysql.MasterStatu
 		return mysql.MasterStatus{}, fmd.MasterStatusError
 	}
 	return mysql.MasterStatus{
-		Position: fmd.CurrentMasterPosition,
+		Position:     fmd.CurrentMasterPosition,
+		FilePosition: fmd.CurrentMasterFilePosition,
 	}, nil
 }
 

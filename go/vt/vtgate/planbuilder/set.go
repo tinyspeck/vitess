@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"vitess.io/vitess/go/vt/vtgate/evalengine"
+
 	"vitess.io/vitess/go/vt/vtgate/vindexes"
 
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
@@ -28,136 +30,23 @@ import (
 	"vitess.io/vitess/go/vt/key"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vtgate/engine"
-	"vitess.io/vitess/go/vt/vtgate/evalengine"
 )
 
-type planFunc = func(expr *sqlparser.SetExpr, vschema ContextVSchema) (engine.SetOp, error)
+type (
+	planFunc = func(expr *sqlparser.SetExpr, vschema ContextVSchema, ec *expressionConverter) (engine.SetOp, error)
+
+	setting struct {
+		name         string
+		boolean      bool
+		defaultValue evalengine.Expr
+
+		// this allows identifiers (a.k.a. ColName) from the AST to be handled as if they are strings.
+		// SET transaction_mode = two_pc => SET transaction_mode = 'two_pc'
+		identifierAsString bool
+	}
+)
 
 var sysVarPlanningFunc = map[string]planFunc{}
-
-var notSupported = []string{
-	"auto_increment_increment",
-	"auto_increment_offset",
-	"binlog_direct_non_transactional_updates",
-	"innodb_ft_enable_stopword",
-	"innodb_ft_user_stopword_table",
-	"max_points_in_geometry",
-	"max_sp_recursion_depth",
-	"myisam_repair_threads",
-	"myisam_sort_buffer_size",
-	"myisam_stats_method",
-	"ndb_allow_copying_alter_table",
-	"ndb_autoincrement_prefetch_sz",
-	"ndb_blob_read_batch_bytes",
-	"ndb_blob_write_batch_bytes",
-	"ndb_deferred_constraints",
-	"ndb_force_send",
-	"ndb_fully_replicated",
-	"ndb_index_stat_enable",
-	"ndb_index_stat_option",
-	"ndb_join_pushdown",
-	"ndb_log_bin",
-	"ndb_log_exclusive_reads",
-	"ndb_row_checksum",
-	"ndb_use_exact_count",
-	"ndb_use_transactions",
-	"ndbinfo_max_bytes",
-	"ndbinfo_max_rows",
-	"ndbinfo_show_hidden",
-	"ndbinfo_table_prefix",
-	"old_alter_table",
-	"preload_buffer_size",
-	"rbr_exec_mode",
-	"sql_log_off",
-	"transaction_write_set_extraction",
-	"audit_log_read_buffer_size",
-}
-
-var ignoreThese = []string{
-	"big_tables",
-	"bulk_insert_buffer_size",
-	"debug",
-	"default_storage_engine",
-	"default_tmp_storage_engine",
-	"innodb_strict_mode",
-	"innodb_support_xa",
-	"innodb_table_locks",
-	"innodb_tmpdir",
-	"join_buffer_size",
-	"keep_files_on_create",
-	"lc_messages",
-	"long_query_time",
-	"low_priority_updates",
-	"max_delayed_threads",
-	"max_insert_delayed_threads",
-	"multi_range_count",
-	"net_buffer_length",
-	"new",
-	"query_cache_type",
-	"query_cache_wlock_invalidate",
-	"query_prealloc_size",
-	"sql_buffer_result",
-	"transaction_alloc_block_size",
-	"wait_timeout",
-}
-
-var saveSettingsToSession = []string{
-	"sql_mode",
-	"sql_safe_updates",
-}
-
-var allowSetIfValueAlreadySet = []string{}
-
-var vitessShouldBeAwareOf = []string{
-	"block_encryption_mode",
-	"character_set_client",
-	"character_set_connection",
-	"character_set_database",
-	"character_set_filesystem",
-	"character_set_server",
-	"collation_connection",
-	"collation_database",
-	"collation_server",
-	"completion_type",
-	"div_precision_increment",
-	"innodb_lock_wait_timeout",
-	"interactive_timeout",
-	"lc_time_names",
-	"lock_wait_timeout",
-	"max_allowed_packet",
-	"max_error_count",
-	"max_execution_time",
-	"max_join_size",
-	"max_length_for_sort_data",
-	"max_sort_length",
-	"max_user_connections",
-	"session_track_gtids",
-	"session_track_schema",
-	"session_track_state_change",
-	"session_track_system_variables",
-	"session_track_transaction_info",
-	"time_zone",
-	"transaction_isolation",
-	"version_tokens_session",
-	"sql_auto_is_null",
-}
-
-func init() {
-	forSettings(ignoreThese, buildSetOpIgnore)
-	forSettings(saveSettingsToSession, buildSetOpVarSet)
-	forSettings(allowSetIfValueAlreadySet, buildSetOpCheckAndIgnore)
-	forSettings(vitessShouldBeAwareOf, buildSetOpCheckAndIgnore)
-	forSettings(notSupported, buildNotSupported)
-}
-
-func forSettings(settings []string, f planFunc) {
-	for _, setting := range settings {
-		if _, alreadyExists := sysVarPlanningFunc[setting]; alreadyExists {
-			panic("bug in set plan init - " + setting + " aleady configured")
-		}
-		sysVarPlanningFunc[setting] = f
-	}
-}
 
 func buildSetPlan(stmt *sqlparser.Set, vschema ContextVSchema) (engine.Primitive, error) {
 	var setOps []engine.SetOp
@@ -168,14 +57,14 @@ func buildSetPlan(stmt *sqlparser.Set, vschema ContextVSchema) (engine.Primitive
 
 	for _, expr := range stmt.Exprs {
 		switch expr.Scope {
-		case sqlparser.GlobalStr:
-			return nil, vterrors.New(vtrpcpb.Code_INVALID_ARGUMENT, "unsupported in set: global")
+		case sqlparser.GlobalScope:
+			return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unsupported global scope in set: %s", sqlparser.String(expr))
 			// AST struct has been prepared before getting here, so no scope here means that
 			// we have a UDV. If the original query didn't explicitly specify the scope, it
 			// would have been explictly set to sqlparser.SessionStr before reaching this
 			// phase of planning
-		case "":
-			evalExpr, err := ec.convert(expr)
+		case sqlparser.ImplicitScope:
+			evalExpr, err := ec.convert(expr.Expr /*boolean*/, false /*identifierAsString*/, false)
 			if err != nil {
 				return nil, err
 			}
@@ -185,12 +74,12 @@ func buildSetPlan(stmt *sqlparser.Set, vschema ContextVSchema) (engine.Primitive
 			}
 
 			setOps = append(setOps, setOp)
-		case sqlparser.SessionStr:
+		case sqlparser.SessionScope:
 			planFunc, ok := sysVarPlanningFunc[expr.Name.Lowered()]
 			if !ok {
-				return nil, ErrPlanNotSupported
+				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "unsupported construct in set: %s", sqlparser.String(expr))
 			}
-			setOp, err = planFunc(expr, vschema)
+			setOp, err = planFunc(expr, vschema, ec)
 			if err != nil {
 				return nil, err
 			}
@@ -211,69 +100,37 @@ func buildSetPlan(stmt *sqlparser.Set, vschema ContextVSchema) (engine.Primitive
 	}, nil
 }
 
-type expressionConverter struct {
-	tabletExpressions []*sqlparser.SetExpr
+func buildNotSupported(setting) planFunc {
+	return func(expr *sqlparser.SetExpr, schema ContextVSchema, _ *expressionConverter) (engine.SetOp, error) {
+		return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "%s: system setting is not supported", expr.Name)
+	}
 }
 
-func (spb *expressionConverter) convert(setExpr *sqlparser.SetExpr) (evalengine.Expr, error) {
-	astExpr := setExpr.Expr
-	evalExpr, err := sqlparser.Convert(astExpr)
-	if err != nil {
-		if err != sqlparser.ExprNotSupported {
+func buildSetOpIgnore(s setting) planFunc {
+	return func(expr *sqlparser.SetExpr, vschema ContextVSchema, _ *expressionConverter) (engine.SetOp, error) {
+		value, err := extractValue(expr, s.boolean)
+		if err != nil {
 			return nil, err
 		}
-		// We have an expression that we can't handle at the vtgate level
-		if !expressionOkToDelegateToTablet(astExpr) {
-			// Uh-oh - this expression is not even safe to delegate to the tablet. Give up.
-			return nil, vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "expression not supported for SET: %s", sqlparser.String(astExpr))
-		}
-		evalExpr = &evalengine.Column{Offset: len(spb.tabletExpressions)}
-		spb.tabletExpressions = append(spb.tabletExpressions, setExpr)
+		return &engine.SysVarIgnore{
+			Name: expr.Name.Lowered(),
+			Expr: value,
+		}, nil
 	}
-	return evalExpr, nil
 }
 
-func (spb *expressionConverter) source(vschema ContextVSchema) (engine.Primitive, error) {
-	if len(spb.tabletExpressions) == 0 {
-		return &engine.SingleRow{}, nil
+func buildSetOpCheckAndIgnore(s setting) planFunc {
+	return func(expr *sqlparser.SetExpr, schema ContextVSchema, _ *expressionConverter) (engine.SetOp, error) {
+		return planSysVarCheckIgnore(expr, schema, s.boolean)
 	}
-	ks, dest, err := resolveDestination(vschema)
+}
+
+func planSysVarCheckIgnore(expr *sqlparser.SetExpr, schema ContextVSchema, boolean bool) (engine.SetOp, error) {
+	keyspace, dest, err := resolveDestination(schema)
 	if err != nil {
 		return nil, err
 	}
-
-	var expr []string
-	for _, e := range spb.tabletExpressions {
-		expr = append(expr, sqlparser.String(e.Expr))
-	}
-	query := fmt.Sprintf("select %s from dual", strings.Join(expr, ","))
-
-	primitive := &engine.Send{
-		Keyspace:          ks,
-		TargetDestination: dest,
-		Query:             query,
-		IsDML:             false,
-		SingleShardOnly:   true,
-	}
-	return primitive, nil
-}
-
-func buildNotSupported(e *sqlparser.SetExpr, _ ContextVSchema) (engine.SetOp, error) {
-	return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "%s: system setting is not supported", e.Name)
-}
-
-func buildSetOpIgnore(expr *sqlparser.SetExpr, _ ContextVSchema) (engine.SetOp, error) {
-	buf := sqlparser.NewTrackedBuffer(nil)
-	buf.Myprintf("%v", expr.Expr)
-
-	return &engine.SysVarIgnore{
-		Name: expr.Name.Lowered(),
-		Expr: buf.String(),
-	}, nil
-}
-
-func buildSetOpCheckAndIgnore(expr *sqlparser.SetExpr, vschema ContextVSchema) (engine.SetOp, error) {
-	keyspace, dest, err := resolveDestination(vschema)
+	value, err := extractValue(expr, boolean)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +139,7 @@ func buildSetOpCheckAndIgnore(expr *sqlparser.SetExpr, vschema ContextVSchema) (
 		Name:              expr.Name.Lowered(),
 		Keyspace:          keyspace,
 		TargetDestination: dest,
-		Expr:              sqlparser.String(expr.Expr),
+		Expr:              value,
 	}, nil
 }
 
@@ -297,24 +154,64 @@ func expressionOkToDelegateToTablet(e sqlparser.Expr) bool {
 			_, ok := validFuncs[n.Name.Lowered()]
 			valid = ok
 			return ok
+		case *sqlparser.ColName:
+			valid = n.Name.AtCount() == 2
+			return false
 		}
 		return true
 	})
 	return valid
 }
 
-func buildSetOpVarSet(expr *sqlparser.SetExpr, vschema ContextVSchema) (engine.SetOp, error) {
-	ks, err := vschema.AnyKeyspace()
-	if err != nil {
-		return nil, err
-	}
+func buildSetOpReservedConn(s setting) planFunc {
+	return func(expr *sqlparser.SetExpr, vschema ContextVSchema, _ *expressionConverter) (engine.SetOp, error) {
+		if !vschema.SysVarSetEnabled() {
+			return planSysVarCheckIgnore(expr, vschema, s.boolean)
+		}
+		ks, err := vschema.AnyKeyspace()
+		if err != nil {
+			return nil, err
+		}
+		value, err := extractValue(expr, s.boolean)
+		if err != nil {
+			return nil, err
+		}
 
-	return &engine.SysVarSet{
-		Name:              expr.Name.Lowered(),
-		Keyspace:          ks,
-		TargetDestination: vschema.Destination(),
-		Expr:              sqlparser.String(expr.Expr),
-	}, nil
+		return &engine.SysVarReservedConn{
+			Name:              expr.Name.Lowered(),
+			Keyspace:          ks,
+			TargetDestination: vschema.Destination(),
+			Expr:              value,
+		}, nil
+	}
+}
+
+const defaultNotSupportedErrFmt = "DEFAULT not supported for @@%s"
+
+func buildSetOpVitessAware(s setting) planFunc {
+	return func(astExpr *sqlparser.SetExpr, vschema ContextVSchema, ec *expressionConverter) (engine.SetOp, error) {
+		var err error
+		var runtimeExpr evalengine.Expr
+
+		_, isDefault := astExpr.Expr.(*sqlparser.Default)
+		if isDefault {
+			if s.defaultValue == nil {
+
+				return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, defaultNotSupportedErrFmt, astExpr.Name)
+			}
+			runtimeExpr = s.defaultValue
+		} else {
+			runtimeExpr, err = ec.convert(astExpr.Expr, s.boolean, s.identifierAsString)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return &engine.SysVarSetAware{
+			Name: astExpr.Name.Lowered(),
+			Expr: runtimeExpr,
+		}, nil
+	}
 }
 
 func resolveDestination(vschema ContextVSchema) (*vindexes.Keyspace, key.Destination, error) {
@@ -328,6 +225,36 @@ func resolveDestination(vschema ContextVSchema) (*vindexes.Keyspace, key.Destina
 		dest = key.DestinationAnyShard{}
 	}
 	return keyspace, dest, nil
+}
+
+func extractValue(expr *sqlparser.SetExpr, boolean bool) (string, error) {
+	switch node := expr.Expr.(type) {
+	case *sqlparser.Literal:
+		if node.Type == sqlparser.StrVal && boolean {
+			switch strings.ToLower(string(node.Val)) {
+			case "on":
+				return "1", nil
+			case "off":
+				return "0", nil
+			}
+		}
+	case *sqlparser.ColName:
+		// this is a little of a hack. it's used when the setting is not a normal expression, but rather
+		// an enumeration, such as utf8, utf8mb4, etc
+		if node.Name.AtCount() == sqlparser.NoAt {
+			switch node.Name.Lowered() {
+			case "on":
+				return "1", nil
+			case "off":
+				return "0", nil
+			}
+			return fmt.Sprintf("'%s'", sqlparser.String(expr.Expr)), nil
+		}
+	case *sqlparser.Default:
+		return "", vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, defaultNotSupportedErrFmt, expr.Name)
+	}
+
+	return sqlparser.String(expr.Expr), nil
 }
 
 // whitelist of functions knows to be safe to pass through to mysql for evaluation

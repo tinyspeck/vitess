@@ -69,6 +69,11 @@ var (
 	HealthCheckTimeout = flag.Duration("healthcheck_timeout", time.Minute, "the health check timeout period")
 	maxPayloadSize     = flag.Int("max_payload_size", 0, "The threshold for query payloads in bytes. A payload greater than this threshold will result in a failure to handle the query.")
 	warnPayloadSize    = flag.Int("warn_payload_size", 0, "The warning threshold for query payloads in bytes. A payload greater than this threshold will cause the VtGateWarnings.WarnPayloadSizeExceeded counter to be incremented.")
+
+	// Put set-passthrough under a flag.
+	sysVarSetEnabled = flag.Bool("enable_system_settings", false, "This will enable the system settings to be changed per session at the database connection level")
+	// lockHeartbeatTime is used to set the next heartbeat time.
+	lockHeartbeatTime = flag.Duration("lock_heartbeat_time", 5*time.Second, "If there is lock function used. This will keep the lock connection active by using this heartbeat")
 )
 
 func getTxMode() vtgatepb.TransactionMode {
@@ -151,7 +156,7 @@ func Init(ctx context.Context, serv srvtopo.Server, cell string, tabletTypesToWa
 
 	// If we want to filter keyspaces replace the srvtopo.Server with a
 	// filtering server
-	if len(discovery.KeyspacesToWatch) > 0 {
+	if discovery.FilteringKeyspaces() {
 		log.Infof("Keyspace filtering enabled, selecting %v", discovery.KeyspacesToWatch)
 		var err error
 		serv, err = srvtopo.NewKeyspaceFilteringServer(serv, discovery.KeyspacesToWatch)
@@ -490,7 +495,7 @@ func LegacyInit(ctx context.Context, hc discovery.LegacyHealthCheck, serv srvtop
 
 	// If we want to filter keyspaces replace the srvtopo.Server with a
 	// filtering server
-	if len(discovery.KeyspacesToWatch) > 0 {
+	if discovery.FilteringKeyspaces() {
 		log.Infof("Keyspace filtering enabled, selecting %v", discovery.KeyspacesToWatch)
 		var err error
 		serv, err = srvtopo.NewKeyspaceFilteringServer(serv, discovery.KeyspacesToWatch)

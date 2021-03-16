@@ -66,7 +66,7 @@ func TestAutocommitUpdateLookup(t *testing.T) {
 	require.NoError(t, err)
 
 	testQueries(t, "sbclookup", sbclookup, []*querypb.BoundQuery{{
-		Sql: "select music_id, user_id from music_user_map where music_id in ::music_id",
+		Sql: "select music_id, user_id from music_user_map where music_id in ::music_id for update",
 		BindVariables: map[string]*querypb.BindVariable{
 			"music_id": vars,
 		},
@@ -84,8 +84,8 @@ func TestAutocommitUpdateLookup(t *testing.T) {
 func TestAutocommitUpdateVindexChange(t *testing.T) {
 	executor, sbc, _, sbclookup := createLegacyExecutorEnv()
 	sbc.SetResults([]*sqltypes.Result{sqltypes.MakeTestResult(
-		sqltypes.MakeTestFields("id|name|lastname", "int64|int32|varchar"),
-		"1|1|foo",
+		sqltypes.MakeTestFields("id|name|lastname|name_lastname_keyspace_id_map", "int64|int32|varchar|int64"),
+		"1|1|foo|0",
 	),
 	})
 
@@ -110,7 +110,7 @@ func TestAutocommitUpdateVindexChange(t *testing.T) {
 	testCommitCount(t, "sbclookup", sbclookup, 1)
 
 	testQueries(t, "sbc", sbc, []*querypb.BoundQuery{{
-		Sql:           "select id, name, lastname from user2 where id = 1 for update",
+		Sql:           "select id, name, lastname, name = 'myname' and lastname = 'mylastname' from user2 where id = 1 for update",
 		BindVariables: map[string]*querypb.BindVariable{},
 	}, {
 		Sql:           "update user2 set name = 'myname', lastname = 'mylastname' where id = 1",
@@ -155,7 +155,7 @@ func TestAutocommitDeleteLookup(t *testing.T) {
 	require.NoError(t, err)
 
 	testQueries(t, "sbclookup", sbclookup, []*querypb.BoundQuery{{
-		Sql: "select music_id, user_id from music_user_map where music_id in ::music_id",
+		Sql: "select music_id, user_id from music_user_map where music_id in ::music_id for update",
 		BindVariables: map[string]*querypb.BindVariable{
 			"music_id": vars,
 		},

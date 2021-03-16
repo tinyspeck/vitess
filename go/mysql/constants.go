@@ -496,8 +496,13 @@ const (
 // Originally found in include/mysql/mysql_com.h
 // See http://dev.mysql.com/doc/internals/en/status-flags.html
 const (
-	// ServerStatusAutocommit is SERVER_STATUS_AUTOCOMMIT.
-	ServerStatusAutocommit = 0x0002
+	// ServerStatusInTransaction is SERVER_STATUS_IN_TRANS
+	ServerStatusInTransaction   = 0x0001
+	NoServerStatusInTransaction = 0xFFFE
+
+	// ServerStatusAutocommit is SERVER_STATUS_AUTOCOMMIT
+	ServerStatusAutocommit   = 0x0002
+	NoServerStatusAutocommit = 0xFFFD
 
 	// ServerMoreResultsExists is SERVER_MORE_RESULTS_EXISTS
 	ServerMoreResultsExists = 0x0008
@@ -571,6 +576,23 @@ func IsConnErr(err error) bool {
 	if sqlErr, ok := err.(*SQLError); ok {
 		num := sqlErr.Number()
 		return (num >= CRUnknownError && num <= CRNamedPipeStateError) || num == ERQueryInterrupted
+	}
+	return false
+}
+
+// IsSchemaApplyError returns true when given error is a MySQL error applying schema change
+func IsSchemaApplyError(err error) bool {
+	merr, isSQLErr := err.(*SQLError)
+	if !isSQLErr {
+		return false
+	}
+	switch merr.Num {
+	case
+		ERDupKeyName,
+		ERCantDropFieldOrKey,
+		ERTableExists,
+		ERDupFieldName:
+		return true
 	}
 	return false
 }

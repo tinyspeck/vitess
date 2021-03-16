@@ -49,7 +49,7 @@ type tmState struct {
 	// while changing the state of the system to match these values.
 	// This can be held for many seconds while tmState connects to
 	// external components to change their state.
-	// Obtaining tm.actionMutex before calling a tmState function is
+	// Obtaining tm.actionSema before calling a tmState function is
 	// not required.
 	// Because mu can be held for long, we publish the current state
 	// of these variables into displayState, which can be accessed
@@ -68,26 +68,28 @@ type tmState struct {
 }
 
 func newTMState(tm *TabletManager, tablet *topodatapb.Tablet) *tmState {
+	ctx, cancel := context.WithCancel(tm.BatchCtx)
 	return &tmState{
 		tm: tm,
 		displayState: displayState{
 			tablet: proto.Clone(tablet).(*topodatapb.Tablet),
 		},
 		tablet: tablet,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
-func (ts *tmState) Open(ctx context.Context) {
+func (ts *tmState) Open() {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	if ts.isOpen {
 		return
 	}
 
-	ts.ctx, ts.cancel = context.WithCancel(ctx)
 	ts.isOpen = true
 	ts.updateLocked(ts.ctx)
-	ts.publishStateLocked(ctx)
+	ts.publishStateLocked(ts.ctx)
 }
 
 func (ts *tmState) Close() {
@@ -148,7 +150,7 @@ func (ts *tmState) RefreshFromTopoInfo(ctx context.Context, shardInfo *topo.Shar
 	ts.updateLocked(ctx)
 }
 
-func (ts *tmState) ChangeTabletType(ctx context.Context, tabletType topodatapb.TabletType) error {
+func (ts *tmState) ChangeTabletType(ctx context.Context, tabletType topodatapb.TabletType, action DBAction) error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	log.Infof("Changing Tablet Type: %v", tabletType)
@@ -160,6 +162,13 @@ func (ts *tmState) ChangeTabletType(ctx context.Context, tabletType topodatapb.T
 		_, err := topotools.ChangeType(ctx, ts.tm.TopoServer, ts.tm.tabletAlias, tabletType, masterTermStartTime)
 		if err != nil {
 			return err
+		}
+		if action == DBActionSetReadWrite {
+			// We call SetReadOnly only after the topo has been updated to avoid
+			// situations where two tablets are master at the DB level but not at the vitess level
+			if err := ts.tm.MysqlDaemon.SetReadOnly(false); err != nil {
+				return err
+			}
 		}
 
 		ts.tablet.Type = tabletType
@@ -192,18 +201,19 @@ func (ts *tmState) UpdateTablet(update func(tablet *topodatapb.Tablet)) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	update(ts.tablet)
+	ts.publishForDisplay()
 }
 
 func (ts *tmState) updateLocked(ctx context.Context) {
 	span, ctx := trace.NewSpan(ctx, "tmState.update")
 	defer span.Finish()
+	ts.publishForDisplay()
 
 	if !ts.isOpen {
 		return
 	}
 
 	terTime := logutil.ProtoToTime(ts.tablet.MasterTermStartTime)
-	ts.publishForDisplay()
 
 	// Disable TabletServer first so the nonserving state gets advertised
 	// before other services are shutdown.
