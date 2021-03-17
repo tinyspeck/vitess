@@ -2326,7 +2326,7 @@ func commandGetSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag
 		ExcludeTables:  excludeTableArray,
 		IncludeViews:   *includeViews,
 		TableNamesOnly: *tableNamesOnly,
-    TableSizesOnly: *tableSizesOnly,
+		TableSizesOnly: *tableSizesOnly,
 	})
 	if err != nil {
 		return err
