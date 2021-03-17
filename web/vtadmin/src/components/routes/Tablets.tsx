@@ -25,6 +25,7 @@ import { Icons } from '../Icon';
 import { filterNouns } from '../../util/filterNouns';
 import style from './Tablets.module.scss';
 import { Button } from '../Button';
+import { Link } from 'react-router-dom';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
@@ -44,7 +45,9 @@ export const Tablets = () => {
                 <td>{t.shard}</td>
                 <td>{t.type}</td>
                 <td>{t.state}</td>
-                <td>{t.alias}</td>
+                <td>
+                    <Link to={`/tablet/${t.clusterID}/${t.alias}`}>{t.alias}</Link>
+                </td>
                 <td>{t.hostname}</td>
             </tr>
         ));
@@ -109,6 +112,7 @@ export const formatRows = (tablets: pb.Tablet[] | null, filter: string) => {
     // unexpected and a little weird to key on properties that you can't see.
     const mapped = tablets.map((t) => ({
         cluster: t.cluster?.name,
+        clusterID: t.cluster?.id,
         keyspace: t.tablet?.keyspace,
         shard: t.tablet?.shard,
         alias: formatAlias(t),
