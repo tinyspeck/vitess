@@ -6,6 +6,11 @@ import sparkline from '@fnando/sparkline';
 import { topodata, vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
 import { TabletLink } from '../../links/TabletLink';
 import style from './Stream.module.scss';
+import { useQuery } from 'react-query';
+import { fetchTabletVars } from '../../../api/tablet';
+import Highcharts from 'highcharts';
+import HighchartsReact from 'highcharts-react-official';
+import { Code } from '../../Code';
 
 interface Props {
     keyspace: string;
@@ -14,6 +19,16 @@ interface Props {
 }
 
 export const Stream = ({ keyspace, stream, tablet }: Props) => {
+    const tr = useQuery<any, any>(
+        ['/debug/vars', tablet?.tablet?.alias?.uid],
+        () => {
+            return fetchTabletVars(tablet?.tablet?.alias?.uid || 101);
+        },
+        { refetchInterval: 1000 }
+    );
+
+    console.log(tr);
+
     const containerRef = React.useRef(null);
     const sparklineRef = React.useRef(null);
 
@@ -151,6 +166,9 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
                         </div>
                     </>
                 )}
+            </div>
+            <div>
+                <Code code={JSON.stringify(tr.data || {}, null, 2)} />
             </div>
             <div className={style.toggle} onClick={() => setExpanded(!expanded)}>
                 {expanded ? 'Hide' : 'Expand'}

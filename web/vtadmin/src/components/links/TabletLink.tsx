@@ -27,7 +27,14 @@ export const TabletLink: React.FunctionComponent<Props> = ({ cell, children, hos
         return <span>{children}</span>;
     }
 
-    const href = process.env.REACT_APP_TABLET_LINK_TEMPLATE.replace('{{hostname}}', hostname);
+    const template = process.env.REACT_APP_TABLET_LINK_TEMPLATE;
+    let href = template.replace('{{hostname}}', hostname);
+
+    // This is truly so disgusting.
+    if (uid) {
+        href = template.replace('{{uid}}', `${parseInt(`${uid}`, 10)}`);
+    }
+
     return (
         <a
             className="link-external"
