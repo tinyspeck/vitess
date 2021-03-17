@@ -116,7 +116,6 @@ import (
 	"vitess.io/vitess/go/vt/wrangler"
 
 	replicationdatapb "vitess.io/vitess/go/vt/proto/replicationdata"
-	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
