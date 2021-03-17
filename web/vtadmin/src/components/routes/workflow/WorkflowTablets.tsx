@@ -6,8 +6,8 @@ import { flatten } from 'lodash';
 import { useQueries, UseQueryResult } from 'react-query';
 import { fetchTabletVars, TabletVars } from '../../../api/tablet';
 import { useWorkflow } from '../../../hooks/api';
-import { vtctldata } from '../../../proto/vtadmin';
 import style from './WorkflowTablets.module.scss';
+import { uniqBy } from 'lodash-es';
 
 interface Props {
     clusterID: string;
@@ -17,7 +17,7 @@ interface Props {
 
 interface Series {
     name: string;
-    data: number[];
+    data: [number, number][];
 }
 
 interface TabletVarsResponse {
@@ -28,7 +28,7 @@ interface TabletVarsResponse {
 export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name: workflow });
     const shardStreams = Object.values(data?.workflow?.shard_streams || {});
-    const tablets = flatten(shardStreams.map((s) => s.streams?.map((st) => st.tablet)));
+    const tablets = uniqBy(flatten(shardStreams.map((s) => s.streams?.map((st) => st.tablet))), 'cell');
 
     const tabletQueries = useQueries(
         tablets.map((t) => ({
@@ -37,6 +37,7 @@ export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
                 const tv = await fetchTabletVars(t?.uid || 101);
                 return { tablet: t, vars: tv };
             },
+            refetchInterval: 1000,
         }))
     ) as UseQueryResult<TabletVarsResponse, any>[];
 
@@ -45,34 +46,34 @@ export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
             return acc;
         }
 
+        const { dataUpdatedAt } = tq;
         const { tablet, vars } = tq.data;
-        const d = tq.data.vars.VReplicationQPS;
+        const dq = (vars.VReplicationQPS.Query || []).map((d, dx) => {
+            const ts = dataUpdatedAt - dx * 1000;
+            return [ts, d] as [number, number];
+        });
 
         acc.push({
             name: `${tablet.cell}-${tablet.uid} Query`,
-            data: d.Query,
+            data: dq,
         });
-
-        // console.log(tq);
 
         return acc;
     }, [] as Series[]);
 
     const options = {
+        chart: {
+            animation: false,
+        },
+        series: qpsSeries,
         title: {
             text: 'VReplication QPS by Tablet',
         },
-        series: qpsSeries,
+        xAxis: {
+            type: 'datetime',
+        },
     };
-    console.log(qpsSeries);
 
-    // const tr = useQuery<any, any>(
-    //     ['/debug/vars', tablet?.tablet?.alias?.uid],
-
-    //     { refetchInterval: 1000 }
-    // );
-
-    // console.log(tr);
     return (
         <div className={style.container}>
             <HighchartsReact highcharts={Highcharts} options={options} />
