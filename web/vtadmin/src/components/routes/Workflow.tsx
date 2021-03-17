@@ -23,6 +23,7 @@ import { Code } from '../Code';
 import { Tab, Tabs } from '../Tabs';
 import style from './Workflow.module.scss';
 import { Streams } from './workflow/Streams';
+import { WorkflowTablets } from './workflow/WorkflowTablets';
 
 interface RouteParams {
     clusterID: string;
@@ -37,10 +38,8 @@ export const Workflow = () => {
 
     useDocumentTitle(name);
 
-    const numStreams = Object.values(data?.workflow?.shard_streams || {}).reduce(
-        (acc, ss) => (acc += (ss.streams || []).length),
-        0
-    );
+    const shardStreams = Object.values(data?.workflow?.shard_streams || {});
+    const numStreams = shardStreams.reduce((acc, ss) => (acc += (ss.streams || []).length), 0);
 
     return (
         <div>
@@ -68,12 +67,17 @@ export const Workflow = () => {
                 <Tab to={`${url}/streams`} count={numStreams}>
                     Streams
                 </Tab>
+                <Tab to={`${url}/tablets`}>Tablets</Tab>
                 <Tab to={`${url}/json`}>JSON</Tab>
             </Tabs>
 
             <Switch>
                 <Route path={`${path}/streams`}>
                     <Streams clusterID={clusterID} keyspace={keyspace} name={name} />
+                </Route>
+
+                <Route path={`${path}/tablets`}>
+                    <WorkflowTablets clusterID={clusterID} keyspace={keyspace} workflow={name} />
                 </Route>
 
                 <Route path={`${path}/json`}>
