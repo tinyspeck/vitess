@@ -32,7 +32,7 @@ export const TabletLink: React.FunctionComponent<Props> = ({ cell, children, hos
 
     // This is truly so disgusting.
     if (uid) {
-        href = template.replace('{{uid}}', `${parseInt(`${uid}`, 10)}`);
+        href = href.replace('{{uid}}', `${parseInt(`${uid}`, 10)}`);
     }
 
     return (
