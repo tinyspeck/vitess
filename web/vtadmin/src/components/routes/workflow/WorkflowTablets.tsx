@@ -22,7 +22,7 @@ interface Series {
 }
 
 interface TabletVarsResponse {
-    tablet: { cell: string; uid: number };
+    tablet: pb.Tablet;
     vars: TabletVars;
 }
 
@@ -59,7 +59,7 @@ export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
         });
 
         acc.push({
-            name: `${tablet.cell}-${tablet.uid} Query`,
+            name: `${tablet?.tablet?.alias?.cell}-${tablet?.tablet?.alias?.uid} Query`,
             data: dq,
         });
 
