@@ -53,14 +53,12 @@ export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
 
         const { dataUpdatedAt } = tq;
         const { tablet, vars } = tq.data;
-        const dq = (vars.VReplicationQPS.Query || []).map((d, dx) => {
-            const ts = dataUpdatedAt - dx * 1000;
-            return [ts, d] as [number, number];
-        });
-
         acc.push({
-            name: `${tablet?.tablet?.alias?.cell}-${tablet?.tablet?.alias?.uid} Query`,
-            data: dq,
+            name: `${tablet?.tablet?.alias?.cell}-${tablet?.tablet?.alias?.uid} All`,
+            data: (vars.VReplicationQPS.All || []).map((d, dx) => {
+                const ts = dataUpdatedAt - dx * 1000;
+                return [ts, d] as [number, number];
+            }),
         });
 
         return acc;
@@ -69,6 +67,14 @@ export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
     const options = {
         chart: {
             animation: false,
+        },
+        credits: {
+            enabled: false,
+        },
+        plotOptions: {
+            series: {
+                animation: false,
+            },
         },
         series: qpsSeries,
         title: {

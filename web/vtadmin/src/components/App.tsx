@@ -29,6 +29,7 @@ import { Schema } from './routes/Schema';
 import { Workflows } from './routes/Workflows';
 import { Workflow } from './routes/Workflow';
 import { VTExplain } from './routes/vtexplain/VTExplain';
+import { Tablet } from './routes/tablet/Tablet';
 
 export const App = () => {
     return (
@@ -62,6 +63,10 @@ export const App = () => {
 
                         <Route path="/tablets">
                             <Tablets />
+                        </Route>
+
+                        <Route path="/tablet/:clusterID/:alias">
+                            <Tablet />
                         </Route>
 
                         <Route path="/workflows">
