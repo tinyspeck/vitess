@@ -29,17 +29,43 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 func init() { proto.RegisterFile("vtctlservice.proto", fileDescriptor_27055cdbb1148d2b) }
 
 var fileDescriptor_27055cdbb1148d2b = []byte{
-	// 146 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x2a, 0x2b, 0x49, 0x2e,
-	0xc9, 0x29, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2,
-	0x41, 0x16, 0x93, 0xe2, 0x07, 0xf3, 0x52, 0x12, 0x4b, 0x12, 0x21, 0xd2, 0x46, 0x85, 0x5c, 0xac,
-	0x61, 0x20, 0x21, 0xa1, 0x0c, 0x2e, 0x61, 0xd7, 0x8a, 0xd4, 0xe4, 0xd2, 0x92, 0x54, 0x30, 0xdf,
-	0x39, 0x3f, 0x37, 0x37, 0x31, 0x2f, 0x45, 0x48, 0x55, 0x0f, 0xa1, 0x03, 0x8b, 0x7c, 0x50, 0x6a,
-	0x61, 0x69, 0x6a, 0x71, 0x89, 0x94, 0x1a, 0x21, 0x65, 0xc5, 0x05, 0xf9, 0x79, 0xc5, 0xa9, 0x4a,
-	0x0c, 0x06, 0x8c, 0x4e, 0xda, 0x51, 0x9a, 0x65, 0x99, 0x25, 0xa9, 0xc5, 0xc5, 0x7a, 0x99, 0xf9,
-	0xfa, 0x10, 0x96, 0x7e, 0x7a, 0xbe, 0x7e, 0x59, 0x89, 0x3e, 0xd8, 0x49, 0xfa, 0xc8, 0x0e, 0x4e,
-	0x62, 0x03, 0x8b, 0x19, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x9d, 0xb5, 0x06, 0x92, 0xdb, 0x00,
-	0x00, 0x00,
+	// 570 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x96, 0x6f, 0x4f, 0xdb, 0x30,
+	0x10, 0xc6, 0xb7, 0x17, 0x43, 0x9b, 0xc7, 0x00, 0x79, 0x2f, 0x26, 0x01, 0xed, 0x68, 0x37, 0x26,
+	0xb1, 0x49, 0xcd, 0xc4, 0x3e, 0x01, 0x74, 0xac, 0x43, 0x48, 0x48, 0x83, 0x0a, 0x24, 0x24, 0x5e,
+	0x98, 0xe4, 0xa0, 0x11, 0x4e, 0x1c, 0x62, 0x37, 0x1b, 0xdf, 0x76, 0x1f, 0x65, 0xaa, 0x5d, 0xbb,
+	0x8e, 0xff, 0x94, 0xbd, 0x23, 0xf7, 0x7b, 0xee, 0x39, 0x5f, 0x72, 0x67, 0x8a, 0x70, 0x23, 0x52,
+	0x41, 0x39, 0xd4, 0x4d, 0x9e, 0xc2, 0xa0, 0xaa, 0x99, 0x60, 0x78, 0xd5, 0x8e, 0x6d, 0xae, 0xcb,
+	0xa7, 0x8c, 0x08, 0xa2, 0xf0, 0xfe, 0x03, 0x7a, 0x71, 0x31, 0x0b, 0xe1, 0x09, 0x7a, 0x7b, 0xf4,
+	0x07, 0xd2, 0xa9, 0x00, 0xf9, 0x3c, 0x64, 0x45, 0x41, 0xca, 0x0c, 0xef, 0x0e, 0x16, 0x19, 0x01,
+	0x7e, 0x06, 0x0f, 0x53, 0xe0, 0x62, 0xf3, 0xd3, 0x53, 0x32, 0x5e, 0xb1, 0x92, 0x43, 0xff, 0xd9,
+	0xd7, 0xe7, 0xfb, 0x7f, 0xd7, 0xd0, 0x8a, 0x84, 0x19, 0xbe, 0x46, 0x1b, 0xc3, 0x09, 0x29, 0xef,
+	0x60, 0x4c, 0x6e, 0x28, 0x88, 0xf1, 0x63, 0x05, 0xb8, 0x6f, 0x59, 0xb9, 0x50, 0x97, 0xfb, 0xb0,
+	0x54, 0xa3, 0x6b, 0xe1, 0x4b, 0xb4, 0x36, 0xac, 0x81, 0x08, 0x38, 0x81, 0x47, 0x5e, 0x91, 0x14,
+	0xf0, 0x8e, 0x9d, 0xd8, 0x42, 0xda, 0xba, 0xb7, 0x44, 0x61, 0x8c, 0x4f, 0xd1, 0x6b, 0xc5, 0xce,
+	0x27, 0xa4, 0xce, 0x70, 0xc7, 0xcb, 0x91, 0x71, 0x6d, 0xd9, 0x8d, 0x61, 0xfb, 0xa0, 0xdf, 0x81,
+	0x42, 0xe4, 0xa0, 0x6d, 0x14, 0x3a, 0xa8, 0xab, 0x30, 0xc6, 0xbf, 0xd0, 0xaa, 0x62, 0xb2, 0x22,
+	0xc7, 0x5d, 0x2f, 0x49, 0x01, 0x6d, 0xfa, 0x3e, 0xca, 0x8d, 0xe5, 0x18, 0xbd, 0x51, 0x44, 0xbd,
+	0x72, 0x8e, 0xfd, 0x9c, 0x39, 0xd1, 0xa6, 0x3b, 0x71, 0x81, 0x71, 0xad, 0xd1, 0xbb, 0x1f, 0x79,
+	0x99, 0x1d, 0x50, 0xaa, 0x0a, 0x1e, 0x97, 0xe6, 0x55, 0xec, 0x59, 0xe9, 0x11, 0x8d, 0xae, 0xf4,
+	0xf9, 0x7f, 0xa4, 0xa6, 0xe6, 0x09, 0x42, 0x23, 0x10, 0x87, 0x24, 0xbd, 0x9f, 0x56, 0x1c, 0x6f,
+	0x5b, 0xb9, 0x8b, 0xb0, 0x76, 0xee, 0x44, 0xa8, 0x31, 0xbb, 0x46, 0x1b, 0x23, 0x10, 0x43, 0xa0,
+	0xf4, 0xb8, 0xbc, 0x65, 0xa7, 0xa4, 0x00, 0xde, 0x1a, 0x65, 0x17, 0x86, 0x46, 0xd9, 0xd7, 0xd8,
+	0x13, 0x67, 0x51, 0xdc, 0x09, 0x67, 0x85, 0x26, 0xae, 0x85, 0x8d, 0xdf, 0x15, 0x5a, 0x9f, 0x03,
+	0x7e, 0x40, 0x73, 0xc2, 0x81, 0xe3, 0x9e, 0x9f, 0xa4, 0x99, 0xf6, 0xed, 0x2f, 0x93, 0x38, 0x67,
+	0x35, 0xdf, 0xcf, 0x39, 0xab, 0xfb, 0xcd, 0xba, 0x31, 0x6c, 0x0f, 0xb1, 0x05, 0xda, 0x43, 0x6c,
+	0x83, 0xd0, 0x10, 0xb7, 0xb9, 0xb1, 0xfc, 0x89, 0x5e, 0x8d, 0x40, 0x9c, 0xa7, 0x13, 0x28, 0x08,
+	0xde, 0x6a, 0xeb, 0x55, 0x54, 0x9b, 0x6d, 0x87, 0xa1, 0x71, 0x3a, 0x42, 0x2f, 0x67, 0x61, 0x79,
+	0x0f, 0x6c, 0x3a, 0x5a, 0xfb, 0x12, 0xd8, 0x0a, 0x32, 0x7b, 0xab, 0x66, 0xd1, 0xba, 0xb9, 0x98,
+	0x1f, 0xca, 0x69, 0x62, 0x41, 0x42, 0x5b, 0xe5, 0x08, 0x9c, 0x36, 0xd5, 0xb6, 0xb9, 0x6d, 0xaa,
+	0x68, 0xa4, 0x4d, 0x0d, 0x9d, 0x5d, 0xd1, 0x2b, 0x1f, 0x54, 0xc7, 0x76, 0xc5, 0x5f, 0x76, 0x65,
+	0xa6, 0x3b, 0x75, 0xcc, 0x9c, 0x36, 0x3b, 0x11, 0xea, 0x4c, 0xc7, 0x25, 0xab, 0xef, 0x6f, 0x29,
+	0xfb, 0xed, 0x4d, 0x87, 0x01, 0x91, 0xe9, 0xb0, 0xb8, 0xb1, 0x4c, 0x11, 0x3e, 0x83, 0x82, 0x35,
+	0xe6, 0x46, 0x9d, 0x0d, 0x3a, 0xfe, 0x68, 0x25, 0xfa, 0x58, 0xdb, 0xef, 0x3e, 0xa1, 0xb2, 0x37,
+	0x50, 0x71, 0x39, 0x0a, 0xb2, 0x42, 0xcf, 0xcb, 0x35, 0x2c, 0xb4, 0x81, 0x9e, 0x44, 0x7b, 0x1f,
+	0x7e, 0xb9, 0xda, 0x6b, 0x72, 0x01, 0x9c, 0x0f, 0x72, 0x96, 0xa8, 0xbf, 0x92, 0x3b, 0x96, 0x34,
+	0x22, 0x91, 0xff, 0xf5, 0x13, 0xfb, 0x37, 0xc1, 0xcd, 0x8a, 0x8c, 0x7d, 0xfb, 0x17, 0x00, 0x00,
+	0xff, 0xff, 0xb0, 0xcb, 0xe1, 0x8e, 0x3e, 0x08, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -146,5 +172,915 @@ var _Vtctl_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
+	Metadata: "vtctlservice.proto",
+}
+
+// VtctldClient is the client API for Vtctld service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type VtctldClient interface {
+	// ChangeTabletType changes the db type for the specified tablet, if possible.
+	// This is used primarily to arrange replicas, and it will not convert a
+	// primary. For that, use InitShardPrimary.
+	//
+	// NOTE: This command automatically updates the serving graph.
+	ChangeTabletType(ctx context.Context, in *vtctldata.ChangeTabletTypeRequest, opts ...grpc.CallOption) (*vtctldata.ChangeTabletTypeResponse, error)
+	// CreateKeyspace creates the specified keyspace in the topology. For a
+	// SNAPSHOT keyspace, the request must specify the name of a base keyspace,
+	// as well as a snapshot time.
+	CreateKeyspace(ctx context.Context, in *vtctldata.CreateKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.CreateKeyspaceResponse, error)
+	// CreateShard creates the specified shard in the topology.
+	CreateShard(ctx context.Context, in *vtctldata.CreateShardRequest, opts ...grpc.CallOption) (*vtctldata.CreateShardResponse, error)
+	// DeleteKeyspace deletes the specified keyspace from the topology. In
+	// recursive mode, it also recursively deletes all shards in the keyspace.
+	// Otherwise, the keyspace must be empty (have no shards), or DeleteKeyspace
+	// returns an error.
+	DeleteKeyspace(ctx context.Context, in *vtctldata.DeleteKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.DeleteKeyspaceResponse, error)
+	// DeleteShards deletes the specified shards from the topology. In recursive
+	// mode, it also deletes all tablets belonging to the shard. Otherwise, the
+	// shard must be empty (have no tablets) or DeleteShards returns an error for
+	// that shard.
+	DeleteShards(ctx context.Context, in *vtctldata.DeleteShardsRequest, opts ...grpc.CallOption) (*vtctldata.DeleteShardsResponse, error)
+	// DeleteTablets deletes one or more tablets from the topology.
+	DeleteTablets(ctx context.Context, in *vtctldata.DeleteTabletsRequest, opts ...grpc.CallOption) (*vtctldata.DeleteTabletsResponse, error)
+	// FindAllShardsInKeyspace returns a map of shard names to shard references
+	// for a given keyspace.
+	FindAllShardsInKeyspace(ctx context.Context, in *vtctldata.FindAllShardsInKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.FindAllShardsInKeyspaceResponse, error)
+	// GetBackups returns all the backups for a shard.
+	GetBackups(ctx context.Context, in *vtctldata.GetBackupsRequest, opts ...grpc.CallOption) (*vtctldata.GetBackupsResponse, error)
+	// GetCellInfoNames returns all the cells for which we have a CellInfo object,
+	// meaning we have a topology service registered.
+	GetCellInfoNames(ctx context.Context, in *vtctldata.GetCellInfoNamesRequest, opts ...grpc.CallOption) (*vtctldata.GetCellInfoNamesResponse, error)
+	// GetCellInfo returns the information for a cell.
+	GetCellInfo(ctx context.Context, in *vtctldata.GetCellInfoRequest, opts ...grpc.CallOption) (*vtctldata.GetCellInfoResponse, error)
+	// GetCellsAliases returns a mapping of cell alias to cells identified by that
+	// alias.
+	GetCellsAliases(ctx context.Context, in *vtctldata.GetCellsAliasesRequest, opts ...grpc.CallOption) (*vtctldata.GetCellsAliasesResponse, error)
+	// GetKeyspace reads the given keyspace from the topo and returns it.
+	GetKeyspace(ctx context.Context, in *vtctldata.GetKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.GetKeyspaceResponse, error)
+	// GetKeyspaces returns the keyspace struct of all keyspaces in the topo.
+	GetKeyspaces(ctx context.Context, in *vtctldata.GetKeyspacesRequest, opts ...grpc.CallOption) (*vtctldata.GetKeyspacesResponse, error)
+	// GetSchema returns the schema for a tablet, or just the schema for the
+	// specified tables in that tablet.
+	GetSchema(ctx context.Context, in *vtctldata.GetSchemaRequest, opts ...grpc.CallOption) (*vtctldata.GetSchemaResponse, error)
+	// GetShard returns information about a shard in the topology.
+	GetShard(ctx context.Context, in *vtctldata.GetShardRequest, opts ...grpc.CallOption) (*vtctldata.GetShardResponse, error)
+	// GetSrvVSchema returns a the SrvVSchema for a cell.
+	GetSrvVSchema(ctx context.Context, in *vtctldata.GetSrvVSchemaRequest, opts ...grpc.CallOption) (*vtctldata.GetSrvVSchemaResponse, error)
+	// GetTablet returns information about a tablet.
+	GetTablet(ctx context.Context, in *vtctldata.GetTabletRequest, opts ...grpc.CallOption) (*vtctldata.GetTabletResponse, error)
+	// GetTablets returns tablets, optionally filtered by keyspace and shard.
+	GetTablets(ctx context.Context, in *vtctldata.GetTabletsRequest, opts ...grpc.CallOption) (*vtctldata.GetTabletsResponse, error)
+	// GetVSchema returns the vschema for a keyspace.
+	GetVSchema(ctx context.Context, in *vtctldata.GetVSchemaRequest, opts ...grpc.CallOption) (*vtctldata.GetVSchemaResponse, error)
+	// GetWorkflows returns a list of workflows for the given keyspace.
+	GetWorkflows(ctx context.Context, in *vtctldata.GetWorkflowsRequest, opts ...grpc.CallOption) (*vtctldata.GetWorkflowsResponse, error)
+	// RemoveKeyspaceCell removes the specified cell from the Cells list for all
+	// shards in the specified keyspace, as well as from the SrvKeyspace for that
+	// keyspace in that cell.
+	RemoveKeyspaceCell(ctx context.Context, in *vtctldata.RemoveKeyspaceCellRequest, opts ...grpc.CallOption) (*vtctldata.RemoveKeyspaceCellResponse, error)
+	// RemoveShardCell removes the specified cell from the specified shard's Cells
+	// list.
+	RemoveShardCell(ctx context.Context, in *vtctldata.RemoveShardCellRequest, opts ...grpc.CallOption) (*vtctldata.RemoveShardCellResponse, error)
+}
+
+type vtctldClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewVtctldClient(cc *grpc.ClientConn) VtctldClient {
+	return &vtctldClient{cc}
+}
+
+func (c *vtctldClient) ChangeTabletType(ctx context.Context, in *vtctldata.ChangeTabletTypeRequest, opts ...grpc.CallOption) (*vtctldata.ChangeTabletTypeResponse, error) {
+	out := new(vtctldata.ChangeTabletTypeResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/ChangeTabletType", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) CreateKeyspace(ctx context.Context, in *vtctldata.CreateKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.CreateKeyspaceResponse, error) {
+	out := new(vtctldata.CreateKeyspaceResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/CreateKeyspace", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) CreateShard(ctx context.Context, in *vtctldata.CreateShardRequest, opts ...grpc.CallOption) (*vtctldata.CreateShardResponse, error) {
+	out := new(vtctldata.CreateShardResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/CreateShard", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) DeleteKeyspace(ctx context.Context, in *vtctldata.DeleteKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.DeleteKeyspaceResponse, error) {
+	out := new(vtctldata.DeleteKeyspaceResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/DeleteKeyspace", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) DeleteShards(ctx context.Context, in *vtctldata.DeleteShardsRequest, opts ...grpc.CallOption) (*vtctldata.DeleteShardsResponse, error) {
+	out := new(vtctldata.DeleteShardsResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/DeleteShards", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) DeleteTablets(ctx context.Context, in *vtctldata.DeleteTabletsRequest, opts ...grpc.CallOption) (*vtctldata.DeleteTabletsResponse, error) {
+	out := new(vtctldata.DeleteTabletsResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/DeleteTablets", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) FindAllShardsInKeyspace(ctx context.Context, in *vtctldata.FindAllShardsInKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.FindAllShardsInKeyspaceResponse, error) {
+	out := new(vtctldata.FindAllShardsInKeyspaceResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/FindAllShardsInKeyspace", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetBackups(ctx context.Context, in *vtctldata.GetBackupsRequest, opts ...grpc.CallOption) (*vtctldata.GetBackupsResponse, error) {
+	out := new(vtctldata.GetBackupsResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetBackups", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetCellInfoNames(ctx context.Context, in *vtctldata.GetCellInfoNamesRequest, opts ...grpc.CallOption) (*vtctldata.GetCellInfoNamesResponse, error) {
+	out := new(vtctldata.GetCellInfoNamesResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetCellInfoNames", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetCellInfo(ctx context.Context, in *vtctldata.GetCellInfoRequest, opts ...grpc.CallOption) (*vtctldata.GetCellInfoResponse, error) {
+	out := new(vtctldata.GetCellInfoResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetCellInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetCellsAliases(ctx context.Context, in *vtctldata.GetCellsAliasesRequest, opts ...grpc.CallOption) (*vtctldata.GetCellsAliasesResponse, error) {
+	out := new(vtctldata.GetCellsAliasesResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetCellsAliases", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetKeyspace(ctx context.Context, in *vtctldata.GetKeyspaceRequest, opts ...grpc.CallOption) (*vtctldata.GetKeyspaceResponse, error) {
+	out := new(vtctldata.GetKeyspaceResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetKeyspace", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetKeyspaces(ctx context.Context, in *vtctldata.GetKeyspacesRequest, opts ...grpc.CallOption) (*vtctldata.GetKeyspacesResponse, error) {
+	out := new(vtctldata.GetKeyspacesResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetKeyspaces", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetSchema(ctx context.Context, in *vtctldata.GetSchemaRequest, opts ...grpc.CallOption) (*vtctldata.GetSchemaResponse, error) {
+	out := new(vtctldata.GetSchemaResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetSchema", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetShard(ctx context.Context, in *vtctldata.GetShardRequest, opts ...grpc.CallOption) (*vtctldata.GetShardResponse, error) {
+	out := new(vtctldata.GetShardResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetShard", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetSrvVSchema(ctx context.Context, in *vtctldata.GetSrvVSchemaRequest, opts ...grpc.CallOption) (*vtctldata.GetSrvVSchemaResponse, error) {
+	out := new(vtctldata.GetSrvVSchemaResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetSrvVSchema", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetTablet(ctx context.Context, in *vtctldata.GetTabletRequest, opts ...grpc.CallOption) (*vtctldata.GetTabletResponse, error) {
+	out := new(vtctldata.GetTabletResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetTablet", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetTablets(ctx context.Context, in *vtctldata.GetTabletsRequest, opts ...grpc.CallOption) (*vtctldata.GetTabletsResponse, error) {
+	out := new(vtctldata.GetTabletsResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetTablets", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetVSchema(ctx context.Context, in *vtctldata.GetVSchemaRequest, opts ...grpc.CallOption) (*vtctldata.GetVSchemaResponse, error) {
+	out := new(vtctldata.GetVSchemaResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetVSchema", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) GetWorkflows(ctx context.Context, in *vtctldata.GetWorkflowsRequest, opts ...grpc.CallOption) (*vtctldata.GetWorkflowsResponse, error) {
+	out := new(vtctldata.GetWorkflowsResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/GetWorkflows", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) RemoveKeyspaceCell(ctx context.Context, in *vtctldata.RemoveKeyspaceCellRequest, opts ...grpc.CallOption) (*vtctldata.RemoveKeyspaceCellResponse, error) {
+	out := new(vtctldata.RemoveKeyspaceCellResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/RemoveKeyspaceCell", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vtctldClient) RemoveShardCell(ctx context.Context, in *vtctldata.RemoveShardCellRequest, opts ...grpc.CallOption) (*vtctldata.RemoveShardCellResponse, error) {
+	out := new(vtctldata.RemoveShardCellResponse)
+	err := c.cc.Invoke(ctx, "/vtctlservice.Vtctld/RemoveShardCell", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// VtctldServer is the server API for Vtctld service.
+type VtctldServer interface {
+	// ChangeTabletType changes the db type for the specified tablet, if possible.
+	// This is used primarily to arrange replicas, and it will not convert a
+	// primary. For that, use InitShardPrimary.
+	//
+	// NOTE: This command automatically updates the serving graph.
+	ChangeTabletType(context.Context, *vtctldata.ChangeTabletTypeRequest) (*vtctldata.ChangeTabletTypeResponse, error)
+	// CreateKeyspace creates the specified keyspace in the topology. For a
+	// SNAPSHOT keyspace, the request must specify the name of a base keyspace,
+	// as well as a snapshot time.
+	CreateKeyspace(context.Context, *vtctldata.CreateKeyspaceRequest) (*vtctldata.CreateKeyspaceResponse, error)
+	// CreateShard creates the specified shard in the topology.
+	CreateShard(context.Context, *vtctldata.CreateShardRequest) (*vtctldata.CreateShardResponse, error)
+	// DeleteKeyspace deletes the specified keyspace from the topology. In
+	// recursive mode, it also recursively deletes all shards in the keyspace.
+	// Otherwise, the keyspace must be empty (have no shards), or DeleteKeyspace
+	// returns an error.
+	DeleteKeyspace(context.Context, *vtctldata.DeleteKeyspaceRequest) (*vtctldata.DeleteKeyspaceResponse, error)
+	// DeleteShards deletes the specified shards from the topology. In recursive
+	// mode, it also deletes all tablets belonging to the shard. Otherwise, the
+	// shard must be empty (have no tablets) or DeleteShards returns an error for
+	// that shard.
+	DeleteShards(context.Context, *vtctldata.DeleteShardsRequest) (*vtctldata.DeleteShardsResponse, error)
+	// DeleteTablets deletes one or more tablets from the topology.
+	DeleteTablets(context.Context, *vtctldata.DeleteTabletsRequest) (*vtctldata.DeleteTabletsResponse, error)
+	// FindAllShardsInKeyspace returns a map of shard names to shard references
+	// for a given keyspace.
+	FindAllShardsInKeyspace(context.Context, *vtctldata.FindAllShardsInKeyspaceRequest) (*vtctldata.FindAllShardsInKeyspaceResponse, error)
+	// GetBackups returns all the backups for a shard.
+	GetBackups(context.Context, *vtctldata.GetBackupsRequest) (*vtctldata.GetBackupsResponse, error)
+	// GetCellInfoNames returns all the cells for which we have a CellInfo object,
+	// meaning we have a topology service registered.
+	GetCellInfoNames(context.Context, *vtctldata.GetCellInfoNamesRequest) (*vtctldata.GetCellInfoNamesResponse, error)
+	// GetCellInfo returns the information for a cell.
+	GetCellInfo(context.Context, *vtctldata.GetCellInfoRequest) (*vtctldata.GetCellInfoResponse, error)
+	// GetCellsAliases returns a mapping of cell alias to cells identified by that
+	// alias.
+	GetCellsAliases(context.Context, *vtctldata.GetCellsAliasesRequest) (*vtctldata.GetCellsAliasesResponse, error)
+	// GetKeyspace reads the given keyspace from the topo and returns it.
+	GetKeyspace(context.Context, *vtctldata.GetKeyspaceRequest) (*vtctldata.GetKeyspaceResponse, error)
+	// GetKeyspaces returns the keyspace struct of all keyspaces in the topo.
+	GetKeyspaces(context.Context, *vtctldata.GetKeyspacesRequest) (*vtctldata.GetKeyspacesResponse, error)
+	// GetSchema returns the schema for a tablet, or just the schema for the
+	// specified tables in that tablet.
+	GetSchema(context.Context, *vtctldata.GetSchemaRequest) (*vtctldata.GetSchemaResponse, error)
+	// GetShard returns information about a shard in the topology.
+	GetShard(context.Context, *vtctldata.GetShardRequest) (*vtctldata.GetShardResponse, error)
+	// GetSrvVSchema returns a the SrvVSchema for a cell.
+	GetSrvVSchema(context.Context, *vtctldata.GetSrvVSchemaRequest) (*vtctldata.GetSrvVSchemaResponse, error)
+	// GetTablet returns information about a tablet.
+	GetTablet(context.Context, *vtctldata.GetTabletRequest) (*vtctldata.GetTabletResponse, error)
+	// GetTablets returns tablets, optionally filtered by keyspace and shard.
+	GetTablets(context.Context, *vtctldata.GetTabletsRequest) (*vtctldata.GetTabletsResponse, error)
+	// GetVSchema returns the vschema for a keyspace.
+	GetVSchema(context.Context, *vtctldata.GetVSchemaRequest) (*vtctldata.GetVSchemaResponse, error)
+	// GetWorkflows returns a list of workflows for the given keyspace.
+	GetWorkflows(context.Context, *vtctldata.GetWorkflowsRequest) (*vtctldata.GetWorkflowsResponse, error)
+	// RemoveKeyspaceCell removes the specified cell from the Cells list for all
+	// shards in the specified keyspace, as well as from the SrvKeyspace for that
+	// keyspace in that cell.
+	RemoveKeyspaceCell(context.Context, *vtctldata.RemoveKeyspaceCellRequest) (*vtctldata.RemoveKeyspaceCellResponse, error)
+	// RemoveShardCell removes the specified cell from the specified shard's Cells
+	// list.
+	RemoveShardCell(context.Context, *vtctldata.RemoveShardCellRequest) (*vtctldata.RemoveShardCellResponse, error)
+}
+
+// UnimplementedVtctldServer can be embedded to have forward compatible implementations.
+type UnimplementedVtctldServer struct {
+}
+
+func (*UnimplementedVtctldServer) ChangeTabletType(ctx context.Context, req *vtctldata.ChangeTabletTypeRequest) (*vtctldata.ChangeTabletTypeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangeTabletType not implemented")
+}
+func (*UnimplementedVtctldServer) CreateKeyspace(ctx context.Context, req *vtctldata.CreateKeyspaceRequest) (*vtctldata.CreateKeyspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateKeyspace not implemented")
+}
+func (*UnimplementedVtctldServer) CreateShard(ctx context.Context, req *vtctldata.CreateShardRequest) (*vtctldata.CreateShardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateShard not implemented")
+}
+func (*UnimplementedVtctldServer) DeleteKeyspace(ctx context.Context, req *vtctldata.DeleteKeyspaceRequest) (*vtctldata.DeleteKeyspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteKeyspace not implemented")
+}
+func (*UnimplementedVtctldServer) DeleteShards(ctx context.Context, req *vtctldata.DeleteShardsRequest) (*vtctldata.DeleteShardsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteShards not implemented")
+}
+func (*UnimplementedVtctldServer) DeleteTablets(ctx context.Context, req *vtctldata.DeleteTabletsRequest) (*vtctldata.DeleteTabletsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTablets not implemented")
+}
+func (*UnimplementedVtctldServer) FindAllShardsInKeyspace(ctx context.Context, req *vtctldata.FindAllShardsInKeyspaceRequest) (*vtctldata.FindAllShardsInKeyspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindAllShardsInKeyspace not implemented")
+}
+func (*UnimplementedVtctldServer) GetBackups(ctx context.Context, req *vtctldata.GetBackupsRequest) (*vtctldata.GetBackupsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBackups not implemented")
+}
+func (*UnimplementedVtctldServer) GetCellInfoNames(ctx context.Context, req *vtctldata.GetCellInfoNamesRequest) (*vtctldata.GetCellInfoNamesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCellInfoNames not implemented")
+}
+func (*UnimplementedVtctldServer) GetCellInfo(ctx context.Context, req *vtctldata.GetCellInfoRequest) (*vtctldata.GetCellInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCellInfo not implemented")
+}
+func (*UnimplementedVtctldServer) GetCellsAliases(ctx context.Context, req *vtctldata.GetCellsAliasesRequest) (*vtctldata.GetCellsAliasesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCellsAliases not implemented")
+}
+func (*UnimplementedVtctldServer) GetKeyspace(ctx context.Context, req *vtctldata.GetKeyspaceRequest) (*vtctldata.GetKeyspaceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetKeyspace not implemented")
+}
+func (*UnimplementedVtctldServer) GetKeyspaces(ctx context.Context, req *vtctldata.GetKeyspacesRequest) (*vtctldata.GetKeyspacesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetKeyspaces not implemented")
+}
+func (*UnimplementedVtctldServer) GetSchema(ctx context.Context, req *vtctldata.GetSchemaRequest) (*vtctldata.GetSchemaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSchema not implemented")
+}
+func (*UnimplementedVtctldServer) GetShard(ctx context.Context, req *vtctldata.GetShardRequest) (*vtctldata.GetShardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetShard not implemented")
+}
+func (*UnimplementedVtctldServer) GetSrvVSchema(ctx context.Context, req *vtctldata.GetSrvVSchemaRequest) (*vtctldata.GetSrvVSchemaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSrvVSchema not implemented")
+}
+func (*UnimplementedVtctldServer) GetTablet(ctx context.Context, req *vtctldata.GetTabletRequest) (*vtctldata.GetTabletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTablet not implemented")
+}
+func (*UnimplementedVtctldServer) GetTablets(ctx context.Context, req *vtctldata.GetTabletsRequest) (*vtctldata.GetTabletsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTablets not implemented")
+}
+func (*UnimplementedVtctldServer) GetVSchema(ctx context.Context, req *vtctldata.GetVSchemaRequest) (*vtctldata.GetVSchemaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVSchema not implemented")
+}
+func (*UnimplementedVtctldServer) GetWorkflows(ctx context.Context, req *vtctldata.GetWorkflowsRequest) (*vtctldata.GetWorkflowsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflows not implemented")
+}
+func (*UnimplementedVtctldServer) RemoveKeyspaceCell(ctx context.Context, req *vtctldata.RemoveKeyspaceCellRequest) (*vtctldata.RemoveKeyspaceCellResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveKeyspaceCell not implemented")
+}
+func (*UnimplementedVtctldServer) RemoveShardCell(ctx context.Context, req *vtctldata.RemoveShardCellRequest) (*vtctldata.RemoveShardCellResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveShardCell not implemented")
+}
+
+func RegisterVtctldServer(s *grpc.Server, srv VtctldServer) {
+	s.RegisterService(&_Vtctld_serviceDesc, srv)
+}
+
+func _Vtctld_ChangeTabletType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.ChangeTabletTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).ChangeTabletType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/ChangeTabletType",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).ChangeTabletType(ctx, req.(*vtctldata.ChangeTabletTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_CreateKeyspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.CreateKeyspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).CreateKeyspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/CreateKeyspace",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).CreateKeyspace(ctx, req.(*vtctldata.CreateKeyspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_CreateShard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.CreateShardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).CreateShard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/CreateShard",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).CreateShard(ctx, req.(*vtctldata.CreateShardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_DeleteKeyspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.DeleteKeyspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).DeleteKeyspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/DeleteKeyspace",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).DeleteKeyspace(ctx, req.(*vtctldata.DeleteKeyspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_DeleteShards_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.DeleteShardsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).DeleteShards(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/DeleteShards",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).DeleteShards(ctx, req.(*vtctldata.DeleteShardsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_DeleteTablets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.DeleteTabletsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).DeleteTablets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/DeleteTablets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).DeleteTablets(ctx, req.(*vtctldata.DeleteTabletsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_FindAllShardsInKeyspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.FindAllShardsInKeyspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).FindAllShardsInKeyspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/FindAllShardsInKeyspace",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).FindAllShardsInKeyspace(ctx, req.(*vtctldata.FindAllShardsInKeyspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetBackups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetBackupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetBackups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetBackups",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetBackups(ctx, req.(*vtctldata.GetBackupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetCellInfoNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetCellInfoNamesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetCellInfoNames(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetCellInfoNames",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetCellInfoNames(ctx, req.(*vtctldata.GetCellInfoNamesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetCellInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetCellInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetCellInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetCellInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetCellInfo(ctx, req.(*vtctldata.GetCellInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetCellsAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetCellsAliasesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetCellsAliases(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetCellsAliases",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetCellsAliases(ctx, req.(*vtctldata.GetCellsAliasesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetKeyspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetKeyspaceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetKeyspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetKeyspace",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetKeyspace(ctx, req.(*vtctldata.GetKeyspaceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetKeyspaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetKeyspacesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetKeyspaces(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetKeyspaces",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetKeyspaces(ctx, req.(*vtctldata.GetKeyspacesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetSchemaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetSchema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetSchema",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetSchema(ctx, req.(*vtctldata.GetSchemaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetShard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetShardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetShard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetShard",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetShard(ctx, req.(*vtctldata.GetShardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetSrvVSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetSrvVSchemaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetSrvVSchema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetSrvVSchema",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetSrvVSchema(ctx, req.(*vtctldata.GetSrvVSchemaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetTablet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetTabletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetTablet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetTablet",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetTablet(ctx, req.(*vtctldata.GetTabletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetTablets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetTabletsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetTablets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetTablets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetTablets(ctx, req.(*vtctldata.GetTabletsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetVSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetVSchemaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetVSchema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetVSchema",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetVSchema(ctx, req.(*vtctldata.GetVSchemaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_GetWorkflows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.GetWorkflowsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).GetWorkflows(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/GetWorkflows",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).GetWorkflows(ctx, req.(*vtctldata.GetWorkflowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_RemoveKeyspaceCell_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.RemoveKeyspaceCellRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).RemoveKeyspaceCell(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/RemoveKeyspaceCell",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).RemoveKeyspaceCell(ctx, req.(*vtctldata.RemoveKeyspaceCellRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Vtctld_RemoveShardCell_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(vtctldata.RemoveShardCellRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VtctldServer).RemoveShardCell(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vtctlservice.Vtctld/RemoveShardCell",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VtctldServer).RemoveShardCell(ctx, req.(*vtctldata.RemoveShardCellRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Vtctld_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "vtctlservice.Vtctld",
+	HandlerType: (*VtctldServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ChangeTabletType",
+			Handler:    _Vtctld_ChangeTabletType_Handler,
+		},
+		{
+			MethodName: "CreateKeyspace",
+			Handler:    _Vtctld_CreateKeyspace_Handler,
+		},
+		{
+			MethodName: "CreateShard",
+			Handler:    _Vtctld_CreateShard_Handler,
+		},
+		{
+			MethodName: "DeleteKeyspace",
+			Handler:    _Vtctld_DeleteKeyspace_Handler,
+		},
+		{
+			MethodName: "DeleteShards",
+			Handler:    _Vtctld_DeleteShards_Handler,
+		},
+		{
+			MethodName: "DeleteTablets",
+			Handler:    _Vtctld_DeleteTablets_Handler,
+		},
+		{
+			MethodName: "FindAllShardsInKeyspace",
+			Handler:    _Vtctld_FindAllShardsInKeyspace_Handler,
+		},
+		{
+			MethodName: "GetBackups",
+			Handler:    _Vtctld_GetBackups_Handler,
+		},
+		{
+			MethodName: "GetCellInfoNames",
+			Handler:    _Vtctld_GetCellInfoNames_Handler,
+		},
+		{
+			MethodName: "GetCellInfo",
+			Handler:    _Vtctld_GetCellInfo_Handler,
+		},
+		{
+			MethodName: "GetCellsAliases",
+			Handler:    _Vtctld_GetCellsAliases_Handler,
+		},
+		{
+			MethodName: "GetKeyspace",
+			Handler:    _Vtctld_GetKeyspace_Handler,
+		},
+		{
+			MethodName: "GetKeyspaces",
+			Handler:    _Vtctld_GetKeyspaces_Handler,
+		},
+		{
+			MethodName: "GetSchema",
+			Handler:    _Vtctld_GetSchema_Handler,
+		},
+		{
+			MethodName: "GetShard",
+			Handler:    _Vtctld_GetShard_Handler,
+		},
+		{
+			MethodName: "GetSrvVSchema",
+			Handler:    _Vtctld_GetSrvVSchema_Handler,
+		},
+		{
+			MethodName: "GetTablet",
+			Handler:    _Vtctld_GetTablet_Handler,
+		},
+		{
+			MethodName: "GetTablets",
+			Handler:    _Vtctld_GetTablets_Handler,
+		},
+		{
+			MethodName: "GetVSchema",
+			Handler:    _Vtctld_GetVSchema_Handler,
+		},
+		{
+			MethodName: "GetWorkflows",
+			Handler:    _Vtctld_GetWorkflows_Handler,
+		},
+		{
+			MethodName: "RemoveKeyspaceCell",
+			Handler:    _Vtctld_RemoveKeyspaceCell_Handler,
+		},
+		{
+			MethodName: "RemoveShardCell",
+			Handler:    _Vtctld_RemoveShardCell_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "vtctlservice.proto",
 }

@@ -730,19 +730,6 @@ func parseTabletType(param string, types []topodatapb.TabletType) (topodatapb.Ta
 	return tabletType, nil
 }
 
-// parseServingTabletType3 parses the tablet type into the enum,
-// and makes sure the enum is of serving type (MASTER, REPLICA, RDONLY/BATCH)
-func parseServingTabletType3(param string) (topodatapb.TabletType, error) {
-	servedType, err := topoproto.ParseTabletType(param)
-	if err != nil {
-		return topodatapb.TabletType_UNKNOWN, err
-	}
-	if !topo.IsInServingGraph(servedType) {
-		return topodatapb.TabletType_UNKNOWN, fmt.Errorf("served_type has to be in the serving graph, not %v", param)
-	}
-	return servedType, nil
-}
-
 func commandInitTablet(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
 	dbNameOverride := subFlags.String("db_name_override", "", "Overrides the name of the database that the vttablet uses")
 	allowUpdate := subFlags.Bool("allow_update", false, "Use this flag to force initialization if a tablet with the same name already exists. Use with caution.")
@@ -1116,7 +1103,7 @@ func commandWaitForDrain(ctx context.Context, wr *wrangler.Wrangler, subFlags *f
 	if err != nil {
 		return err
 	}
-	servedType, err := parseServingTabletType3(subFlags.Arg(1))
+	servedType, err := topo.ParseServingTabletType(subFlags.Arg(1))
 	if err != nil {
 		return err
 	}
@@ -1397,7 +1384,7 @@ func commandUpdateSrvKeyspacePartition(ctx context.Context, wr *wrangler.Wrangle
 	if err != nil {
 		return err
 	}
-	tabletType, err := parseServingTabletType3(subFlags.Arg(1))
+	tabletType, err := topo.ParseServingTabletType(subFlags.Arg(1))
 	if err != nil {
 		return err
 	}
@@ -1429,7 +1416,7 @@ func commandSetShardTabletControl(ctx context.Context, wr *wrangler.Wrangler, su
 	if err != nil {
 		return err
 	}
-	tabletType, err := parseServingTabletType3(subFlags.Arg(1))
+	tabletType, err := topo.ParseServingTabletType(subFlags.Arg(1))
 	if err != nil {
 		return err
 	}
@@ -1686,7 +1673,7 @@ func commandCreateKeyspace(ctx context.Context, wr *wrangler.Wrangler, subFlags 
 	}
 	if len(servedFrom) > 0 {
 		for name, value := range servedFrom {
-			tt, err := parseServingTabletType3(name)
+			tt, err := topo.ParseServingTabletType(name)
 			if err != nil {
 				return err
 			}
@@ -1773,20 +1760,29 @@ func commandGetKeyspace(ctx context.Context, wr *wrangler.Wrangler, subFlags *fl
 	}
 
 	keyspace := subFlags.Arg(0)
-	keyspaceInfo, err := wr.TopoServer().GetKeyspace(ctx, keyspace)
+
+	keyspaceInfo, err := wr.VtctldServer().GetKeyspace(ctx, &vtctldatapb.GetKeyspaceRequest{
+		Keyspace: keyspace,
+	})
 	if err != nil {
 		return err
 	}
 	// Pass the embedded proto directly or jsonpb will panic.
-	return printJSON(wr.Logger(), keyspaceInfo.Keyspace)
+	return printJSON(wr.Logger(), keyspaceInfo.Keyspace.Keyspace)
 }
 
 func commandGetKeyspaces(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
-	keyspaces, err := wr.TopoServer().GetKeyspaces(ctx)
+	resp, err := wr.VtctldServer().GetKeyspaces(ctx, &vtctldatapb.GetKeyspacesRequest{})
 	if err != nil {
 		return err
 	}
-	wr.Logger().Printf("%v\n", strings.Join(keyspaces, "\n"))
+
+	names := make([]string, len(resp.Keyspaces))
+	for i, ks := range resp.Keyspaces {
+		names[i] = ks.Name
+	}
+
+	wr.Logger().Printf("%v\n", strings.Join(names, "\n"))
 	return nil
 }
 
@@ -2040,7 +2036,7 @@ func commandMigrateServedTypes(ctx context.Context, wr *wrangler.Wrangler, subFl
 	if err != nil {
 		return err
 	}
-	servedType, err := parseServingTabletType3(subFlags.Arg(1))
+	servedType, err := topo.ParseServingTabletType(subFlags.Arg(1))
 	if err != nil {
 		return err
 	}
@@ -2224,11 +2220,21 @@ func commandFindAllShardsInKeyspace(ctx context.Context, wr *wrangler.Wrangler, 
 	}
 
 	keyspace := subFlags.Arg(0)
-	result, err := wr.TopoServer().FindAllShardsInKeyspace(ctx, keyspace)
+	result, err := wr.VtctldServer().FindAllShardsInKeyspace(ctx, &vtctldatapb.FindAllShardsInKeyspaceRequest{
+		Keyspace: keyspace,
+	})
 	if err != nil {
 		return err
 	}
-	return printJSON(wr.Logger(), result)
+
+	// reformat data into structure of old interface
+	legacyShardMap := make(map[string]*topodatapb.Shard, len(result.Shards))
+
+	for _, shard := range result.Shards {
+		legacyShardMap[shard.Name] = shard.Shard
+	}
+
+	return printJSON(wr.Logger(), legacyShardMap)
 }
 
 func commandValidate(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
@@ -2292,6 +2298,8 @@ func commandGetSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag
 	excludeTables := subFlags.String("exclude_tables", "", "Specifies a comma-separated list of tables to exclude. Each is either an exact match, or a regular expression of the form /regexp/")
 	includeViews := subFlags.Bool("include-views", false, "Includes views in the output")
 	tableNamesOnly := subFlags.Bool("table_names_only", false, "Only displays table names that match")
+	tableSizesOnly := subFlags.Bool("table_sizes_only", false, "Only displays size information for tables. Ignored if -table_names_only is passed.")
+
 	if err := subFlags.Parse(args); err != nil {
 		return err
 	}
@@ -2311,17 +2319,26 @@ func commandGetSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag
 		excludeTableArray = strings.Split(*excludeTables, ",")
 	}
 
-	sd, err := wr.GetSchema(ctx, tabletAlias, tableArray, excludeTableArray, *includeViews)
+	resp, err := wr.VtctldServer().GetSchema(ctx, &vtctldatapb.GetSchemaRequest{
+		TabletAlias:    tabletAlias,
+		Tables:         tableArray,
+		ExcludeTables:  excludeTableArray,
+		IncludeViews:   *includeViews,
+		TableNamesOnly: *tableNamesOnly,
+		TableSizesOnly: *tableSizesOnly,
+	})
 	if err != nil {
 		return err
 	}
+
 	if *tableNamesOnly {
-		for _, td := range sd.TableDefinitions {
+		for _, td := range resp.Schema.TableDefinitions {
 			wr.Logger().Printf("%v\n", td.Name)
 		}
 		return nil
 	}
-	return printJSON(wr.Logger(), sd)
+
+	return printJSON(wr.Logger(), resp.Schema)
 }
 
 func commandReloadSchema(ctx context.Context, wr *wrangler.Wrangler, subFlags *flag.FlagSet, args []string) error {
