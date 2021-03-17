@@ -5,9 +5,10 @@ import HighchartsReact from 'highcharts-react-official';
 import { flatten } from 'lodash';
 import { useQueries, UseQueryResult } from 'react-query';
 import { fetchTabletVars, TabletVars } from '../../../api/tablet';
-import { useWorkflow } from '../../../hooks/api';
+import { useTablets, useWorkflow } from '../../../hooks/api';
 import style from './WorkflowTablets.module.scss';
 import { uniqBy } from 'lodash-es';
+import { vtadmin as pb } from '../../../proto/vtadmin';
 
 interface Props {
     clusterID: string;
@@ -27,14 +28,18 @@ interface TabletVarsResponse {
 
 export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name: workflow });
+    const { data: allTablets = [] } = useTablets();
+
     const shardStreams = Object.values(data?.workflow?.shard_streams || {});
-    const tablets = uniqBy(flatten(shardStreams.map((s) => s.streams?.map((st) => st.tablet))), 'cell');
+    const tablets = uniqBy(flatten(shardStreams.map((s) => s.streams?.map((st) => st.tablet))), 'cell')
+        .map((ta) => allTablets.find((tt) => tt.tablet?.alias?.cell === ta?.cell && tt.tablet?.alias?.uid === ta?.uid))
+        .filter((tt) => !!tt) as pb.Tablet[];
 
     const tabletQueries = useQueries(
         tablets.map((t) => ({
-            queryKey: ['/debug/vars', t?.uid],
+            queryKey: ['/debug/vars', t],
             queryFn: async () => {
-                const tv = await fetchTabletVars(t?.uid || 101);
+                const tv = await fetchTabletVars(t);
                 return { tablet: t, vars: tv };
             },
             refetchInterval: 1000,
