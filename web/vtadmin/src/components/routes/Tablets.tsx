@@ -26,6 +26,7 @@ import { filterNouns } from '../../util/filterNouns';
 import style from './Tablets.module.scss';
 import { Button } from '../Button';
 import { Link } from 'react-router-dom';
+import { TabletLink } from '../links/TabletLink';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
@@ -40,15 +41,35 @@ export const Tablets = () => {
     const renderRows = React.useCallback((rows: typeof filteredData) => {
         return rows.map((t, tdx) => (
             <tr key={tdx}>
-                <td>{t.cluster}</td>
-                <td>{t.keyspace}</td>
-                <td>{t.shard}</td>
-                <td>{t.type}</td>
-                <td>{t.state}</td>
                 <td>
-                    <Link to={`/tablet/${t.clusterID}/${t.alias}`}>{t.alias}</Link>
+                    <code>{t.cluster}</code>
                 </td>
-                <td>{t.hostname}</td>
+                <td>
+                    <code>{t.keyspace}</code>
+                </td>
+                <td>
+                    <code>{t.shard}</code>
+                </td>
+                <td>
+                    <Link to={`/tablet/${t.clusterID}/${t.alias}`}>
+                        <code className="font-weight-bold">{t.alias}</code>
+                    </Link>
+                </td>
+                <td>
+                    <code>{t.type}</code>
+                </td>
+                <td>
+                    <code>{t.state}</code>
+                </td>
+                <td>
+                    <TabletLink
+                        cell={t._tablet.tablet?.alias?.cell}
+                        hostname={t._tablet.tablet?.hostname}
+                        uid={t._tablet.tablet?.alias?.uid}
+                    >
+                        <code>{t.hostname}</code>
+                    </TabletLink>
+                </td>
             </tr>
         ));
     }, []);
@@ -69,7 +90,7 @@ export const Tablets = () => {
                 </Button>
             </div>
             <DataTable
-                columns={['Cluster', 'Keyspace', 'Shard', 'Type', 'State', 'Alias', 'Hostname']}
+                columns={['Cluster', 'Keyspace', 'Shard', 'Alias', 'Type', 'State', 'Hostname']}
                 data={filteredData}
                 renderRows={renderRows}
             />
@@ -125,6 +146,7 @@ export const formatRows = (tablets: pb.Tablet[] | null, filter: string) => {
         _rawType: formatType(t),
         // Always sort primary tablets first, then sort alphabetically by type, etc.
         _typeSortOrder: formatDisplayType(t) === 'PRIMARY' ? 1 : 2,
+        _tablet: t,
     }));
     const filtered = filterNouns(filter, mapped);
     return orderBy(filtered, ['cluster', 'keyspace', 'shard', '_typeSortOrder', 'type', 'alias']);
