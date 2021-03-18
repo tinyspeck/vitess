@@ -15,7 +15,7 @@
  */
 import * as React from 'react';
 import { Switch, useParams } from 'react-router';
-import { Link, NavLink, Redirect, Route, useRouteMatch } from 'react-router-dom';
+import { Link, Redirect, Route, useRouteMatch } from 'react-router-dom';
 
 import { useWorkflow } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
@@ -67,7 +67,7 @@ export const Workflow = () => {
                 <Tab to={`${url}/streams`} count={numStreams}>
                     Streams
                 </Tab>
-                <Tab to={`${url}/tablets`}>Tablets</Tab>
+                <Tab to={`${url}/tablets`}>VRep QPS</Tab>
                 <Tab to={`${url}/json`}>JSON</Tab>
             </Tabs>
 

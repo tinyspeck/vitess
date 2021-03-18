@@ -19,6 +19,7 @@ import { Link } from 'react-router-dom';
 import { TableDefinition, useTableDefinitions } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { DataTable } from '../dataTable/DataTable';
+import style from './Schemas.module.scss';
 
 export const Schemas = () => {
     useDocumentTitle('Schemas');
@@ -36,15 +37,23 @@ export const Schemas = () => {
                     : null;
             return (
                 <tr key={idx}>
-                    <td>{row.cluster?.name}</td>
-                    <td>{row.keyspace}</td>
-                    <td>{href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}</td>
+                    <td>
+                        <code>{row.cluster?.name}</code>
+                    </td>
+                    <td>
+                        <code>{row.keyspace}</code>
+                    </td>
+                    <td>
+                        <code>
+                            {href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}
+                        </code>
+                    </td>
                 </tr>
             );
         });
 
     return (
-        <div>
+        <div className={style.container}>
             <h1>Schemas</h1>
             <DataTable columns={['Cluster', 'Keyspace', 'Table']} data={rows} renderRows={renderRows} />
         </div>

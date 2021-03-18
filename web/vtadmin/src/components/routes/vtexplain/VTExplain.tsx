@@ -12,7 +12,7 @@ import style from './VTExplain.module.scss';
 import { vtadmin as pb } from '../../../proto/vtadmin';
 import { Label } from '../../inputs/Label';
 import { useQuery } from 'react-query';
-import { fetchVTExplain, HttpResponseNotOkError } from '../../../api/http';
+import { fetchVTExplain } from '../../../api/http';
 import { Code } from '../../Code';
 import { useURLQuery } from '../../../hooks/useURLQuery';
 
@@ -53,6 +53,7 @@ export const VTExplain = () => {
             vtexplainQuery.refetch();
             setHasInitialQuery(true);
         }
+        /* eslint-disable-next-line react-hooks/exhaustive-deps */
     }, [hasInitialized, hasInitialQuery, cluster, clusterName, keyspace, keyspaceName, sql]);
 
     const onChangeCluster = (c: pb.Cluster | null | undefined) => {
