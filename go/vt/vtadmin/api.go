@@ -37,6 +37,7 @@ import (
 	"vitess.io/vitess/go/vt/vtadmin/errors"
 	"vitess.io/vitess/go/vt/vtadmin/grpcserver"
 	vtadminhttp "vitess.io/vitess/go/vt/vtadmin/http"
+	"vitess.io/vitess/go/vt/vtadmin/http/experimental"
 	vthandlers "vitess.io/vitess/go/vt/vtadmin/http/handlers"
 	"vitess.io/vitess/go/vt/vtadmin/sort"
 	"vitess.io/vitess/go/vt/vterrors"
@@ -94,7 +95,7 @@ func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadm
 
 	vtadminpb.RegisterVTAdminServer(serv.GRPCServer(), api)
 
-	httpAPI := vtadminhttp.NewAPI(api)
+	httpAPI := vtadminhttp.NewAPI(api, httpOpts)
 
 	router.HandleFunc("/clusters", httpAPI.Adapt(vtadminhttp.GetClusters)).Name("API.GetClusters")
 	router.HandleFunc("/gates", httpAPI.Adapt(vtadminhttp.GetGates)).Name("API.GetGates")
@@ -109,6 +110,9 @@ func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadm
 	router.HandleFunc("/vtexplain", httpAPI.Adapt(vtadminhttp.VTExplain)).Name("API.VTExplain")
 	router.HandleFunc("/workflow/{cluster_id}/{keyspace}/{name}", httpAPI.Adapt(vtadminhttp.GetWorkflow)).Name("API.GetWorkflow")
 	router.HandleFunc("/workflows", httpAPI.Adapt(vtadminhttp.GetWorkflows)).Name("API.GetWorkflows")
+
+	experimentalRouter := router.PathPrefix("/experimental").Subrouter()
+	experimentalRouter.HandleFunc("/tablet/{tablet}/debug/vars", httpAPI.Adapt(experimental.TabletDebugVarsPassthrough)).Name("API.TabletDebugVarsPassthrough")
 
 	// Middlewares are executed in order of addition. Our ordering (all
 	// middlewares being optional) is:
