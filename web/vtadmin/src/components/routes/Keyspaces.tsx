@@ -15,10 +15,12 @@
  */
 import { orderBy } from 'lodash-es';
 import * as React from 'react';
+import { Link } from 'react-router-dom';
 import { useKeyspaces } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { vtadmin as pb } from '../../proto/vtadmin';
 import { DataTable } from '../dataTable/DataTable';
+import style from './Keyspaces.module.scss';
 
 export const Keyspaces = () => {
     useDocumentTitle('Keyspaces');
@@ -31,13 +33,19 @@ export const Keyspaces = () => {
     const renderRows = (rows: pb.Keyspace[]) =>
         rows.map((keyspace, idx) => (
             <tr key={idx}>
-                <td>{keyspace.cluster?.name}</td>
-                <td>{keyspace.keyspace?.name}</td>
+                <td>
+                    <code>{keyspace.cluster?.name}</code>
+                </td>
+                <td>
+                    <Link to={`/keyspace/${keyspace.cluster?.id}/${keyspace.keyspace?.name}`}>
+                        <code className="font-weight-bold">{keyspace.keyspace?.name}</code>
+                    </Link>
+                </td>
             </tr>
         ));
 
     return (
-        <div>
+        <div className={style.container}>
             <h1>Keyspaces</h1>
             <DataTable columns={['Cluster', 'Keyspace']} data={rows} renderRows={renderRows} />
         </div>
