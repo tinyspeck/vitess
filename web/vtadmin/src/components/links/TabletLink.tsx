@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import * as React from 'react';
+import { tabletFQDN } from '../../util/tablet';
 
 interface Props {
     cell?: string | null | undefined;
@@ -23,16 +24,10 @@ interface Props {
 
 export const TabletLink: React.FunctionComponent<Props> = ({ cell, children, hostname, uid }) => {
     if (!cell || !uid) return null;
-    if (!process.env.REACT_APP_TABLET_LINK_TEMPLATE || !hostname) {
+
+    const href = tabletFQDN({ cell, hostname, uid });
+    if (!hostname || href === '') {
         return <span>{children}</span>;
-    }
-
-    const template = process.env.REACT_APP_TABLET_LINK_TEMPLATE;
-    let href = template.replace('{{hostname}}', hostname);
-
-    // This is truly so disgusting.
-    if (uid) {
-        href = href.replace('{{uid}}', `${parseInt(`${uid}`, 10)}`);
     }
 
     return (

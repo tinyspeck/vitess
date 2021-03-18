@@ -63,7 +63,7 @@ export const Streams = ({ clusterID, keyspace, name }: Props) => {
                     (t) => t.tablet?.alias?.cell === ss.tablet?.cell && t.tablet?.alias?.uid === ss.tablet?.uid
                 );
 
-                return <Stream keyspace={keyspace} stream={ss} tablet={tablet} />;
+                return <Stream clusterID={clusterID} keyspace={keyspace} stream={ss} tablet={tablet} />;
             })}
         </div>
     );
