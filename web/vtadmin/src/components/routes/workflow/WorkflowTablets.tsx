@@ -53,12 +53,17 @@ export const WorkflowTablets = ({ clusterID, keyspace, workflow }: Props) => {
 
         const { dataUpdatedAt } = tq;
         const { tablet, vars } = tq.data;
+
+        const da = [...(vars.VReplicationQPS.All || [])];
+        da.reverse();
+        const dq = da.map((d, dx) => {
+            const ts = dataUpdatedAt - dx * 1000;
+            return [ts, d] as [number, number];
+        });
+
         acc.push({
             name: `${tablet?.tablet?.alias?.cell}-${tablet?.tablet?.alias?.uid} All`,
-            data: (vars.VReplicationQPS.All || []).map((d, dx) => {
-                const ts = dataUpdatedAt - dx * 1000;
-                return [ts, d] as [number, number];
-            }),
+            data: dq,
         });
 
         return acc;
