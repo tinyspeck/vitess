@@ -2,7 +2,7 @@ import * as React from 'react';
 import { NavLink } from 'react-router-dom';
 import style from './Tabs.module.scss';
 
-export const Tabs = (props: { children: any[] }) => {
+export const Tabs = (props: { children: any[] | any }) => {
     return <div className={style.tabs}>{props.children}</div>;
 };
 
