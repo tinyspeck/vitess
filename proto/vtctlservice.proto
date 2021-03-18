@@ -94,4 +94,8 @@ service Vtctld {
   // RemoveShardCell removes the specified cell from the specified shard's Cells
   // list.
   rpc RemoveShardCell(vtctldata.RemoveShardCellRequest) returns (vtctldata.RemoveShardCellResponse) {};
+  // ReparentTablet reparents a tablet to the current primary in the shard. This
+  // only works if the current replica position matches the last known reparent
+  // action.
+  rpc ShardReplicationPositions(vtctldata.ShardReplicationPositionsRequest) returns (vtctldata.ShardReplicationPositionsResponse) {};
 }
