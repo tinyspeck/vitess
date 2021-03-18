@@ -1,12 +1,15 @@
 import * as React from 'react';
 import { useQuery } from 'react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
 import { useTablets } from '../../../hooks/api';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
 import { Code } from '../../Code';
 import { vtadmin as pb } from '../../../proto/vtadmin';
 import { fetchTabletVars, TabletVars } from '../../../api/tablet';
 import style from './Tablet.module.scss';
+import { TabletLink } from '../../links/TabletLink';
+import { tabletFQDN } from '../../../util/tablet';
+import { Tab, Tabs } from '../../Tabs';
 
 interface RouteParams {
     clusterID: string;
@@ -19,6 +22,7 @@ interface TabletVarsResponse {
 }
 
 export const Tablet = () => {
+    let { path, url } = useRouteMatch();
     const { clusterID, alias } = useParams<RouteParams>();
 
     useDocumentTitle(alias);
@@ -33,6 +37,12 @@ export const Tablet = () => {
         if (!tablet) return Promise.resolve({ tablet, vars: null } as any);
         const tv = await fetchTabletVars(tablet);
         return { tablet, vars: tv } as TabletVarsResponse;
+    });
+
+    const fqdn = tabletFQDN({
+        cell: tablet?.tablet?.alias?.cell,
+        hostname: tablet?.tablet?.hostname,
+        uid: tablet?.tablet?.alias?.uid,
     });
 
     return (
@@ -51,14 +61,28 @@ export const Tablet = () => {
                     <span>
                         Keyspace: <code>{tablet?.tablet?.keyspace}</code>
                     </span>
+                    <span>
+                        <TabletLink
+                            cell={tablet?.tablet?.alias?.cell}
+                            hostname={tablet?.tablet?.hostname}
+                            uid={tablet?.tablet?.alias?.uid}
+                        >
+                            {fqdn}
+                        </TabletLink>
+                    </span>
                 </div>
             </header>
 
-            <h2>Tablet</h2>
-            <Code code={JSON.stringify(tablet, null, 2)} />
+            <Tabs>
+                <Tab to={`${url}/json`}>JSON</Tab>
+            </Tabs>
 
-            <h2>/debug/vars</h2>
-            <Code code={JSON.stringify(tq.data, null, 2)} />
+            <Switch>
+                <Route path={`${path}/json`}>
+                    <Code code={JSON.stringify(tq.data, null, 2)} />
+                </Route>
+                <Redirect exact from={`${path}/`} to={`${path}/json`} />
+            </Switch>
         </div>
     );
 };
