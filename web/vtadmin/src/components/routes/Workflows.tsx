@@ -73,7 +73,7 @@ export const Workflows = () => {
                             const pipClass = cx(style.streamStatePip, style[state.toLowerCase()]);
                             return (
                                 <div key={state}>
-                                    {/* <div className={pipClass} /> */}
+                                    <div className={pipClass} />
                                     <code>
                                         {streams.length} {state.toLocaleLowerCase()}
                                     </code>

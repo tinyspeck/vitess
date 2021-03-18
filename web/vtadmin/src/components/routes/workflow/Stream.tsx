@@ -1,14 +1,10 @@
-import { invertBy, times } from 'lodash-es';
+import { times } from 'lodash-es';
 import * as React from 'react';
 import cx from 'classnames';
 import sparkline from '@fnando/sparkline';
 
-import { topodata, vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
-import { TabletLink } from '../../links/TabletLink';
+import { vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
 import style from './Stream.module.scss';
-import { useQuery } from 'react-query';
-import { fetchTabletVars } from '../../../api/tablet';
-import { Code } from '../../Code';
 import { Link } from 'react-router-dom';
 
 interface Props {
@@ -40,6 +36,7 @@ export const Stream = ({ clusterID, keyspace, stream, tablet }: Props) => {
 
     React.useEffect(() => {
         sparkline(sparklineRef.current, lagData);
+        /* eslint-disable-next-line react-hooks/exhaustive-deps */
     }, []);
 
     React.useEffect(() => {
@@ -48,6 +45,7 @@ export const Stream = ({ clusterID, keyspace, stream, tablet }: Props) => {
         nextLagData = nextLagData.slice(Math.max(nextLagData.length - 29, 1), 30);
         sparkline(sparklineRef.current, nextLagData);
         setLagData(nextLagData);
+        /* eslint-disable-next-line react-hooks/exhaustive-deps */
     }, [stream]);
 
     const panelClass = cx(style.panel, {
