@@ -36,7 +36,9 @@ export const Keyspace = () => {
                         <code>{t.tablet?.shard}</code>
                     </td>
                     <td>
-                        <code>{formatAlias(t)}</code>
+                        <Link to={`/tablet/${clusterID}/${formatAlias(t)}`}>
+                            <code className="font-weight-bold">{formatAlias(t)}</code>
+                        </Link>
                     </td>
                     <td>
                         <code>{formatDisplayType(t)}</code>
