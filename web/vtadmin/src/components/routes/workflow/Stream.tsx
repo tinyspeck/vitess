@@ -65,15 +65,20 @@ export const Stream = ({ clusterID, keyspace, stream, tablet }: Props) => {
 
                     <div>
                         <div className={style.label}>Source</div>
-                        <code>
-                            {stream.binlog_source?.keyspace}/{stream.binlog_source?.shard}
-                        </code>
+                        <Link to={`/keyspace/${clusterID}/${stream.binlog_source?.keyspace}`}>
+                            <code>
+                                {stream.binlog_source?.keyspace}/{stream.binlog_source?.shard}
+                            </code>
+                        </Link>
                     </div>
                     <div>
                         <div className={style.label}>Target</div>
-                        <code>
-                            {keyspace}/{stream.shard}
-                        </code>
+
+                        <Link to={`/keyspace/${clusterID}/${keyspace}`}>
+                            <code>
+                                {keyspace}/{stream.shard}
+                            </code>
+                        </Link>
                     </div>
 
                     <div className={style.field}>
