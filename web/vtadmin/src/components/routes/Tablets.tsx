@@ -89,11 +89,13 @@ export const Tablets = () => {
                     Clear filters
                 </Button>
             </div>
-            <DataTable
-                columns={['Cluster', 'Keyspace', 'Shard', 'Alias', 'Type', 'State', 'Hostname']}
-                data={filteredData}
-                renderRows={renderRows}
-            />
+            <div className={style.container}>
+                <DataTable
+                    columns={['Cluster', 'Keyspace', 'Shard', 'Alias', 'Type', 'State', 'Hostname']}
+                    data={filteredData}
+                    renderRows={renderRows}
+                />
+            </div>
         </div>
     );
 };

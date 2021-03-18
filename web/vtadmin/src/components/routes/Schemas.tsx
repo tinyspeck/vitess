@@ -44,7 +44,7 @@ export const Schemas = () => {
                         <code>{row.keyspace}</code>
                     </td>
                     <td>
-                        <code>
+                        <code className="font-weight-bold">
                             {href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}
                         </code>
                     </td>
