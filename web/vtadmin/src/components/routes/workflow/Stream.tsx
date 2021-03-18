@@ -9,14 +9,16 @@ import style from './Stream.module.scss';
 import { useQuery } from 'react-query';
 import { fetchTabletVars } from '../../../api/tablet';
 import { Code } from '../../Code';
+import { Link } from 'react-router-dom';
 
 interface Props {
+    clusterID: string;
     keyspace: string;
     stream: vtctldata.Workflow.IStream;
     tablet: pb.Tablet | null | undefined;
 }
 
-export const Stream = ({ keyspace, stream, tablet }: Props) => {
+export const Stream = ({ clusterID, keyspace, stream, tablet }: Props) => {
     const containerRef = React.useRef(null);
     const sparklineRef = React.useRef(null);
 
@@ -78,15 +80,11 @@ export const Stream = ({ keyspace, stream, tablet }: Props) => {
 
                     <div className={style.field}>
                         <div className={style.label}>Tablet</div>
-                        <TabletLink
-                            cell={stream.tablet?.cell}
-                            hostname={tablet?.tablet?.hostname}
-                            uid={stream.tablet?.uid}
-                        >
+                        <Link to={`/tablet/${clusterID}/${tablet?.tablet?.alias?.cell}-${tablet?.tablet?.alias?.uid}`}>
                             <code className="no-wrap">
                                 {stream.tablet?.cell}-{stream.tablet?.uid}
                             </code>
-                        </TabletLink>
+                        </Link>
                     </div>
 
                     {/* Sparkline */}
