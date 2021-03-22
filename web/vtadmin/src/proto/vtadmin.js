@@ -63604,6 +63604,8 @@ $root.vtctldata = (function() {
          * @property {string|null} [keyspace] GetTabletsRequest keyspace
          * @property {string|null} [shard] GetTabletsRequest shard
          * @property {Array.<string>|null} [cells] GetTabletsRequest cells
+         * @property {boolean|null} [strict] GetTabletsRequest strict
+         * @property {Array.<topodata.ITabletAlias>|null} [tablet_aliases] GetTabletsRequest tablet_aliases
          */
 
         /**
@@ -63616,6 +63618,7 @@ $root.vtctldata = (function() {
          */
         function GetTabletsRequest(properties) {
             this.cells = [];
+            this.tablet_aliases = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -63645,6 +63648,22 @@ $root.vtctldata = (function() {
          * @instance
          */
         GetTabletsRequest.prototype.cells = $util.emptyArray;
+
+        /**
+         * GetTabletsRequest strict.
+         * @member {boolean} strict
+         * @memberof vtctldata.GetTabletsRequest
+         * @instance
+         */
+        GetTabletsRequest.prototype.strict = false;
+
+        /**
+         * GetTabletsRequest tablet_aliases.
+         * @member {Array.<topodata.ITabletAlias>} tablet_aliases
+         * @memberof vtctldata.GetTabletsRequest
+         * @instance
+         */
+        GetTabletsRequest.prototype.tablet_aliases = $util.emptyArray;
 
         /**
          * Creates a new GetTabletsRequest instance using the specified properties.
@@ -63677,6 +63696,11 @@ $root.vtctldata = (function() {
             if (message.cells != null && message.cells.length)
                 for (var i = 0; i < message.cells.length; ++i)
                     writer.uint32(/* id 3, wireType 2 =*/26).string(message.cells[i]);
+            if (message.strict != null && Object.hasOwnProperty.call(message, "strict"))
+                writer.uint32(/* id 4, wireType 0 =*/32).bool(message.strict);
+            if (message.tablet_aliases != null && message.tablet_aliases.length)
+                for (var i = 0; i < message.tablet_aliases.length; ++i)
+                    $root.topodata.TabletAlias.encode(message.tablet_aliases[i], writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
             return writer;
         };
 
@@ -63721,6 +63745,14 @@ $root.vtctldata = (function() {
                     if (!(message.cells && message.cells.length))
                         message.cells = [];
                     message.cells.push(reader.string());
+                    break;
+                case 4:
+                    message.strict = reader.bool();
+                    break;
+                case 5:
+                    if (!(message.tablet_aliases && message.tablet_aliases.length))
+                        message.tablet_aliases = [];
+                    message.tablet_aliases.push($root.topodata.TabletAlias.decode(reader, reader.uint32()));
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -63770,6 +63802,18 @@ $root.vtctldata = (function() {
                     if (!$util.isString(message.cells[i]))
                         return "cells: string[] expected";
             }
+            if (message.strict != null && message.hasOwnProperty("strict"))
+                if (typeof message.strict !== "boolean")
+                    return "strict: boolean expected";
+            if (message.tablet_aliases != null && message.hasOwnProperty("tablet_aliases")) {
+                if (!Array.isArray(message.tablet_aliases))
+                    return "tablet_aliases: array expected";
+                for (var i = 0; i < message.tablet_aliases.length; ++i) {
+                    var error = $root.topodata.TabletAlias.verify(message.tablet_aliases[i]);
+                    if (error)
+                        return "tablet_aliases." + error;
+                }
+            }
             return null;
         };
 
@@ -63796,6 +63840,18 @@ $root.vtctldata = (function() {
                 for (var i = 0; i < object.cells.length; ++i)
                     message.cells[i] = String(object.cells[i]);
             }
+            if (object.strict != null)
+                message.strict = Boolean(object.strict);
+            if (object.tablet_aliases) {
+                if (!Array.isArray(object.tablet_aliases))
+                    throw TypeError(".vtctldata.GetTabletsRequest.tablet_aliases: array expected");
+                message.tablet_aliases = [];
+                for (var i = 0; i < object.tablet_aliases.length; ++i) {
+                    if (typeof object.tablet_aliases[i] !== "object")
+                        throw TypeError(".vtctldata.GetTabletsRequest.tablet_aliases: object expected");
+                    message.tablet_aliases[i] = $root.topodata.TabletAlias.fromObject(object.tablet_aliases[i]);
+                }
+            }
             return message;
         };
 
@@ -63812,11 +63868,14 @@ $root.vtctldata = (function() {
             if (!options)
                 options = {};
             var object = {};
-            if (options.arrays || options.defaults)
+            if (options.arrays || options.defaults) {
                 object.cells = [];
+                object.tablet_aliases = [];
+            }
             if (options.defaults) {
                 object.keyspace = "";
                 object.shard = "";
+                object.strict = false;
             }
             if (message.keyspace != null && message.hasOwnProperty("keyspace"))
                 object.keyspace = message.keyspace;
@@ -63826,6 +63885,13 @@ $root.vtctldata = (function() {
                 object.cells = [];
                 for (var j = 0; j < message.cells.length; ++j)
                     object.cells[j] = message.cells[j];
+            }
+            if (message.strict != null && message.hasOwnProperty("strict"))
+                object.strict = message.strict;
+            if (message.tablet_aliases && message.tablet_aliases.length) {
+                object.tablet_aliases = [];
+                for (var j = 0; j < message.tablet_aliases.length; ++j)
+                    object.tablet_aliases[j] = $root.topodata.TabletAlias.toObject(message.tablet_aliases[j], options);
             }
             return object;
         };

@@ -26450,6 +26450,12 @@ export namespace vtctldata {
 
         /** GetTabletsRequest cells */
         cells?: (string[]|null);
+
+        /** GetTabletsRequest strict */
+        strict?: (boolean|null);
+
+        /** GetTabletsRequest tablet_aliases */
+        tablet_aliases?: (topodata.ITabletAlias[]|null);
     }
 
     /** Represents a GetTabletsRequest. */
@@ -26469,6 +26475,12 @@ export namespace vtctldata {
 
         /** GetTabletsRequest cells. */
         public cells: string[];
+
+        /** GetTabletsRequest strict. */
+        public strict: boolean;
+
+        /** GetTabletsRequest tablet_aliases. */
+        public tablet_aliases: topodata.ITabletAlias[];
 
         /**
          * Creates a new GetTabletsRequest instance using the specified properties.
