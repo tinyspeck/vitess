@@ -182,12 +182,19 @@ table th {
   text-align: left;
 }
 
-table tbody td {
+table tbody tr {
   border: solid 1px var(--tableBorderColor);
+}
+
+table tbody td {
   padding: var(--tableCellPadding);
 }
 
-/* Utilities */
+/* One-liner utilities */
+.font-weight-bold {
+  font-weight: 700;
+}
+
 .text-color-secondary {
   color: var(--textColorSecondary);
 }

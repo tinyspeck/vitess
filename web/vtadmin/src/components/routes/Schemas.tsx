@@ -18,6 +18,7 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { TableDefinition, useTableDefinitions } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { DataCell } from '../dataTable/DataCell';
 import { DataTable } from '../dataTable/DataTable';
 
 export const Schemas = () => {
@@ -36,9 +37,11 @@ export const Schemas = () => {
                     : null;
             return (
                 <tr key={idx}>
-                    <td>{row.cluster?.name}</td>
-                    <td>{row.keyspace}</td>
-                    <td>{href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}</td>
+                    <DataCell>{row.cluster?.name}</DataCell>
+                    <DataCell>{row.keyspace}</DataCell>
+                    <DataCell className="font-weight-bold">
+                        {href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}
+                    </DataCell>
                 </tr>
             );
         });
