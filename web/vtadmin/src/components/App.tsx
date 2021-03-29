@@ -36,41 +36,43 @@ export const App = () => {
                 </div>
 
                 <div className={style.mainContainer}>
-                    <Switch>
-                        <Route path="/clusters">
-                            <Clusters />
-                        </Route>
+                    <div className={style.main}>
+                        <Switch>
+                            <Route path="/clusters">
+                                <Clusters />
+                            </Route>
 
-                        <Route path="/gates">
-                            <Gates />
-                        </Route>
+                            <Route path="/gates">
+                                <Gates />
+                            </Route>
 
-                        <Route path="/keyspaces">
-                            <Keyspaces />
-                        </Route>
+                            <Route path="/keyspaces">
+                                <Keyspaces />
+                            </Route>
 
-                        <Route path="/schemas">
-                            <Schemas />
-                        </Route>
+                            <Route path="/schemas">
+                                <Schemas />
+                            </Route>
 
-                        <Route path="/schema/:clusterID/:keyspace/:table">
-                            <Schema />
-                        </Route>
+                            <Route path="/schema/:clusterID/:keyspace/:table">
+                                <Schema />
+                            </Route>
 
-                        <Route path="/tablets">
-                            <Tablets />
-                        </Route>
+                            <Route path="/tablets">
+                                <Tablets />
+                            </Route>
 
-                        <Route path="/debug">
-                            <Debug />
-                        </Route>
+                            <Route path="/debug">
+                                <Debug />
+                            </Route>
 
-                        <Redirect exact from="/" to="/tablets" />
+                            <Redirect exact from="/" to="/tablets" />
 
-                        <Route>
-                            <Error404 />
-                        </Route>
-                    </Switch>
+                            <Route>
+                                <Error404 />
+                            </Route>
+                        </Switch>
+                    </div>
                 </div>
             </div>
         </Router>
