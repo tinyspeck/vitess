@@ -207,6 +207,10 @@ table tbody td {
   font-size: var(--fontSizeSmall);
 }
 
+.font-weight-bold {
+  font-weight: 700;
+}
+
 .text-align-right {
   text-align: right;
 }

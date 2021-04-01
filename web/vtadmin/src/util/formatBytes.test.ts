@@ -56,7 +56,7 @@ describe('prettyBytes', () => {
         {
             name: 'uses units parameter if defined',
             input: 1234567890,
-            expected: '1177.38 MiB',
+            expected: '1,177.38 MiB',
             opts: { units: 'MiB' },
         },
     ];
