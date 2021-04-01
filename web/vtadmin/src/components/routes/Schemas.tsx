@@ -16,8 +16,10 @@
 import { orderBy } from 'lodash-es';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { TableDefinition, useTableDefinitions } from '../../hooks/api';
+import { useTableDefinitions } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { prettyBytes } from '../../util/formatBytes';
+import { TableDefinition } from '../../util/schemas';
 import { DataTable } from '../dataTable/DataTable';
 
 export const Schemas = () => {
@@ -34,11 +36,34 @@ export const Schemas = () => {
                 row.cluster?.id && row.keyspace && row.tableDefinition?.name
                     ? `/schema/${row.cluster.id}/${row.keyspace}/${row.tableDefinition.name}`
                     : null;
+
+            const mib = prettyBytes(row.tableSize?.data_length, { precision: 0, units: 'MiB' });
+            const pb = prettyBytes(row.tableSize?.data_length);
+
             return (
                 <tr key={idx}>
-                    <td>{row.cluster?.name}</td>
-                    <td>{row.keyspace}</td>
-                    <td>{href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}</td>
+                    <td>
+                        <code>{row.cluster?.name}</code>
+                    </td>
+                    <td>
+                        <code>{row.keyspace}</code>
+                    </td>
+                    <td>
+                        <code>
+                            {href ? <Link to={href}>{row.tableDefinition?.name}</Link> : row.tableDefinition?.name}
+                        </code>
+                    </td>
+                    <td className="text-align-right">
+                        <code>{pb}</code>
+                        <code className="display-block font-size-small text-color-secondary">
+                            {prettyBytes(row.tableSize?.data_length, { units: 'B' })}
+                        </code>
+                    </td>
+                    <td className="text-align-right">
+                        <code>
+                            <div>{Number(row.tableSize?.row_count || 0).toLocaleString()}</div>
+                        </code>
+                    </td>
                 </tr>
             );
         });
@@ -46,7 +71,7 @@ export const Schemas = () => {
     return (
         <div className="max-width-content">
             <h1>Schemas</h1>
-            <DataTable columns={['Cluster', 'Keyspace', 'Table']} data={rows} renderRows={renderRows} />
+            <DataTable columns={['Cluster', 'Keyspace', 'Table', 'Size', 'Rows']} data={rows} renderRows={renderRows} />
         </div>
     );
 };

@@ -185,14 +185,30 @@ table th {
   text-align: left;
 }
 
-table tbody td {
+table tbody tr {
   border: solid 1px var(--tableBorderColor);
+}
+
+table tbody td {
   padding: var(--tableCellPadding);
+  vertical-align: top;
 }
 
 /* One-liner utilities */
+.display-block {
+  display: block;
+}
+
 .max-width-content {
   max-width: var(--contentWidth);
+}
+
+.font-size-small {
+  font-size: var(--fontSizeSmall);
+}
+
+.text-align-right {
+  text-align: right;
 }
 
 .text-color-secondary {

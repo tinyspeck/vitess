@@ -25,6 +25,7 @@ import {
     fetchWorkflows,
 } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
+import { getTableDefinitions } from '../util/schemas';
 
 /**
  * useClusters is a query hook that fetches all clusters VTAdmin is configured to discover.
@@ -85,15 +86,6 @@ export const useWorkflows = (...args: Parameters<typeof useWorkflowsResponse>) =
     return { data: workflows, ...query };
 };
 
-export interface TableDefinition {
-    cluster?: pb.Schema['cluster'];
-    keyspace?: pb.Schema['keyspace'];
-    // The [0] index is a typescript quirk to infer the type of
-    // an entry in an array, and therefore the type of ALL entries
-    // in the array (not just the first one).
-    tableDefinition?: pb.Schema['table_definitions'][0];
-}
-
 /**
  * useTableDefinitions is a helper hook for when a flattened list
  * of table definitions (across all keyspaces and clusters) is required,
@@ -109,17 +101,7 @@ export const useTableDefinitions = (...args: Parameters<typeof useSchemas>) => {
         return { data, ...query };
     }
 
-    const tds = data.reduce((acc: TableDefinition[], schema: pb.Schema) => {
-        (schema.table_definitions || []).forEach((td) => {
-            acc.push({
-                cluster: schema.cluster,
-                keyspace: schema.keyspace,
-                tableDefinition: td,
-            });
-        });
-        return acc;
-    }, []);
-
+    const tds = getTableDefinitions(data);
     return { ...query, data: tds };
 };
 
