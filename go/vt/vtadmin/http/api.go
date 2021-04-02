@@ -68,6 +68,13 @@ func (api *API) Adapt(handler VTAdminHandler) http.HandlerFunc {
 			ctx = trace.NewContext(ctx, span)
 		}
 
+		info, ok := auth.FromContext(r.Context())
+		if !ok {
+			info = &auth.Unauthenticated{}
+		}
+
+		ctx = auth.NewContext(ctx, info)
+
 		handler(ctx, Request{r}, api).Write(w)
 	}
 }
