@@ -62,15 +62,15 @@ func LoadPlugin(path string) (Authenticator, error) {
 		return nil, err
 	}
 
-	sym, err := p.Lookup("Authenticator")
+	sym, err := p.Lookup("NewAuthenticator")
 	if err != nil {
 		return nil, err
 	}
 
-	authenticator, ok := sym.(Authenticator)
+	factory, ok := sym.(func() (Authenticator, error))
 	if !ok {
-		return nil, fmt.Errorf("plugin %s does not contain symbol named \"Authenticator\" implementing auth.Authenticator", path)
+		return nil, fmt.Errorf("plugin %s does not contain function \"NewAuthenticator\" returning (auth.Authenticator, error)", path)
 	}
 
-	return authenticator, nil
+	return factory()
 }
