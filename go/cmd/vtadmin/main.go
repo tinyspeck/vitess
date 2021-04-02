@@ -25,17 +25,19 @@ import (
 
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/vtadmin"
+	"vitess.io/vitess/go/vt/vtadmin/auth"
 	"vitess.io/vitess/go/vt/vtadmin/cluster"
 	"vitess.io/vitess/go/vt/vtadmin/grpcserver"
 	vtadminhttp "vitess.io/vitess/go/vt/vtadmin/http"
 )
 
 var (
-	opts                 grpcserver.Options
-	httpOpts             vtadminhttp.Options
-	clusterConfigs       cluster.ClustersFlag
-	clusterFileConfig    cluster.FileConfig
-	defaultClusterConfig cluster.Config
+	opts                    grpcserver.Options
+	httpOpts                vtadminhttp.Options
+	clusterConfigs          cluster.ClustersFlag
+	clusterFileConfig       cluster.FileConfig
+	defaultClusterConfig    cluster.Config
+	authenticatorPluginPath string
 
 	rootCmd = &cobra.Command{
 		Use: "vtadmin",
@@ -65,6 +67,18 @@ func run(cmd *cobra.Command, args []string) {
 		}
 
 		clusters[i] = cluster
+	}
+
+	// TODO: allow two flags, to allow for separate impls for grpc/http auth
+	if authenticatorPluginPath != "" {
+		authenticator, err := auth.LoadPlugin(authenticatorPluginPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if httpauth, ok := authenticator.(auth.HTTPAuthenticator); ok {
+			httpOpts.Authenticator = httpauth
+		}
 	}
 
 	s := vtadmin.NewAPI(clusters, opts, httpOpts)

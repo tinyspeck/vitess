@@ -120,7 +120,8 @@ func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadm
 	// middlewares being optional) is:
 	// 	1. CORS. CORS is a special case and is applied globally, the rest are applied only to the subrouter.
 	//	2. Compression
-	//	3. Tracing
+	//	3. Authentication
+	//	4. Tracing
 	middlewares := []mux.MiddlewareFunc{}
 
 	if len(httpOpts.CORSOrigins) > 0 {
@@ -130,6 +131,10 @@ func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadm
 
 	if !httpOpts.DisableCompression {
 		middlewares = append(middlewares, handlers.CompressHandler)
+	}
+
+	if httpOpts.Authenticator != nil {
+		middlewares = append(middlewares, vthandlers.NewAuthenticationHandler(httpOpts.Authenticator))
 	}
 
 	if httpOpts.EnableTracing {

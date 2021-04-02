@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"vitess.io/vitess/go/trace"
+	"vitess.io/vitess/go/vt/vtadmin/auth"
 
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 )
@@ -37,6 +38,7 @@ type Options struct {
 	// endpoints. It is named as the negative (as opposed to EnableTracing) so
 	// the zero value has compression enabled.
 	DisableCompression bool
+	Authenticator      auth.HTTPAuthenticator
 }
 
 // API is used to power HTTP endpoint wrappers to the VTAdminServer interface.
