@@ -100,6 +100,8 @@ func main() {
 	rootCmd.Flags().BoolVar(&httpOpts.DisableCompression, "http-no-compress", false, "whether to disable compression of HTTP API responses")
 	rootCmd.Flags().StringSliceVar(&httpOpts.CORSOrigins, "http-origin", []string{}, "repeated, comma-separated flag of allowed CORS origins. omit to disable CORS")
 
+	rootCmd.Flags().StringVar(&authenticatorPluginPath, "authentication-plugin", "", "")
+
 	// glog flags, no better way to do this
 	rootCmd.Flags().AddGoFlag(flag.Lookup("v"))
 	rootCmd.Flags().AddGoFlag(flag.Lookup("logtostderr"))
