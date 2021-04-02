@@ -38,7 +38,7 @@ func (u *Unauthenticated) GetRoles() []string       { return nil }
 func (u *Unauthenticated) HasRole(role string) bool { return false }
 
 type Authenticator interface {
-	AuthenticateUnary(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo) (Info error)
+	AuthenticateUnary(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo) (Info, error)
 }
 
 type HTTPAuthenticator interface {
