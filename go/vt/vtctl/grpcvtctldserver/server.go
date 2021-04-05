@@ -22,9 +22,11 @@ import (
 	"google.golang.org/grpc"
 
 	"vitess.io/vitess/go/vt/topo"
+	"vitess.io/vitess/go/vt/vterrors"
 
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
 	vtctlservicepb "vitess.io/vitess/go/vt/proto/vtctlservice"
+	"vitess.io/vitess/go/vt/proto/vtrpc"
 )
 
 // VtctldServer implements the Vtctld RPC service protocol.
