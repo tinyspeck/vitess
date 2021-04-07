@@ -39,6 +39,7 @@ import (
 	"vitess.io/vitess/go/vt/mysqlctl"
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 	"vitess.io/vitess/go/vt/topo"
 )
@@ -101,6 +102,7 @@ type Engine struct {
 	cancel context.CancelFunc
 
 	ts              *topo.Server
+	tablet          *topodatapb.Tablet
 	cell            string
 	mysqld          mysqlctl.MysqlDaemon
 	dbClientFactory func() binlogplayer.DBClient
@@ -118,11 +120,12 @@ type journalEvent struct {
 
 // NewEngine creates a new Engine.
 // A nil ts means that the Engine is disabled.
-func NewEngine(config *tabletenv.TabletConfig, ts *topo.Server, cell string, mysqld mysqlctl.MysqlDaemon) *Engine {
+func NewEngine(config *tabletenv.TabletConfig, ts *topo.Server, cell string, tablet *topodatapb.Tablet, mysqld mysqlctl.MysqlDaemon) *Engine {
 	vre := &Engine{
 		controllers: make(map[int]*controller),
 		ts:          ts,
 		cell:        cell,
+		tablet:      tablet,
 		mysqld:      mysqld,
 		journaler:   make(map[string]*journalEvent),
 		ec:          newExternalConnector(config.ExternalConnections),
