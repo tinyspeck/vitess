@@ -73,10 +73,10 @@ type tabletVdiffer struct {
 
 	// The key for sources and targets is the shard name.
 	// The source and target keyspaces are pulled from ts.
-	sources  map[string]*shardStreamer
-	targets  map[string]*shardStreamer
-	target   *tabletTsTarget
-	workflow string
+	sources             map[string]*shardStreamer
+	targetShardStreamer *shardStreamer
+	target              *tabletTsTarget
+	workflow            string
 
 	tmc tmclient.TabletManagerClient // make remote calls to tablets
 	// tabletmanager *tabletmanager.TabletManager // make local calls
@@ -135,7 +135,6 @@ func newVDiffer(ts *topo.Server, tabletTypesStr string) *tabletVdiffer {
 		topoServer:     ts,
 		tmc:            tmclient.NewTabletManagerClient(),
 		sources:        make(map[string]*shardStreamer),
-		targets:        make(map[string]*shardStreamer),
 	}
 }
 
@@ -205,7 +204,7 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		sources: make(map[uint32]*binlogdatapb.BinlogSource),
 	}
 	df.target = target
-	df.targets[destinationShard.String()] = &shardStreamer{
+	df.targetShardStreamer = &shardStreamer{
 		master: destinationMaster,
 	}
 
@@ -264,6 +263,9 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 	if err := df.selectTablets(ctx); err != nil {
 		return nil, vterrors.Wrap(err, "selectTablets")
 	}
+
+	df.targetShardStreamer.tablet = tablet
+
 	log.Infof("selected tablets after SUCCESS")
 
 	defer func(ctx context.Context) {
@@ -283,8 +285,8 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 	for table, td := range df.differs {
 		log.Infof("PROCESSING table %s td %v", table, td)
 
-		// Stop the targets and record their source positions.
-		if err := df.stopTargets(ctx); err != nil {
+		// Stop the target and record their source positions.
+		if err := df.stopTarget(ctx); err != nil {
 			return nil, vterrors.Wrap(err, "stopTargets")
 		}
 		log.Infof("stop targets successful %v", err)
@@ -304,10 +306,11 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		// Sources and targets are in sync. Start query streams on the targets.
 		// targetKeyspace == destination tablet keyspace
 		// targets is just self tablet
-		if err := df.startQueryStreams(ctx, df.targetKeyspace, df.targets, td.targetExpression, filteredReplicationWaitTime); err != nil {
+		targets := make(map[string]*shardStreamer)
+		targets[df.targetShardStreamer.master.Shard] = df.targetShardStreamer
+		if err := df.startQueryStreams(ctx, df.targetKeyspace, targets, td.targetExpression, filteredReplicationWaitTime); err != nil {
 			return nil, vterrors.Wrap(err, "startQueryStreams(targets)")
 		}
-		log.Infof("start query streams successful TWO %v", df.targets)
 
 		// Now that queries are running, target vreplication streams can be restarted.
 		if err := df.restartTarget(ctx); err != nil {
@@ -510,7 +513,10 @@ func (df *tabletVdiffer) buildTablePlan(table *tabletmanagerdatapb.TableDefiniti
 	td.targetExpression = sqlparser.String(targetSelect)
 
 	td.sourcePrimitive = newMergeSorter(df.sources, td.comparePKs)
-	td.targetPrimitive = newMergeSorter(df.targets, td.comparePKs)
+
+	targets := make(map[string]*shardStreamer)
+	targets[df.targetShardStreamer.master.Shard] = df.targetShardStreamer
+	td.targetPrimitive = newMergeSorter(targets, td.comparePKs)
 	// If there were aggregate expressions, we have to re-aggregate
 	// the results, which engine.OrderedAggregate can do.
 	if len(aggregates) != 0 {
@@ -571,26 +577,6 @@ func (df *tabletVdiffer) selectTablets(ctx context.Context) error {
 		})
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err2 = df.forAll(df.targets, func(shard string, target *shardStreamer) error {
-			log.Infof("HELLO second shard cell is %s", shard)
-
-			tp, err := discovery.NewTabletPicker(df.topoServer, []string{df.targetCell}, df.targetKeyspace, shard, df.tabletTypesStr)
-			if err != nil {
-				return err
-			}
-
-			tablet, err := tp.PickForStreaming(ctx)
-			if err != nil {
-				return err
-			}
-			target.tablet = tablet
-			return nil
-		})
-	}()
-
 	wg.Wait()
 	if err1 != nil {
 		return err1
@@ -599,50 +585,44 @@ func (df *tabletVdiffer) selectTablets(ctx context.Context) error {
 }
 
 // stopTargets stops all the targets and records their source positions.
-func (df *tabletVdiffer) stopTargets(ctx context.Context) error {
+func (df *tabletVdiffer) stopTarget(ctx context.Context) error {
 	var mu sync.Mutex
 
-	err := df.forAll(df.targets, func(shard string, target *shardStreamer) error {
-		query := fmt.Sprintf("update _vt.vreplication set state='Stopped', message='for vdiff' where db_name=%s and workflow=%s", encodeString(target.master.DbName()), encodeString(df.workflow))
-		_, err := df.tmc.VReplicationExec(ctx, target.master.Tablet, query)
-		if err != nil {
-			return err
-		}
-		query = fmt.Sprintf("select source, pos from _vt.vreplication where db_name=%s and workflow=%s", encodeString(target.master.DbName()), encodeString(df.workflow))
-		p3qr, err := df.tmc.VReplicationExec(ctx, target.master.Tablet, query)
-		if err != nil {
-			return err
-		}
-		qr := sqltypes.Proto3ToResult(p3qr)
-
-		for _, row := range qr.Rows {
-			var bls binlogdatapb.BinlogSource
-			if err := proto.UnmarshalText(row[0].ToString(), &bls); err != nil {
-				return err
-			}
-			pos, err := mysql.DecodePosition(row[1].ToString())
-			if err != nil {
-				return err
-			}
-			func() {
-				mu.Lock()
-				defer mu.Unlock()
-
-				source, ok := df.sources[bls.Shard]
-				if !ok {
-					// Unreachable.
-					return
-				}
-				if !source.position.IsZero() && source.position.AtLeast(pos) {
-					return
-				}
-				df.sources[bls.Shard].position = pos
-			}()
-		}
-		return nil
-	})
+	query := fmt.Sprintf("update _vt.vreplication set state='Stopped', message='for vdiff' where db_name=%s and workflow=%s", encodeString(df.targetShardStreamer.master.DbName()), encodeString(df.workflow))
+	_, err := df.tmc.VReplicationExec(ctx, df.targetShardStreamer.master.Tablet, query)
 	if err != nil {
 		return err
+	}
+	query = fmt.Sprintf("select source, pos from _vt.vreplication where db_name=%s and workflow=%s", encodeString(df.targetShardStreamer.master.DbName()), encodeString(df.workflow))
+	p3qr, err := df.tmc.VReplicationExec(ctx, df.targetShardStreamer.master.Tablet, query)
+	if err != nil {
+		return err
+	}
+	qr := sqltypes.Proto3ToResult(p3qr)
+
+	for _, row := range qr.Rows {
+		var bls binlogdatapb.BinlogSource
+		if err := proto.UnmarshalText(row[0].ToString(), &bls); err != nil {
+			return err
+		}
+		pos, err := mysql.DecodePosition(row[1].ToString())
+		if err != nil {
+			return err
+		}
+		func() {
+			mu.Lock()
+			defer mu.Unlock()
+
+			source, ok := df.sources[bls.Shard]
+			if !ok {
+				// Unreachable.
+				return
+			}
+			if !source.position.IsZero() && source.position.AtLeast(pos) {
+				return
+			}
+			df.sources[bls.Shard].position = pos
+		}()
 	}
 	return nil
 }
@@ -748,19 +728,16 @@ func (df *tabletVdiffer) syncTargets(ctx context.Context, filteredReplicationWai
 		return err
 	}
 
-	err = df.forAll(df.targets, func(shard string, target *shardStreamer) error {
-		pos, err := df.tmc.MasterPosition(ctx, target.master.Tablet)
-		if err != nil {
-			return err
-		}
-		mpos, err := mysql.DecodePosition(pos)
-		if err != nil {
-			return err
-		}
-		target.position = mpos
-		return nil
-	})
-	return err
+	pos, err := df.tmc.MasterPosition(ctx, df.targetShardStreamer.master.Tablet)
+	if err != nil {
+		return err
+	}
+	mpos, err := mysql.DecodePosition(pos)
+	if err != nil {
+		return err
+	}
+	df.targetShardStreamer.position = mpos
+	return nil
 }
 
 func (df *tabletVdiffer) forAll(participants map[string]*shardStreamer, f func(string, *shardStreamer) error) error {
