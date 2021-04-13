@@ -124,17 +124,17 @@ func newController(ctx context.Context, params map[string]string, dbClientFactor
 		ct.tabletPicker = tp
 	}
 
-	vd := newVDiffer(ts, tabletTypesStr)
-	go func() {
-		time.Sleep(5 * time.Second)
-		log.Infof("Trying to start vdiff")
-		diffReport, err := vd.PerformVDiff(context.Background(), vre.tablet, "loadtest", "copy_rafael_test", "us_east_1", "us_east_1", "json,", 1*time.Second)
-		if err != nil {
-			log.Infof("error is %v", err)
-			return
-		}
-		log.Infof("diff report is %v", diffReport)
-	}()
+	// vd := newVDiffer(ts, tabletTypesStr)
+	// go func() {
+	// 	time.Sleep(5 * time.Second)
+	// 	log.Infof("Trying to start vdiff")
+	// 	diffReport, err := vd.PerformVDiff(context.Background(), vre.tablet, "loadtest", "copy_rafael_test", "us_east_1", "us_east_1", "json,", 1*time.Second)
+	// 	if err != nil {
+	// 		log.Infof("error is %v", err)
+	// 		return
+	// 	}
+	// 	log.Infof("diff report is %v", diffReport)
+	// }()
 
 	// cancel
 	ctx, ct.cancel = context.WithCancel(ctx)

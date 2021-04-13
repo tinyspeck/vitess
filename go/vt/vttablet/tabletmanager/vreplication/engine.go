@@ -81,7 +81,7 @@ var tabletTypesStr = flag.String("vreplication_tablet_type", "REPLICA", "comma s
 // values in a vreplication row will cause the Engine to accordingly react.
 // For example, setting the state to 'Stopped' will cause that stream to
 // stop replicating.
-var waitRetryTime = 1 * time.Second
+var waitRetryTime = 5 * time.Second
 
 // Engine is the engine for handling vreplication.
 type Engine struct {
@@ -634,11 +634,14 @@ func (vre *Engine) transitionJournal(je *journalEvent) {
 
 // WaitForPos waits for the replication to reach the specified position.
 func (vre *Engine) WaitForPos(ctx context.Context, id int, pos string) error {
+	log.Infof("hi hello inthe WaitForPos")
+	log.Infof("position passed from the replica %s", pos)
 	start := time.Now()
 	mPos, err := mysql.DecodePosition(pos)
 	if err != nil {
 		return err
 	}
+	log.Infof("mpos in WaitForPos is %v", mPos)
 
 	if err := func() error {
 		vre.mu.Lock()
@@ -665,6 +668,7 @@ func (vre *Engine) WaitForPos(ctx context.Context, id int, pos string) error {
 	defer tkr.Stop()
 	for {
 		qr, err := dbClient.ExecuteFetch(binlogplayer.ReadVReplicationStatus(uint32(id)), 10)
+		log.Infof("qr result is %v", qr)
 		switch {
 		case err != nil:
 			return err
@@ -674,6 +678,7 @@ func (vre *Engine) WaitForPos(ctx context.Context, id int, pos string) error {
 			return fmt.Errorf("unexpected result: %v", qr)
 		}
 		current, err := mysql.DecodePosition(qr.Rows[0][0].ToString())
+		log.Infof("position CURRENT from the MASTER %s", current)
 		if err != nil {
 			return err
 		}
@@ -756,4 +761,18 @@ func rowToMap(qr *sqltypes.Result, rownum int) (map[string]string, error) {
 		m[fld.Name] = row[i].ToString()
 	}
 	return m, nil
+}
+
+func (vre *Engine) InitVDiffer() {
+	vd := newVDiffer(vre.ts, "REPLICA")
+	go func() {
+		time.Sleep(5 * time.Second)
+		log.Infof("Trying to start vdiff")
+		diffReport, err := vd.PerformVDiff(context.Background(), vre.tablet, "loadtest", "copy_rafael_test", "us_east_1", "us_east_1", "json,", 1*time.Hour)
+		if err != nil {
+			log.Infof("error is %v", err)
+			return
+		}
+		log.Infof("diff report is %v", diffReport)
+	}()
 }

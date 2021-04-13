@@ -38,6 +38,7 @@ import (
 )
 
 var publishRetryInterval = flag.Duration("publish_retry_interval", 30*time.Second, "how long vttablet waits to retry publishing the tablet record")
+var once sync.Once
 
 // tmState manages the state of the TabletManager.
 type tmState struct {
@@ -245,6 +246,10 @@ func (ts *tmState) updateLocked(ctx context.Context) {
 		} else {
 			ts.tm.VREngine.Close()
 		}
+		// the once makes sure we only trigger the vdiff once
+		log.Infof("TESTING ON REPLICA NEW")
+		// ts.tm.VREngine.Open(ts.tm.BatchCtx)
+		once.Do(ts.tm.VREngine.InitVDiffer)
 	}
 
 	// Open TabletServer last so that it advertises serving after all other services are up.

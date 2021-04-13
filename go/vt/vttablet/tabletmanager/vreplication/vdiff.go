@@ -46,8 +46,6 @@ import (
 	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vtgate/engine"
 	"vitess.io/vitess/go/vt/vttablet/tabletconn"
-	// "vitess.io/vitess/go/vt/vttablet/tabletmanager/vreplication"
-	// "vitess.io/vitess/go/vt/wrangler"
 )
 
 // DiffReport is the summary of differences for one table.
@@ -61,7 +59,6 @@ type DiffReport struct {
 
 // vdiff contains the metadata for performing vdiff for one workflow
 type tabletVdiffer struct {
-	// ts             *tabletTrafficSwitcher
 	sourceCell     string
 	targetCell     string
 	sourceKeyspace string
@@ -78,8 +75,7 @@ type tabletVdiffer struct {
 	target              *tabletTsTarget
 	workflow            string
 
-	tmc tmclient.TabletManagerClient // make remote calls to tablets
-	// tabletmanager *tabletmanager.TabletManager // make local calls
+	tmc        tmclient.TabletManagerClient // make remote calls to tablets
 	topoServer *topo.Server
 }
 
@@ -282,6 +278,7 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 
 	diffReports := make(map[string]*DiffReport)
 	jsonOutput := ""
+	log.Infof("differs are %+v", df.differs)
 	for table, td := range df.differs {
 		log.Infof("PROCESSING table %s td %v", table, td)
 
@@ -300,9 +297,9 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		log.Infof("start query streams successful %v", df.sources)
 
 		// Fast forward the targets to the newly recorded source positions.
-		// if err := df.syncTargets(ctx, filteredReplicationWaitTime); err != nil {
-		// 	return nil, vterrors.Wrap(err, "syncTargets")
-		// }
+		if err := df.syncTargets(ctx, filteredReplicationWaitTime); err != nil {
+			return nil, vterrors.Wrap(err, "syncTargets")
+		}
 		// Sources and targets are in sync. Start query streams on the targets.
 		// targetKeyspace == destination tablet keyspace
 		// targets is just self tablet
@@ -311,6 +308,7 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		if err := df.startQueryStreams(ctx, df.targetKeyspace, targets, td.targetExpression, filteredReplicationWaitTime); err != nil {
 			return nil, vterrors.Wrap(err, "startQueryStreams(targets)")
 		}
+		log.Infof("second start query streams successful %v", df.sources)
 
 		// Now that queries are running, target vreplication streams can be restarted.
 		if err := df.restartTarget(ctx); err != nil {
@@ -335,14 +333,15 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 			}
 			jsonOutput += fmt.Sprintf("%s", json)
 		} else {
-			log.Info("Summary for %v: %+v\n", td.targetTable, *dr)
+			log.Infof("Summary for %v: %+v\n", td.targetTable, *dr)
 		}
+
 		diffReports[table] = dr
 	}
 	if format == "json" && jsonOutput != "" {
 		log.Info(`[ %s ]`, jsonOutput)
 	}
-	log.Infof("DIFF REPORT IS successful %v", diffReports)
+	log.Infof("DIFF REPORT IS successful %+v", diffReports)
 
 	return diffReports, nil
 
@@ -715,10 +714,16 @@ func (df *tabletVdiffer) syncTargets(ctx context.Context, filteredReplicationWai
 	err := df.forAllUids(func(target *tabletTsTarget, uid uint32) error {
 		bls := target.sources[uid]
 		pos := df.sources[bls.Shard].snapshotPosition
+		log.Infof("IN SYNC TARGETS")
+		log.Infof("target master tablet is %v", target.master.Tablet)
+		log.Infof("pos is %v", pos)
+		log.Infof("uid is %v", uid)
+
 		query := fmt.Sprintf("update _vt.vreplication set state='Running', stop_pos='%s', message='synchronizing for vdiff' where id=%d", pos, uid)
 		if _, err := df.tmc.VReplicationExec(ctx, target.master.Tablet, query); err != nil {
 			return err
 		}
+		log.Infof("hi hello here after exec vrep thing")
 		if err := df.tmc.VReplicationWaitForPos(waitCtx, target.master.Tablet, int(uid), pos); err != nil {
 			return vterrors.Wrapf(err, "VReplicationWaitForPos for tablet %v", topoproto.TabletAliasString(target.master.Tablet.Alias))
 		}
