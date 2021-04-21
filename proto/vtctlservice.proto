@@ -55,6 +55,7 @@ service Vtctld {
   rpc DeleteShards(vtctldata.DeleteShardsRequest) returns (vtctldata.DeleteShardsResponse) {};
   // DeleteTablets deletes one or more tablets from the topology.
   rpc DeleteTablets(vtctldata.DeleteTabletsRequest) returns (vtctldata.DeleteTabletsResponse) {};
+  rpc DiffSchemas(vtctldata.DiffSchemasRequest) returns (vtctldata.DiffSchemasResponse) {};
   // EmergencyReparentShard reparents the shard to the new primary. It assumes
   // the old primary is dead or otherwise not responding.
   rpc EmergencyReparentShard(vtctldata.EmergencyReparentShardRequest) returns (vtctldata.EmergencyReparentShardResponse) {};

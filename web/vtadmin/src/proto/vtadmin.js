@@ -55513,6 +55513,902 @@ $root.vtctldata = (function() {
         return Keyspace;
     })();
 
+    vtctldata.SchemaDiff = (function() {
+
+        /**
+         * Properties of a SchemaDiff.
+         * @memberof vtctldata
+         * @interface ISchemaDiff
+         * @property {topodata.ITabletAlias|null} [canonical_tablet] SchemaDiff canonical_tablet
+         * @property {tabletmanagerdata.ISchemaDefinition|null} [canonical_schema] SchemaDiff canonical_schema
+         * @property {Object.<string,string>|null} [diff_database_schemas] SchemaDiff diff_database_schemas
+         * @property {Object.<string,vtctldata.SchemaDiff.ITabletTableDefinitionList>|null} [extra_tables] SchemaDiff extra_tables
+         * @property {Object.<string,vtctldata.SchemaDiff.ITabletTableDefinitionList>|null} [missing_tables] SchemaDiff missing_tables
+         * @property {Object.<string,vtctldata.SchemaDiff.ITabletTableDefinitionList>|null} [diff_tables] SchemaDiff diff_tables
+         */
+
+        /**
+         * Constructs a new SchemaDiff.
+         * @memberof vtctldata
+         * @classdesc Represents a SchemaDiff.
+         * @implements ISchemaDiff
+         * @constructor
+         * @param {vtctldata.ISchemaDiff=} [properties] Properties to set
+         */
+        function SchemaDiff(properties) {
+            this.diff_database_schemas = {};
+            this.extra_tables = {};
+            this.missing_tables = {};
+            this.diff_tables = {};
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * SchemaDiff canonical_tablet.
+         * @member {topodata.ITabletAlias|null|undefined} canonical_tablet
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         */
+        SchemaDiff.prototype.canonical_tablet = null;
+
+        /**
+         * SchemaDiff canonical_schema.
+         * @member {tabletmanagerdata.ISchemaDefinition|null|undefined} canonical_schema
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         */
+        SchemaDiff.prototype.canonical_schema = null;
+
+        /**
+         * SchemaDiff diff_database_schemas.
+         * @member {Object.<string,string>} diff_database_schemas
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         */
+        SchemaDiff.prototype.diff_database_schemas = $util.emptyObject;
+
+        /**
+         * SchemaDiff extra_tables.
+         * @member {Object.<string,vtctldata.SchemaDiff.ITabletTableDefinitionList>} extra_tables
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         */
+        SchemaDiff.prototype.extra_tables = $util.emptyObject;
+
+        /**
+         * SchemaDiff missing_tables.
+         * @member {Object.<string,vtctldata.SchemaDiff.ITabletTableDefinitionList>} missing_tables
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         */
+        SchemaDiff.prototype.missing_tables = $util.emptyObject;
+
+        /**
+         * SchemaDiff diff_tables.
+         * @member {Object.<string,vtctldata.SchemaDiff.ITabletTableDefinitionList>} diff_tables
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         */
+        SchemaDiff.prototype.diff_tables = $util.emptyObject;
+
+        /**
+         * Creates a new SchemaDiff instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {vtctldata.ISchemaDiff=} [properties] Properties to set
+         * @returns {vtctldata.SchemaDiff} SchemaDiff instance
+         */
+        SchemaDiff.create = function create(properties) {
+            return new SchemaDiff(properties);
+        };
+
+        /**
+         * Encodes the specified SchemaDiff message. Does not implicitly {@link vtctldata.SchemaDiff.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {vtctldata.ISchemaDiff} message SchemaDiff message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SchemaDiff.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.canonical_tablet != null && Object.hasOwnProperty.call(message, "canonical_tablet"))
+                $root.topodata.TabletAlias.encode(message.canonical_tablet, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.canonical_schema != null && Object.hasOwnProperty.call(message, "canonical_schema"))
+                $root.tabletmanagerdata.SchemaDefinition.encode(message.canonical_schema, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+            if (message.diff_database_schemas != null && Object.hasOwnProperty.call(message, "diff_database_schemas"))
+                for (var keys = Object.keys(message.diff_database_schemas), i = 0; i < keys.length; ++i)
+                    writer.uint32(/* id 3, wireType 2 =*/26).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.diff_database_schemas[keys[i]]).ldelim();
+            if (message.extra_tables != null && Object.hasOwnProperty.call(message, "extra_tables"))
+                for (var keys = Object.keys(message.extra_tables), i = 0; i < keys.length; ++i) {
+                    writer.uint32(/* id 4, wireType 2 =*/34).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]);
+                    $root.vtctldata.SchemaDiff.TabletTableDefinitionList.encode(message.extra_tables[keys[i]], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim().ldelim();
+                }
+            if (message.missing_tables != null && Object.hasOwnProperty.call(message, "missing_tables"))
+                for (var keys = Object.keys(message.missing_tables), i = 0; i < keys.length; ++i) {
+                    writer.uint32(/* id 5, wireType 2 =*/42).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]);
+                    $root.vtctldata.SchemaDiff.TabletTableDefinitionList.encode(message.missing_tables[keys[i]], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim().ldelim();
+                }
+            if (message.diff_tables != null && Object.hasOwnProperty.call(message, "diff_tables"))
+                for (var keys = Object.keys(message.diff_tables), i = 0; i < keys.length; ++i) {
+                    writer.uint32(/* id 6, wireType 2 =*/50).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]);
+                    $root.vtctldata.SchemaDiff.TabletTableDefinitionList.encode(message.diff_tables[keys[i]], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim().ldelim();
+                }
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SchemaDiff message, length delimited. Does not implicitly {@link vtctldata.SchemaDiff.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {vtctldata.ISchemaDiff} message SchemaDiff message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SchemaDiff.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a SchemaDiff message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.SchemaDiff} SchemaDiff
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SchemaDiff.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.SchemaDiff(), key, value;
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.canonical_tablet = $root.topodata.TabletAlias.decode(reader, reader.uint32());
+                    break;
+                case 2:
+                    message.canonical_schema = $root.tabletmanagerdata.SchemaDefinition.decode(reader, reader.uint32());
+                    break;
+                case 3:
+                    if (message.diff_database_schemas === $util.emptyObject)
+                        message.diff_database_schemas = {};
+                    var end2 = reader.uint32() + reader.pos;
+                    key = "";
+                    value = "";
+                    while (reader.pos < end2) {
+                        var tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                        case 1:
+                            key = reader.string();
+                            break;
+                        case 2:
+                            value = reader.string();
+                            break;
+                        default:
+                            reader.skipType(tag2 & 7);
+                            break;
+                        }
+                    }
+                    message.diff_database_schemas[key] = value;
+                    break;
+                case 4:
+                    if (message.extra_tables === $util.emptyObject)
+                        message.extra_tables = {};
+                    var end2 = reader.uint32() + reader.pos;
+                    key = "";
+                    value = null;
+                    while (reader.pos < end2) {
+                        var tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                        case 1:
+                            key = reader.string();
+                            break;
+                        case 2:
+                            value = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.decode(reader, reader.uint32());
+                            break;
+                        default:
+                            reader.skipType(tag2 & 7);
+                            break;
+                        }
+                    }
+                    message.extra_tables[key] = value;
+                    break;
+                case 5:
+                    if (message.missing_tables === $util.emptyObject)
+                        message.missing_tables = {};
+                    var end2 = reader.uint32() + reader.pos;
+                    key = "";
+                    value = null;
+                    while (reader.pos < end2) {
+                        var tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                        case 1:
+                            key = reader.string();
+                            break;
+                        case 2:
+                            value = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.decode(reader, reader.uint32());
+                            break;
+                        default:
+                            reader.skipType(tag2 & 7);
+                            break;
+                        }
+                    }
+                    message.missing_tables[key] = value;
+                    break;
+                case 6:
+                    if (message.diff_tables === $util.emptyObject)
+                        message.diff_tables = {};
+                    var end2 = reader.uint32() + reader.pos;
+                    key = "";
+                    value = null;
+                    while (reader.pos < end2) {
+                        var tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                        case 1:
+                            key = reader.string();
+                            break;
+                        case 2:
+                            value = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.decode(reader, reader.uint32());
+                            break;
+                        default:
+                            reader.skipType(tag2 & 7);
+                            break;
+                        }
+                    }
+                    message.diff_tables[key] = value;
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a SchemaDiff message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.SchemaDiff} SchemaDiff
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SchemaDiff.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SchemaDiff message.
+         * @function verify
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SchemaDiff.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.canonical_tablet != null && message.hasOwnProperty("canonical_tablet")) {
+                var error = $root.topodata.TabletAlias.verify(message.canonical_tablet);
+                if (error)
+                    return "canonical_tablet." + error;
+            }
+            if (message.canonical_schema != null && message.hasOwnProperty("canonical_schema")) {
+                var error = $root.tabletmanagerdata.SchemaDefinition.verify(message.canonical_schema);
+                if (error)
+                    return "canonical_schema." + error;
+            }
+            if (message.diff_database_schemas != null && message.hasOwnProperty("diff_database_schemas")) {
+                if (!$util.isObject(message.diff_database_schemas))
+                    return "diff_database_schemas: object expected";
+                var key = Object.keys(message.diff_database_schemas);
+                for (var i = 0; i < key.length; ++i)
+                    if (!$util.isString(message.diff_database_schemas[key[i]]))
+                        return "diff_database_schemas: string{k:string} expected";
+            }
+            if (message.extra_tables != null && message.hasOwnProperty("extra_tables")) {
+                if (!$util.isObject(message.extra_tables))
+                    return "extra_tables: object expected";
+                var key = Object.keys(message.extra_tables);
+                for (var i = 0; i < key.length; ++i) {
+                    var error = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.verify(message.extra_tables[key[i]]);
+                    if (error)
+                        return "extra_tables." + error;
+                }
+            }
+            if (message.missing_tables != null && message.hasOwnProperty("missing_tables")) {
+                if (!$util.isObject(message.missing_tables))
+                    return "missing_tables: object expected";
+                var key = Object.keys(message.missing_tables);
+                for (var i = 0; i < key.length; ++i) {
+                    var error = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.verify(message.missing_tables[key[i]]);
+                    if (error)
+                        return "missing_tables." + error;
+                }
+            }
+            if (message.diff_tables != null && message.hasOwnProperty("diff_tables")) {
+                if (!$util.isObject(message.diff_tables))
+                    return "diff_tables: object expected";
+                var key = Object.keys(message.diff_tables);
+                for (var i = 0; i < key.length; ++i) {
+                    var error = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.verify(message.diff_tables[key[i]]);
+                    if (error)
+                        return "diff_tables." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a SchemaDiff message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.SchemaDiff} SchemaDiff
+         */
+        SchemaDiff.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.SchemaDiff)
+                return object;
+            var message = new $root.vtctldata.SchemaDiff();
+            if (object.canonical_tablet != null) {
+                if (typeof object.canonical_tablet !== "object")
+                    throw TypeError(".vtctldata.SchemaDiff.canonical_tablet: object expected");
+                message.canonical_tablet = $root.topodata.TabletAlias.fromObject(object.canonical_tablet);
+            }
+            if (object.canonical_schema != null) {
+                if (typeof object.canonical_schema !== "object")
+                    throw TypeError(".vtctldata.SchemaDiff.canonical_schema: object expected");
+                message.canonical_schema = $root.tabletmanagerdata.SchemaDefinition.fromObject(object.canonical_schema);
+            }
+            if (object.diff_database_schemas) {
+                if (typeof object.diff_database_schemas !== "object")
+                    throw TypeError(".vtctldata.SchemaDiff.diff_database_schemas: object expected");
+                message.diff_database_schemas = {};
+                for (var keys = Object.keys(object.diff_database_schemas), i = 0; i < keys.length; ++i)
+                    message.diff_database_schemas[keys[i]] = String(object.diff_database_schemas[keys[i]]);
+            }
+            if (object.extra_tables) {
+                if (typeof object.extra_tables !== "object")
+                    throw TypeError(".vtctldata.SchemaDiff.extra_tables: object expected");
+                message.extra_tables = {};
+                for (var keys = Object.keys(object.extra_tables), i = 0; i < keys.length; ++i) {
+                    if (typeof object.extra_tables[keys[i]] !== "object")
+                        throw TypeError(".vtctldata.SchemaDiff.extra_tables: object expected");
+                    message.extra_tables[keys[i]] = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.fromObject(object.extra_tables[keys[i]]);
+                }
+            }
+            if (object.missing_tables) {
+                if (typeof object.missing_tables !== "object")
+                    throw TypeError(".vtctldata.SchemaDiff.missing_tables: object expected");
+                message.missing_tables = {};
+                for (var keys = Object.keys(object.missing_tables), i = 0; i < keys.length; ++i) {
+                    if (typeof object.missing_tables[keys[i]] !== "object")
+                        throw TypeError(".vtctldata.SchemaDiff.missing_tables: object expected");
+                    message.missing_tables[keys[i]] = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.fromObject(object.missing_tables[keys[i]]);
+                }
+            }
+            if (object.diff_tables) {
+                if (typeof object.diff_tables !== "object")
+                    throw TypeError(".vtctldata.SchemaDiff.diff_tables: object expected");
+                message.diff_tables = {};
+                for (var keys = Object.keys(object.diff_tables), i = 0; i < keys.length; ++i) {
+                    if (typeof object.diff_tables[keys[i]] !== "object")
+                        throw TypeError(".vtctldata.SchemaDiff.diff_tables: object expected");
+                    message.diff_tables[keys[i]] = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.fromObject(object.diff_tables[keys[i]]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SchemaDiff message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.SchemaDiff
+         * @static
+         * @param {vtctldata.SchemaDiff} message SchemaDiff
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SchemaDiff.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.objects || options.defaults) {
+                object.diff_database_schemas = {};
+                object.extra_tables = {};
+                object.missing_tables = {};
+                object.diff_tables = {};
+            }
+            if (options.defaults) {
+                object.canonical_tablet = null;
+                object.canonical_schema = null;
+            }
+            if (message.canonical_tablet != null && message.hasOwnProperty("canonical_tablet"))
+                object.canonical_tablet = $root.topodata.TabletAlias.toObject(message.canonical_tablet, options);
+            if (message.canonical_schema != null && message.hasOwnProperty("canonical_schema"))
+                object.canonical_schema = $root.tabletmanagerdata.SchemaDefinition.toObject(message.canonical_schema, options);
+            var keys2;
+            if (message.diff_database_schemas && (keys2 = Object.keys(message.diff_database_schemas)).length) {
+                object.diff_database_schemas = {};
+                for (var j = 0; j < keys2.length; ++j)
+                    object.diff_database_schemas[keys2[j]] = message.diff_database_schemas[keys2[j]];
+            }
+            if (message.extra_tables && (keys2 = Object.keys(message.extra_tables)).length) {
+                object.extra_tables = {};
+                for (var j = 0; j < keys2.length; ++j)
+                    object.extra_tables[keys2[j]] = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.toObject(message.extra_tables[keys2[j]], options);
+            }
+            if (message.missing_tables && (keys2 = Object.keys(message.missing_tables)).length) {
+                object.missing_tables = {};
+                for (var j = 0; j < keys2.length; ++j)
+                    object.missing_tables[keys2[j]] = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.toObject(message.missing_tables[keys2[j]], options);
+            }
+            if (message.diff_tables && (keys2 = Object.keys(message.diff_tables)).length) {
+                object.diff_tables = {};
+                for (var j = 0; j < keys2.length; ++j)
+                    object.diff_tables[keys2[j]] = $root.vtctldata.SchemaDiff.TabletTableDefinitionList.toObject(message.diff_tables[keys2[j]], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this SchemaDiff to JSON.
+         * @function toJSON
+         * @memberof vtctldata.SchemaDiff
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SchemaDiff.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        SchemaDiff.TabletTableDefinition = (function() {
+
+            /**
+             * Properties of a TabletTableDefinition.
+             * @memberof vtctldata.SchemaDiff
+             * @interface ITabletTableDefinition
+             * @property {topodata.ITabletAlias|null} [tablet_alias] TabletTableDefinition tablet_alias
+             * @property {tabletmanagerdata.ITableDefinition|null} [table_definition] TabletTableDefinition table_definition
+             */
+
+            /**
+             * Constructs a new TabletTableDefinition.
+             * @memberof vtctldata.SchemaDiff
+             * @classdesc Represents a TabletTableDefinition.
+             * @implements ITabletTableDefinition
+             * @constructor
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinition=} [properties] Properties to set
+             */
+            function TabletTableDefinition(properties) {
+                if (properties)
+                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * TabletTableDefinition tablet_alias.
+             * @member {topodata.ITabletAlias|null|undefined} tablet_alias
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @instance
+             */
+            TabletTableDefinition.prototype.tablet_alias = null;
+
+            /**
+             * TabletTableDefinition table_definition.
+             * @member {tabletmanagerdata.ITableDefinition|null|undefined} table_definition
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @instance
+             */
+            TabletTableDefinition.prototype.table_definition = null;
+
+            /**
+             * Creates a new TabletTableDefinition instance using the specified properties.
+             * @function create
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinition=} [properties] Properties to set
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinition} TabletTableDefinition instance
+             */
+            TabletTableDefinition.create = function create(properties) {
+                return new TabletTableDefinition(properties);
+            };
+
+            /**
+             * Encodes the specified TabletTableDefinition message. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinition.verify|verify} messages.
+             * @function encode
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinition} message TabletTableDefinition message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TabletTableDefinition.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.tablet_alias != null && Object.hasOwnProperty.call(message, "tablet_alias"))
+                    $root.topodata.TabletAlias.encode(message.tablet_alias, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                if (message.table_definition != null && Object.hasOwnProperty.call(message, "table_definition"))
+                    $root.tabletmanagerdata.TableDefinition.encode(message.table_definition, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+                return writer;
+            };
+
+            /**
+             * Encodes the specified TabletTableDefinition message, length delimited. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinition.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinition} message TabletTableDefinition message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TabletTableDefinition.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a TabletTableDefinition message from the specified reader or buffer.
+             * @function decode
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinition} TabletTableDefinition
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TabletTableDefinition.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.SchemaDiff.TabletTableDefinition();
+                while (reader.pos < end) {
+                    var tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1:
+                        message.tablet_alias = $root.topodata.TabletAlias.decode(reader, reader.uint32());
+                        break;
+                    case 2:
+                        message.table_definition = $root.tabletmanagerdata.TableDefinition.decode(reader, reader.uint32());
+                        break;
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a TabletTableDefinition message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinition} TabletTableDefinition
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TabletTableDefinition.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a TabletTableDefinition message.
+             * @function verify
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            TabletTableDefinition.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.tablet_alias != null && message.hasOwnProperty("tablet_alias")) {
+                    var error = $root.topodata.TabletAlias.verify(message.tablet_alias);
+                    if (error)
+                        return "tablet_alias." + error;
+                }
+                if (message.table_definition != null && message.hasOwnProperty("table_definition")) {
+                    var error = $root.tabletmanagerdata.TableDefinition.verify(message.table_definition);
+                    if (error)
+                        return "table_definition." + error;
+                }
+                return null;
+            };
+
+            /**
+             * Creates a TabletTableDefinition message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinition} TabletTableDefinition
+             */
+            TabletTableDefinition.fromObject = function fromObject(object) {
+                if (object instanceof $root.vtctldata.SchemaDiff.TabletTableDefinition)
+                    return object;
+                var message = new $root.vtctldata.SchemaDiff.TabletTableDefinition();
+                if (object.tablet_alias != null) {
+                    if (typeof object.tablet_alias !== "object")
+                        throw TypeError(".vtctldata.SchemaDiff.TabletTableDefinition.tablet_alias: object expected");
+                    message.tablet_alias = $root.topodata.TabletAlias.fromObject(object.tablet_alias);
+                }
+                if (object.table_definition != null) {
+                    if (typeof object.table_definition !== "object")
+                        throw TypeError(".vtctldata.SchemaDiff.TabletTableDefinition.table_definition: object expected");
+                    message.table_definition = $root.tabletmanagerdata.TableDefinition.fromObject(object.table_definition);
+                }
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a TabletTableDefinition message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @static
+             * @param {vtctldata.SchemaDiff.TabletTableDefinition} message TabletTableDefinition
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            TabletTableDefinition.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                var object = {};
+                if (options.defaults) {
+                    object.tablet_alias = null;
+                    object.table_definition = null;
+                }
+                if (message.tablet_alias != null && message.hasOwnProperty("tablet_alias"))
+                    object.tablet_alias = $root.topodata.TabletAlias.toObject(message.tablet_alias, options);
+                if (message.table_definition != null && message.hasOwnProperty("table_definition"))
+                    object.table_definition = $root.tabletmanagerdata.TableDefinition.toObject(message.table_definition, options);
+                return object;
+            };
+
+            /**
+             * Converts this TabletTableDefinition to JSON.
+             * @function toJSON
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinition
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            TabletTableDefinition.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            return TabletTableDefinition;
+        })();
+
+        SchemaDiff.TabletTableDefinitionList = (function() {
+
+            /**
+             * Properties of a TabletTableDefinitionList.
+             * @memberof vtctldata.SchemaDiff
+             * @interface ITabletTableDefinitionList
+             * @property {Array.<vtctldata.SchemaDiff.ITabletTableDefinition>|null} [tablet_table_definitions] TabletTableDefinitionList tablet_table_definitions
+             */
+
+            /**
+             * Constructs a new TabletTableDefinitionList.
+             * @memberof vtctldata.SchemaDiff
+             * @classdesc Represents a TabletTableDefinitionList.
+             * @implements ITabletTableDefinitionList
+             * @constructor
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinitionList=} [properties] Properties to set
+             */
+            function TabletTableDefinitionList(properties) {
+                this.tablet_table_definitions = [];
+                if (properties)
+                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * TabletTableDefinitionList tablet_table_definitions.
+             * @member {Array.<vtctldata.SchemaDiff.ITabletTableDefinition>} tablet_table_definitions
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @instance
+             */
+            TabletTableDefinitionList.prototype.tablet_table_definitions = $util.emptyArray;
+
+            /**
+             * Creates a new TabletTableDefinitionList instance using the specified properties.
+             * @function create
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinitionList=} [properties] Properties to set
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinitionList} TabletTableDefinitionList instance
+             */
+            TabletTableDefinitionList.create = function create(properties) {
+                return new TabletTableDefinitionList(properties);
+            };
+
+            /**
+             * Encodes the specified TabletTableDefinitionList message. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinitionList.verify|verify} messages.
+             * @function encode
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinitionList} message TabletTableDefinitionList message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TabletTableDefinitionList.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.tablet_table_definitions != null && message.tablet_table_definitions.length)
+                    for (var i = 0; i < message.tablet_table_definitions.length; ++i)
+                        $root.vtctldata.SchemaDiff.TabletTableDefinition.encode(message.tablet_table_definitions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                return writer;
+            };
+
+            /**
+             * Encodes the specified TabletTableDefinitionList message, length delimited. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinitionList.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {vtctldata.SchemaDiff.ITabletTableDefinitionList} message TabletTableDefinitionList message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            TabletTableDefinitionList.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a TabletTableDefinitionList message from the specified reader or buffer.
+             * @function decode
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinitionList} TabletTableDefinitionList
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TabletTableDefinitionList.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.SchemaDiff.TabletTableDefinitionList();
+                while (reader.pos < end) {
+                    var tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1:
+                        if (!(message.tablet_table_definitions && message.tablet_table_definitions.length))
+                            message.tablet_table_definitions = [];
+                        message.tablet_table_definitions.push($root.vtctldata.SchemaDiff.TabletTableDefinition.decode(reader, reader.uint32()));
+                        break;
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a TabletTableDefinitionList message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinitionList} TabletTableDefinitionList
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            TabletTableDefinitionList.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a TabletTableDefinitionList message.
+             * @function verify
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            TabletTableDefinitionList.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.tablet_table_definitions != null && message.hasOwnProperty("tablet_table_definitions")) {
+                    if (!Array.isArray(message.tablet_table_definitions))
+                        return "tablet_table_definitions: array expected";
+                    for (var i = 0; i < message.tablet_table_definitions.length; ++i) {
+                        var error = $root.vtctldata.SchemaDiff.TabletTableDefinition.verify(message.tablet_table_definitions[i]);
+                        if (error)
+                            return "tablet_table_definitions." + error;
+                    }
+                }
+                return null;
+            };
+
+            /**
+             * Creates a TabletTableDefinitionList message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {vtctldata.SchemaDiff.TabletTableDefinitionList} TabletTableDefinitionList
+             */
+            TabletTableDefinitionList.fromObject = function fromObject(object) {
+                if (object instanceof $root.vtctldata.SchemaDiff.TabletTableDefinitionList)
+                    return object;
+                var message = new $root.vtctldata.SchemaDiff.TabletTableDefinitionList();
+                if (object.tablet_table_definitions) {
+                    if (!Array.isArray(object.tablet_table_definitions))
+                        throw TypeError(".vtctldata.SchemaDiff.TabletTableDefinitionList.tablet_table_definitions: array expected");
+                    message.tablet_table_definitions = [];
+                    for (var i = 0; i < object.tablet_table_definitions.length; ++i) {
+                        if (typeof object.tablet_table_definitions[i] !== "object")
+                            throw TypeError(".vtctldata.SchemaDiff.TabletTableDefinitionList.tablet_table_definitions: object expected");
+                        message.tablet_table_definitions[i] = $root.vtctldata.SchemaDiff.TabletTableDefinition.fromObject(object.tablet_table_definitions[i]);
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a TabletTableDefinitionList message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @static
+             * @param {vtctldata.SchemaDiff.TabletTableDefinitionList} message TabletTableDefinitionList
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            TabletTableDefinitionList.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                var object = {};
+                if (options.arrays || options.defaults)
+                    object.tablet_table_definitions = [];
+                if (message.tablet_table_definitions && message.tablet_table_definitions.length) {
+                    object.tablet_table_definitions = [];
+                    for (var j = 0; j < message.tablet_table_definitions.length; ++j)
+                        object.tablet_table_definitions[j] = $root.vtctldata.SchemaDiff.TabletTableDefinition.toObject(message.tablet_table_definitions[j], options);
+                }
+                return object;
+            };
+
+            /**
+             * Converts this TabletTableDefinitionList to JSON.
+             * @function toJSON
+             * @memberof vtctldata.SchemaDiff.TabletTableDefinitionList
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            TabletTableDefinitionList.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            return TabletTableDefinitionList;
+        })();
+
+        return SchemaDiff;
+    })();
+
     vtctldata.Shard = (function() {
 
         /**
@@ -60105,6 +61001,466 @@ $root.vtctldata = (function() {
         };
 
         return DeleteTabletsResponse;
+    })();
+
+    vtctldata.DiffSchemasRequest = (function() {
+
+        /**
+         * Properties of a DiffSchemasRequest.
+         * @memberof vtctldata
+         * @interface IDiffSchemasRequest
+         * @property {string|null} [keyspace] DiffSchemasRequest keyspace
+         * @property {string|null} [shard] DiffSchemasRequest shard
+         */
+
+        /**
+         * Constructs a new DiffSchemasRequest.
+         * @memberof vtctldata
+         * @classdesc Represents a DiffSchemasRequest.
+         * @implements IDiffSchemasRequest
+         * @constructor
+         * @param {vtctldata.IDiffSchemasRequest=} [properties] Properties to set
+         */
+        function DiffSchemasRequest(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * DiffSchemasRequest keyspace.
+         * @member {string} keyspace
+         * @memberof vtctldata.DiffSchemasRequest
+         * @instance
+         */
+        DiffSchemasRequest.prototype.keyspace = "";
+
+        /**
+         * DiffSchemasRequest shard.
+         * @member {string} shard
+         * @memberof vtctldata.DiffSchemasRequest
+         * @instance
+         */
+        DiffSchemasRequest.prototype.shard = "";
+
+        /**
+         * Creates a new DiffSchemasRequest instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {vtctldata.IDiffSchemasRequest=} [properties] Properties to set
+         * @returns {vtctldata.DiffSchemasRequest} DiffSchemasRequest instance
+         */
+        DiffSchemasRequest.create = function create(properties) {
+            return new DiffSchemasRequest(properties);
+        };
+
+        /**
+         * Encodes the specified DiffSchemasRequest message. Does not implicitly {@link vtctldata.DiffSchemasRequest.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {vtctldata.IDiffSchemasRequest} message DiffSchemasRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DiffSchemasRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.keyspace != null && Object.hasOwnProperty.call(message, "keyspace"))
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.keyspace);
+            if (message.shard != null && Object.hasOwnProperty.call(message, "shard"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.shard);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified DiffSchemasRequest message, length delimited. Does not implicitly {@link vtctldata.DiffSchemasRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {vtctldata.IDiffSchemasRequest} message DiffSchemasRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DiffSchemasRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a DiffSchemasRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.DiffSchemasRequest} DiffSchemasRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DiffSchemasRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.DiffSchemasRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.keyspace = reader.string();
+                    break;
+                case 2:
+                    message.shard = reader.string();
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a DiffSchemasRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.DiffSchemasRequest} DiffSchemasRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DiffSchemasRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a DiffSchemasRequest message.
+         * @function verify
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        DiffSchemasRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                if (!$util.isString(message.keyspace))
+                    return "keyspace: string expected";
+            if (message.shard != null && message.hasOwnProperty("shard"))
+                if (!$util.isString(message.shard))
+                    return "shard: string expected";
+            return null;
+        };
+
+        /**
+         * Creates a DiffSchemasRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.DiffSchemasRequest} DiffSchemasRequest
+         */
+        DiffSchemasRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.DiffSchemasRequest)
+                return object;
+            var message = new $root.vtctldata.DiffSchemasRequest();
+            if (object.keyspace != null)
+                message.keyspace = String(object.keyspace);
+            if (object.shard != null)
+                message.shard = String(object.shard);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a DiffSchemasRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.DiffSchemasRequest
+         * @static
+         * @param {vtctldata.DiffSchemasRequest} message DiffSchemasRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        DiffSchemasRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults) {
+                object.keyspace = "";
+                object.shard = "";
+            }
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                object.keyspace = message.keyspace;
+            if (message.shard != null && message.hasOwnProperty("shard"))
+                object.shard = message.shard;
+            return object;
+        };
+
+        /**
+         * Converts this DiffSchemasRequest to JSON.
+         * @function toJSON
+         * @memberof vtctldata.DiffSchemasRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        DiffSchemasRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return DiffSchemasRequest;
+    })();
+
+    vtctldata.DiffSchemasResponse = (function() {
+
+        /**
+         * Properties of a DiffSchemasResponse.
+         * @memberof vtctldata
+         * @interface IDiffSchemasResponse
+         * @property {vtctldata.ISchemaDiff|null} [diff] DiffSchemasResponse diff
+         * @property {Object.<string,string>|null} [tablet_errors] DiffSchemasResponse tablet_errors
+         */
+
+        /**
+         * Constructs a new DiffSchemasResponse.
+         * @memberof vtctldata
+         * @classdesc Represents a DiffSchemasResponse.
+         * @implements IDiffSchemasResponse
+         * @constructor
+         * @param {vtctldata.IDiffSchemasResponse=} [properties] Properties to set
+         */
+        function DiffSchemasResponse(properties) {
+            this.tablet_errors = {};
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * DiffSchemasResponse diff.
+         * @member {vtctldata.ISchemaDiff|null|undefined} diff
+         * @memberof vtctldata.DiffSchemasResponse
+         * @instance
+         */
+        DiffSchemasResponse.prototype.diff = null;
+
+        /**
+         * DiffSchemasResponse tablet_errors.
+         * @member {Object.<string,string>} tablet_errors
+         * @memberof vtctldata.DiffSchemasResponse
+         * @instance
+         */
+        DiffSchemasResponse.prototype.tablet_errors = $util.emptyObject;
+
+        /**
+         * Creates a new DiffSchemasResponse instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {vtctldata.IDiffSchemasResponse=} [properties] Properties to set
+         * @returns {vtctldata.DiffSchemasResponse} DiffSchemasResponse instance
+         */
+        DiffSchemasResponse.create = function create(properties) {
+            return new DiffSchemasResponse(properties);
+        };
+
+        /**
+         * Encodes the specified DiffSchemasResponse message. Does not implicitly {@link vtctldata.DiffSchemasResponse.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {vtctldata.IDiffSchemasResponse} message DiffSchemasResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DiffSchemasResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.diff != null && Object.hasOwnProperty.call(message, "diff"))
+                $root.vtctldata.SchemaDiff.encode(message.diff, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.tablet_errors != null && Object.hasOwnProperty.call(message, "tablet_errors"))
+                for (var keys = Object.keys(message.tablet_errors), i = 0; i < keys.length; ++i)
+                    writer.uint32(/* id 2, wireType 2 =*/18).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.tablet_errors[keys[i]]).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified DiffSchemasResponse message, length delimited. Does not implicitly {@link vtctldata.DiffSchemasResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {vtctldata.IDiffSchemasResponse} message DiffSchemasResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DiffSchemasResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a DiffSchemasResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.DiffSchemasResponse} DiffSchemasResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DiffSchemasResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.DiffSchemasResponse(), key, value;
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.diff = $root.vtctldata.SchemaDiff.decode(reader, reader.uint32());
+                    break;
+                case 2:
+                    if (message.tablet_errors === $util.emptyObject)
+                        message.tablet_errors = {};
+                    var end2 = reader.uint32() + reader.pos;
+                    key = "";
+                    value = "";
+                    while (reader.pos < end2) {
+                        var tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                        case 1:
+                            key = reader.string();
+                            break;
+                        case 2:
+                            value = reader.string();
+                            break;
+                        default:
+                            reader.skipType(tag2 & 7);
+                            break;
+                        }
+                    }
+                    message.tablet_errors[key] = value;
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a DiffSchemasResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.DiffSchemasResponse} DiffSchemasResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DiffSchemasResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a DiffSchemasResponse message.
+         * @function verify
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        DiffSchemasResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.diff != null && message.hasOwnProperty("diff")) {
+                var error = $root.vtctldata.SchemaDiff.verify(message.diff);
+                if (error)
+                    return "diff." + error;
+            }
+            if (message.tablet_errors != null && message.hasOwnProperty("tablet_errors")) {
+                if (!$util.isObject(message.tablet_errors))
+                    return "tablet_errors: object expected";
+                var key = Object.keys(message.tablet_errors);
+                for (var i = 0; i < key.length; ++i)
+                    if (!$util.isString(message.tablet_errors[key[i]]))
+                        return "tablet_errors: string{k:string} expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a DiffSchemasResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.DiffSchemasResponse} DiffSchemasResponse
+         */
+        DiffSchemasResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.DiffSchemasResponse)
+                return object;
+            var message = new $root.vtctldata.DiffSchemasResponse();
+            if (object.diff != null) {
+                if (typeof object.diff !== "object")
+                    throw TypeError(".vtctldata.DiffSchemasResponse.diff: object expected");
+                message.diff = $root.vtctldata.SchemaDiff.fromObject(object.diff);
+            }
+            if (object.tablet_errors) {
+                if (typeof object.tablet_errors !== "object")
+                    throw TypeError(".vtctldata.DiffSchemasResponse.tablet_errors: object expected");
+                message.tablet_errors = {};
+                for (var keys = Object.keys(object.tablet_errors), i = 0; i < keys.length; ++i)
+                    message.tablet_errors[keys[i]] = String(object.tablet_errors[keys[i]]);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a DiffSchemasResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.DiffSchemasResponse
+         * @static
+         * @param {vtctldata.DiffSchemasResponse} message DiffSchemasResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        DiffSchemasResponse.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.objects || options.defaults)
+                object.tablet_errors = {};
+            if (options.defaults)
+                object.diff = null;
+            if (message.diff != null && message.hasOwnProperty("diff"))
+                object.diff = $root.vtctldata.SchemaDiff.toObject(message.diff, options);
+            var keys2;
+            if (message.tablet_errors && (keys2 = Object.keys(message.tablet_errors)).length) {
+                object.tablet_errors = {};
+                for (var j = 0; j < keys2.length; ++j)
+                    object.tablet_errors[keys2[j]] = message.tablet_errors[keys2[j]];
+            }
+            return object;
+        };
+
+        /**
+         * Converts this DiffSchemasResponse to JSON.
+         * @function toJSON
+         * @memberof vtctldata.DiffSchemasResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        DiffSchemasResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return DiffSchemasResponse;
     })();
 
     vtctldata.EmergencyReparentShardRequest = (function() {

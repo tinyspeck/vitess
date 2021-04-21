@@ -327,6 +327,11 @@ func (s *VtctldServer) DeleteTablets(ctx context.Context, req *vtctldatapb.Delet
 	return &vtctldatapb.DeleteTabletsResponse{}, nil
 }
 
+// DiffSchemas is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) DiffSchemas(ctx context.Context, req *vtctldatapb.DiffSchemasRequest) (*vtctldatapb.DiffSchemasResponse, error) {
+	panic("unimplemented!")
+}
+
 // EmergencyReparentShard is part of the vtctldservicepb.VtctldServer interface.
 func (s *VtctldServer) EmergencyReparentShard(ctx context.Context, req *vtctldatapb.EmergencyReparentShardRequest) (*vtctldatapb.EmergencyReparentShardResponse, error) {
 	waitReplicasTimeout, ok, err := protoutil.DurationFromProto(req.WaitReplicasTimeout)

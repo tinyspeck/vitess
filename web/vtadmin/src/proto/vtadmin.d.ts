@@ -23094,6 +23094,315 @@ export namespace vtctldata {
         public toJSON(): { [k: string]: any };
     }
 
+    /** Properties of a SchemaDiff. */
+    interface ISchemaDiff {
+
+        /** SchemaDiff canonical_tablet */
+        canonical_tablet?: (topodata.ITabletAlias|null);
+
+        /** SchemaDiff canonical_schema */
+        canonical_schema?: (tabletmanagerdata.ISchemaDefinition|null);
+
+        /** SchemaDiff diff_database_schemas */
+        diff_database_schemas?: ({ [k: string]: string }|null);
+
+        /** SchemaDiff extra_tables */
+        extra_tables?: ({ [k: string]: vtctldata.SchemaDiff.ITabletTableDefinitionList }|null);
+
+        /** SchemaDiff missing_tables */
+        missing_tables?: ({ [k: string]: vtctldata.SchemaDiff.ITabletTableDefinitionList }|null);
+
+        /** SchemaDiff diff_tables */
+        diff_tables?: ({ [k: string]: vtctldata.SchemaDiff.ITabletTableDefinitionList }|null);
+    }
+
+    /** Represents a SchemaDiff. */
+    class SchemaDiff implements ISchemaDiff {
+
+        /**
+         * Constructs a new SchemaDiff.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtctldata.ISchemaDiff);
+
+        /** SchemaDiff canonical_tablet. */
+        public canonical_tablet?: (topodata.ITabletAlias|null);
+
+        /** SchemaDiff canonical_schema. */
+        public canonical_schema?: (tabletmanagerdata.ISchemaDefinition|null);
+
+        /** SchemaDiff diff_database_schemas. */
+        public diff_database_schemas: { [k: string]: string };
+
+        /** SchemaDiff extra_tables. */
+        public extra_tables: { [k: string]: vtctldata.SchemaDiff.ITabletTableDefinitionList };
+
+        /** SchemaDiff missing_tables. */
+        public missing_tables: { [k: string]: vtctldata.SchemaDiff.ITabletTableDefinitionList };
+
+        /** SchemaDiff diff_tables. */
+        public diff_tables: { [k: string]: vtctldata.SchemaDiff.ITabletTableDefinitionList };
+
+        /**
+         * Creates a new SchemaDiff instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SchemaDiff instance
+         */
+        public static create(properties?: vtctldata.ISchemaDiff): vtctldata.SchemaDiff;
+
+        /**
+         * Encodes the specified SchemaDiff message. Does not implicitly {@link vtctldata.SchemaDiff.verify|verify} messages.
+         * @param message SchemaDiff message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtctldata.ISchemaDiff, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SchemaDiff message, length delimited. Does not implicitly {@link vtctldata.SchemaDiff.verify|verify} messages.
+         * @param message SchemaDiff message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtctldata.ISchemaDiff, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a SchemaDiff message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns SchemaDiff
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.SchemaDiff;
+
+        /**
+         * Decodes a SchemaDiff message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns SchemaDiff
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.SchemaDiff;
+
+        /**
+         * Verifies a SchemaDiff message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a SchemaDiff message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SchemaDiff
+         */
+        public static fromObject(object: { [k: string]: any }): vtctldata.SchemaDiff;
+
+        /**
+         * Creates a plain object from a SchemaDiff message. Also converts values to other types if specified.
+         * @param message SchemaDiff
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtctldata.SchemaDiff, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this SchemaDiff to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    namespace SchemaDiff {
+
+        /** Properties of a TabletTableDefinition. */
+        interface ITabletTableDefinition {
+
+            /** TabletTableDefinition tablet_alias */
+            tablet_alias?: (topodata.ITabletAlias|null);
+
+            /** TabletTableDefinition table_definition */
+            table_definition?: (tabletmanagerdata.ITableDefinition|null);
+        }
+
+        /** Represents a TabletTableDefinition. */
+        class TabletTableDefinition implements ITabletTableDefinition {
+
+            /**
+             * Constructs a new TabletTableDefinition.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: vtctldata.SchemaDiff.ITabletTableDefinition);
+
+            /** TabletTableDefinition tablet_alias. */
+            public tablet_alias?: (topodata.ITabletAlias|null);
+
+            /** TabletTableDefinition table_definition. */
+            public table_definition?: (tabletmanagerdata.ITableDefinition|null);
+
+            /**
+             * Creates a new TabletTableDefinition instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns TabletTableDefinition instance
+             */
+            public static create(properties?: vtctldata.SchemaDiff.ITabletTableDefinition): vtctldata.SchemaDiff.TabletTableDefinition;
+
+            /**
+             * Encodes the specified TabletTableDefinition message. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinition.verify|verify} messages.
+             * @param message TabletTableDefinition message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encode(message: vtctldata.SchemaDiff.ITabletTableDefinition, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified TabletTableDefinition message, length delimited. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinition.verify|verify} messages.
+             * @param message TabletTableDefinition message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encodeDelimited(message: vtctldata.SchemaDiff.ITabletTableDefinition, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a TabletTableDefinition message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns TabletTableDefinition
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.SchemaDiff.TabletTableDefinition;
+
+            /**
+             * Decodes a TabletTableDefinition message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns TabletTableDefinition
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.SchemaDiff.TabletTableDefinition;
+
+            /**
+             * Verifies a TabletTableDefinition message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            public static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a TabletTableDefinition message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns TabletTableDefinition
+             */
+            public static fromObject(object: { [k: string]: any }): vtctldata.SchemaDiff.TabletTableDefinition;
+
+            /**
+             * Creates a plain object from a TabletTableDefinition message. Also converts values to other types if specified.
+             * @param message TabletTableDefinition
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            public static toObject(message: vtctldata.SchemaDiff.TabletTableDefinition, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this TabletTableDefinition to JSON.
+             * @returns JSON object
+             */
+            public toJSON(): { [k: string]: any };
+        }
+
+        /** Properties of a TabletTableDefinitionList. */
+        interface ITabletTableDefinitionList {
+
+            /** TabletTableDefinitionList tablet_table_definitions */
+            tablet_table_definitions?: (vtctldata.SchemaDiff.ITabletTableDefinition[]|null);
+        }
+
+        /** Represents a TabletTableDefinitionList. */
+        class TabletTableDefinitionList implements ITabletTableDefinitionList {
+
+            /**
+             * Constructs a new TabletTableDefinitionList.
+             * @param [properties] Properties to set
+             */
+            constructor(properties?: vtctldata.SchemaDiff.ITabletTableDefinitionList);
+
+            /** TabletTableDefinitionList tablet_table_definitions. */
+            public tablet_table_definitions: vtctldata.SchemaDiff.ITabletTableDefinition[];
+
+            /**
+             * Creates a new TabletTableDefinitionList instance using the specified properties.
+             * @param [properties] Properties to set
+             * @returns TabletTableDefinitionList instance
+             */
+            public static create(properties?: vtctldata.SchemaDiff.ITabletTableDefinitionList): vtctldata.SchemaDiff.TabletTableDefinitionList;
+
+            /**
+             * Encodes the specified TabletTableDefinitionList message. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinitionList.verify|verify} messages.
+             * @param message TabletTableDefinitionList message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encode(message: vtctldata.SchemaDiff.ITabletTableDefinitionList, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Encodes the specified TabletTableDefinitionList message, length delimited. Does not implicitly {@link vtctldata.SchemaDiff.TabletTableDefinitionList.verify|verify} messages.
+             * @param message TabletTableDefinitionList message or plain object to encode
+             * @param [writer] Writer to encode to
+             * @returns Writer
+             */
+            public static encodeDelimited(message: vtctldata.SchemaDiff.ITabletTableDefinitionList, writer?: $protobuf.Writer): $protobuf.Writer;
+
+            /**
+             * Decodes a TabletTableDefinitionList message from the specified reader or buffer.
+             * @param reader Reader or buffer to decode from
+             * @param [length] Message length if known beforehand
+             * @returns TabletTableDefinitionList
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.SchemaDiff.TabletTableDefinitionList;
+
+            /**
+             * Decodes a TabletTableDefinitionList message from the specified reader or buffer, length delimited.
+             * @param reader Reader or buffer to decode from
+             * @returns TabletTableDefinitionList
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.SchemaDiff.TabletTableDefinitionList;
+
+            /**
+             * Verifies a TabletTableDefinitionList message.
+             * @param message Plain object to verify
+             * @returns `null` if valid, otherwise the reason why it is not
+             */
+            public static verify(message: { [k: string]: any }): (string|null);
+
+            /**
+             * Creates a TabletTableDefinitionList message from a plain object. Also converts values to their respective internal types.
+             * @param object Plain object
+             * @returns TabletTableDefinitionList
+             */
+            public static fromObject(object: { [k: string]: any }): vtctldata.SchemaDiff.TabletTableDefinitionList;
+
+            /**
+             * Creates a plain object from a TabletTableDefinitionList message. Also converts values to other types if specified.
+             * @param message TabletTableDefinitionList
+             * @param [options] Conversion options
+             * @returns Plain object
+             */
+            public static toObject(message: vtctldata.SchemaDiff.TabletTableDefinitionList, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+            /**
+             * Converts this TabletTableDefinitionList to JSON.
+             * @returns JSON object
+             */
+            public toJSON(): { [k: string]: any };
+        }
+    }
+
     /** Properties of a Shard. */
     interface IShard {
 
@@ -24949,6 +25258,198 @@ export namespace vtctldata {
 
         /**
          * Converts this DeleteTabletsResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a DiffSchemasRequest. */
+    interface IDiffSchemasRequest {
+
+        /** DiffSchemasRequest keyspace */
+        keyspace?: (string|null);
+
+        /** DiffSchemasRequest shard */
+        shard?: (string|null);
+    }
+
+    /** Represents a DiffSchemasRequest. */
+    class DiffSchemasRequest implements IDiffSchemasRequest {
+
+        /**
+         * Constructs a new DiffSchemasRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtctldata.IDiffSchemasRequest);
+
+        /** DiffSchemasRequest keyspace. */
+        public keyspace: string;
+
+        /** DiffSchemasRequest shard. */
+        public shard: string;
+
+        /**
+         * Creates a new DiffSchemasRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DiffSchemasRequest instance
+         */
+        public static create(properties?: vtctldata.IDiffSchemasRequest): vtctldata.DiffSchemasRequest;
+
+        /**
+         * Encodes the specified DiffSchemasRequest message. Does not implicitly {@link vtctldata.DiffSchemasRequest.verify|verify} messages.
+         * @param message DiffSchemasRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtctldata.IDiffSchemasRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DiffSchemasRequest message, length delimited. Does not implicitly {@link vtctldata.DiffSchemasRequest.verify|verify} messages.
+         * @param message DiffSchemasRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtctldata.IDiffSchemasRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a DiffSchemasRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DiffSchemasRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.DiffSchemasRequest;
+
+        /**
+         * Decodes a DiffSchemasRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DiffSchemasRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.DiffSchemasRequest;
+
+        /**
+         * Verifies a DiffSchemasRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a DiffSchemasRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DiffSchemasRequest
+         */
+        public static fromObject(object: { [k: string]: any }): vtctldata.DiffSchemasRequest;
+
+        /**
+         * Creates a plain object from a DiffSchemasRequest message. Also converts values to other types if specified.
+         * @param message DiffSchemasRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtctldata.DiffSchemasRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this DiffSchemasRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a DiffSchemasResponse. */
+    interface IDiffSchemasResponse {
+
+        /** DiffSchemasResponse diff */
+        diff?: (vtctldata.ISchemaDiff|null);
+
+        /** DiffSchemasResponse tablet_errors */
+        tablet_errors?: ({ [k: string]: string }|null);
+    }
+
+    /** Represents a DiffSchemasResponse. */
+    class DiffSchemasResponse implements IDiffSchemasResponse {
+
+        /**
+         * Constructs a new DiffSchemasResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtctldata.IDiffSchemasResponse);
+
+        /** DiffSchemasResponse diff. */
+        public diff?: (vtctldata.ISchemaDiff|null);
+
+        /** DiffSchemasResponse tablet_errors. */
+        public tablet_errors: { [k: string]: string };
+
+        /**
+         * Creates a new DiffSchemasResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DiffSchemasResponse instance
+         */
+        public static create(properties?: vtctldata.IDiffSchemasResponse): vtctldata.DiffSchemasResponse;
+
+        /**
+         * Encodes the specified DiffSchemasResponse message. Does not implicitly {@link vtctldata.DiffSchemasResponse.verify|verify} messages.
+         * @param message DiffSchemasResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtctldata.IDiffSchemasResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DiffSchemasResponse message, length delimited. Does not implicitly {@link vtctldata.DiffSchemasResponse.verify|verify} messages.
+         * @param message DiffSchemasResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtctldata.IDiffSchemasResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a DiffSchemasResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DiffSchemasResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.DiffSchemasResponse;
+
+        /**
+         * Decodes a DiffSchemasResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DiffSchemasResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.DiffSchemasResponse;
+
+        /**
+         * Verifies a DiffSchemasResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a DiffSchemasResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DiffSchemasResponse
+         */
+        public static fromObject(object: { [k: string]: any }): vtctldata.DiffSchemasResponse;
+
+        /**
+         * Creates a plain object from a DiffSchemasResponse message. Also converts values to other types if specified.
+         * @param message DiffSchemasResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtctldata.DiffSchemasResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this DiffSchemasResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };

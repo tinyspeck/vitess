@@ -79,6 +79,44 @@ message Keyspace {
   topodata.Keyspace keyspace = 2;
 }
 
+message SchemaDiff {
+  // CanonicalTablet is the tablet alias that was used to get the
+  // CanonicalSchema.
+  topodata.TabletAlias canonical_tablet = 1;
+  // CanonicalSchema represents the authoritative schema definition that
+  // comparisons are based on in the diff. In the case of ValidateSchemaShard
+  // this is the schema according to the shard primary.
+  tabletmanagerdata.SchemaDefinition canonical_schema = 2;
+  // DiffDatabaseSchemas is a map of topodata.TabletAlias strings to
+  // (*tabletmanagerdata.SchemaDefitinion).DatabaseSchema fields where the
+  // DatabaseSchema differs between the CanonicalSchema and the comparison
+  // schemas.
+  map<string, string> diff_database_schemas = 3;
+  // ExtraTables is a map of table names to table definition lists that are in
+  // the CanonicalSchema but not in other tablets in the comparison. For the
+  // case of extra tables, the .TableDefinition field for each
+  // TabletTableDefinition is not set, because it is implicitly the
+  // CanonicalSchema's definition for that table.
+  map<string, TabletTableDefinitionList> extra_tables = 4;
+  // MissingTables is a map of table names to table definition lists that are
+  // not in the CanonicalSchema but are in other tablets in the comparison.
+  map<string, TabletTableDefinitionList> missing_tables = 5;
+  map<string, TabletTableDefinitionList> diff_tables = 6;
+
+  // TabletTableDefinition groups a tablet_alias with the table definition
+  // according to that tablet.
+  message TabletTableDefinition {
+    topodata.TabletAlias tablet_alias = 1;
+    tabletmanagerdata.TableDefinition table_definition = 2;
+  }
+
+  // TabletTableDefinitionList wraps a list af TabletTableDefinitions, solely
+  // because protobuf does not allow `repeated` fields as map values.
+  message TabletTableDefinitionList {
+    repeated TabletTableDefinition tablet_table_definitions = 1;
+  }
+}
+
 message Shard {
   string keyspace = 1;
   string name = 2;
@@ -233,6 +271,24 @@ message DeleteTabletsRequest {
 }
 
 message DeleteTabletsResponse {
+}
+
+message DiffSchemasRequest {
+  string keyspace = 1;
+  string shard = 2;
+  // TODO: allow options for:
+  // - include/exclude table lists
+  // - whether to include views
+  // - override for the canonical schema tablet
+}
+
+message DiffSchemasResponse {
+  SchemaDiff diff = 1;
+  // TabletErrors is a map of topodata.TabletAlias strings to errors returned
+  // from the GetSchema calls to those tablets. It is up to the caller whether
+  // a partial diff (i.e. one or more tablets are not responsive) should be an
+  // overall failure or not.
+  map<string, string> tablet_errors = 2;
 }
 
 message EmergencyReparentShardRequest {

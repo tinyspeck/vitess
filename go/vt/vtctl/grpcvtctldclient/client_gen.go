@@ -82,6 +82,15 @@ func (client *gRPCVtctldClient) DeleteTablets(ctx context.Context, in *vtctldata
 	return client.c.DeleteTablets(ctx, in, opts...)
 }
 
+// DiffSchemas is part of the vtctlservicepb.VtctldClient interface.
+func (client *gRPCVtctldClient) DiffSchemas(ctx context.Context, in *vtctldatapb.DiffSchemasRequest, opts ...grpc.CallOption) (*vtctldatapb.DiffSchemasResponse, error) {
+	if client.c == nil {
+		return nil, status.Error(codes.Unavailable, connClosedMsg)
+	}
+
+	return client.c.DiffSchemas(ctx, in, opts...)
+}
+
 // EmergencyReparentShard is part of the vtctlservicepb.VtctldClient interface.
 func (client *gRPCVtctldClient) EmergencyReparentShard(ctx context.Context, in *vtctldatapb.EmergencyReparentShardRequest, opts ...grpc.CallOption) (*vtctldatapb.EmergencyReparentShardResponse, error) {
 	if client.c == nil {
