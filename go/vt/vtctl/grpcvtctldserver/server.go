@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -329,7 +330,201 @@ func (s *VtctldServer) DeleteTablets(ctx context.Context, req *vtctldatapb.Delet
 
 // DiffSchemas is part of the vtctlservicepb.VtctldServer interface.
 func (s *VtctldServer) DiffSchemas(ctx context.Context, req *vtctldatapb.DiffSchemasRequest) (*vtctldatapb.DiffSchemasResponse, error) {
-	panic("unimplemented!")
+	r, err := s.GetTablets(ctx, &vtctldatapb.GetTabletsRequest{
+		Keyspace: req.Keyspace,
+		Shard:    req.Shard,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		m                          sync.Mutex
+		wg                         sync.WaitGroup
+		rec                        concurrency.ErrorRecorder
+		canonicalSchema            *tabletmanagerdatapb.SchemaDefinition
+		canonicalSchemaTabletAlias *topodatapb.TabletAlias
+		schemasByAlias             = make(map[string]*tabletmanagerdatapb.SchemaDefinition, len(r.Tablets))
+		tabletErrors               = make(map[string]string, len(r.Tablets))
+	)
+
+	for _, tablet := range r.Tablets {
+		wg.Add(1)
+
+		go func(tablet *topodatapb.Tablet) {
+			defer wg.Done()
+
+			resp, err := s.GetSchema(ctx, &vtctldatapb.GetSchemaRequest{
+				TabletAlias: tablet.Alias,
+			})
+
+			aliasStr := topoproto.TabletAliasString(tablet.Alias)
+
+			if err == nil && resp.Schema == nil {
+				err = vterrors.Errorf(vtrpc.Code_NOT_FOUND, "no schema for %v", aliasStr)
+			}
+
+			if err != nil {
+				m.Lock()
+				defer m.Unlock()
+
+				tabletErrors[aliasStr] = err.Error()
+				rec.RecordError(err)
+				return
+			}
+
+			sort.Slice(resp.Schema.TableDefinitions, func(i, j int) bool {
+				return resp.Schema.TableDefinitions[i].Name < resp.Schema.TableDefinitions[j].Name
+			})
+
+			m.Lock()
+			defer m.Unlock()
+
+			if tablet.Type == topodatapb.TabletType_MASTER && canonicalSchemaTabletAlias == nil {
+				canonicalSchema = resp.Schema
+				canonicalSchemaTabletAlias = tablet.Alias
+			}
+
+			schemasByAlias[aliasStr] = resp.Schema
+		}(tablet)
+	}
+
+	wg.Wait()
+
+	if canonicalSchemaTabletAlias == nil {
+		return nil, vterrors.Errorf(vtrpc.Code_NOT_FOUND, "could not find canonical schema for %s/%s: %s", req.Keyspace, req.Shard, rec.Error())
+	}
+
+	diff := &vtctldatapb.SchemaDiff{
+		CanonicalTablet:     canonicalSchemaTabletAlias,
+		CanonicalSchema:     canonicalSchema,
+		DiffDatabaseSchemas: map[string]string{},
+		ExtraTables:         map[string]*vtctldatapb.SchemaDiff_TabletTableDefinitionList{},
+		MissingTables:       map[string]*vtctldatapb.SchemaDiff_TabletTableDefinitionList{},
+		DiffTables:          map[string]*vtctldatapb.SchemaDiff_TabletTableDefinitionList{},
+	}
+
+	canonicalSchemaTabletAliasStr := topoproto.TabletAliasString(canonicalSchemaTabletAlias)
+
+	recordExtraTable := func(alias *topodatapb.TabletAlias, table *tabletmanagerdatapb.TableDefinition) {
+		if _, ok := diff.ExtraTables[table.Name]; !ok {
+			diff.ExtraTables[table.Name] = &vtctldatapb.SchemaDiff_TabletTableDefinitionList{
+				TabletTableDefinitions: []*vtctldatapb.SchemaDiff_TabletTableDefinition{
+					{
+						TabletAlias:     alias,
+						TableDefinition: nil,
+					},
+				},
+			}
+
+			return
+		}
+
+		diff.ExtraTables[table.Name].TabletTableDefinitions = append(diff.ExtraTables[table.Name].TabletTableDefinitions, &vtctldatapb.SchemaDiff_TabletTableDefinition{
+			TabletAlias:     alias,
+			TableDefinition: nil,
+		})
+	}
+
+	recordMissingTable := func(alias *topodatapb.TabletAlias, table *tabletmanagerdatapb.TableDefinition) {
+		if _, ok := diff.MissingTables[table.Name]; !ok {
+			diff.MissingTables[table.Name] = &vtctldatapb.SchemaDiff_TabletTableDefinitionList{
+				TabletTableDefinitions: []*vtctldatapb.SchemaDiff_TabletTableDefinition{
+					{
+						TabletAlias:     alias,
+						TableDefinition: table,
+					},
+				},
+			}
+
+			return
+		}
+
+		diff.MissingTables[table.Name].TabletTableDefinitions = append(diff.MissingTables[table.Name].TabletTableDefinitions, &vtctldatapb.SchemaDiff_TabletTableDefinition{
+			TabletAlias:     alias,
+			TableDefinition: table,
+		})
+	}
+
+	for compareAliasStr, compareSchema := range schemasByAlias {
+		// This call will never error as it's the direct result of a
+		// topoproto.TabletAliasString call earlier in this function.
+		compareAlias, _ := topoproto.ParseTabletAlias(compareAliasStr)
+
+		if compareAliasStr == canonicalSchemaTabletAliasStr {
+			continue
+		}
+
+		if canonicalSchema == nil && compareSchema == nil {
+			continue
+		}
+
+		if canonicalSchema == nil || compareSchema == nil {
+			// not sure how to handle this "diff" case yet, skip it for now
+			log.Warningf("schemas differ\n%s: %v\ndiffers from:\n%s: %v", canonicalSchemaTabletAliasStr, canonicalSchema, compareAliasStr, compareSchema)
+			continue
+		}
+
+		if canonicalSchema.DatabaseSchema != compareSchema.DatabaseSchema {
+			diff.DiffDatabaseSchemas[compareAliasStr] = compareSchema.DatabaseSchema
+		}
+
+		canonicalIdx := 0
+		compareIdx := 0
+
+		for canonicalIdx < len(canonicalSchema.TableDefinitions) && compareIdx < len(compareSchema.TableDefinitions) {
+			canonicalTable := canonicalSchema.TableDefinitions[canonicalIdx]
+			compareTable := compareSchema.TableDefinitions[compareIdx]
+
+			if canonicalTable.Name < compareTable.Name {
+				recordExtraTable(compareAlias, canonicalTable)
+				canonicalIdx++
+				continue
+			}
+
+			if canonicalTable.Name > compareTable.Name {
+				recordMissingTable(compareAlias, compareTable)
+				compareIdx++
+				continue
+			}
+
+			// (TODO:enhancement) Check if table schemas are semantically
+			// equivalent even if they are textually different.
+			if canonicalTable.Schema != compareTable.Schema {
+				// record diff
+				if _, ok := diff.DiffTables[compareTable.Name]; !ok {
+					diff.DiffTables[compareTable.Name] = &vtctldatapb.SchemaDiff_TabletTableDefinitionList{}
+				}
+
+				diff.DiffTables[compareTable.Name].TabletTableDefinitions = append(diff.DiffTables[compareTable.Name].TabletTableDefinitions, &vtctldatapb.SchemaDiff_TabletTableDefinition{
+					TabletAlias:     compareAlias,
+					TableDefinition: compareTable,
+				})
+			}
+
+			if canonicalTable.Type != compareTable.Type {
+				// one table is a view while the other is not. not sure what to
+				// do in this case (yet).
+				log.Warningf("table type mismatch; %v: %s vs %v: %s", canonicalSchemaTabletAliasStr, canonicalTable.Type, compareAliasStr, compareTable.Type)
+			}
+
+			canonicalIdx++
+			compareIdx++
+		}
+
+		for ; canonicalIdx < len(canonicalSchema.TableDefinitions); canonicalIdx++ {
+			recordExtraTable(compareAlias, canonicalSchema.TableDefinitions[canonicalIdx])
+		}
+
+		for ; compareIdx < len(compareSchema.TableDefinitions); compareIdx++ {
+			recordMissingTable(compareAlias, compareSchema.TableDefinitions[compareIdx])
+		}
+	}
+
+	return &vtctldatapb.DiffSchemasResponse{
+		Diff:         diff,
+		TabletErrors: tabletErrors,
+	}, nil
 }
 
 // EmergencyReparentShard is part of the vtctldservicepb.VtctldServer interface.
