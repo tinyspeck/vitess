@@ -15,7 +15,7 @@
  */
 import * as React from 'react';
 import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
-import { useKeyspace, useKeyspaces, useWorkflows } from '../../hooks/api';
+import { useKeyspace, useKeyspaces, useSchemas, useWorkflows } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { Tab } from '../tabs/Tab';
 import { TabList } from '../tabs/TabList';
@@ -39,11 +39,14 @@ export const Keyspace = () => {
 
     const { data: keyspace, ...ksQuery } = useKeyspace({ clusterID, name });
     const { data: workflows, ...wq } = useWorkflows();
+    const { data: schemas, ...sq } = useSchemas();
 
     const is404 = ksQuery.isSuccess && !keyspace;
     if (is404) {
         return <div>404</div>;
     }
+
+    const schemasForKs = (schemas || []).find((s) => s.cluster?.id === clusterID && s.keyspace === name);
 
     const workflowsForKs = (workflows || []).filter(
         (w) =>
@@ -72,7 +75,10 @@ export const Keyspace = () => {
                     text={ksQuery.isLoading ? 'Shards' : `Shards (${Object.values(keyspace?.shards || {}).length})`}
                     to={`${url}/shards`}
                 />
-                <Tab text="Schemas" to={`${url}/schemas`} />
+                <Tab
+                    text={sq.isLoading ? 'Schemas' : `Schemas (${(schemasForKs?.table_definitions || []).length})`}
+                    to={`${url}/schemas`}
+                />
                 <Tab text="VSchema" to={`${url}/vschema`} />
                 <Tab
                     text={wq.isLoading ? 'Workflows' : `Workflows (${workflowsForKs.length})`}
@@ -87,7 +93,7 @@ export const Keyspace = () => {
                     </Route>
 
                     <Route exact path={`${path}/schemas`}>
-                        <KeyspaceSchemas />
+                        <KeyspaceSchemas clusterID={clusterID} name={name} />
                     </Route>
 
                     <Route exact path={`${path}/vschema`}>
