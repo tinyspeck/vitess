@@ -64,6 +64,7 @@ export const Keyspace = () => {
                     <h1>{name}</h1>
                 </code>
                 <div className={style.headingMeta}>
+                    <span>Keyspace</span>
                     <span>
                         Cluster: <code>{clusterID}</code>
                     </span>
