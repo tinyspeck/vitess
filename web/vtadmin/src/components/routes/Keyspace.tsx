@@ -1,0 +1,77 @@
+/**
+ * Copyright 2021 The Vitess Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import * as React from 'react';
+import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { Tab } from '../tabs/Tab';
+import { TabList } from '../tabs/TabList';
+
+import style from './Keyspace.module.scss';
+import { KeyspaceSchemas } from './keyspace/KeyspaceSchemas';
+import { KeyspaceShards } from './keyspace/KeyspaceShards';
+import { KeyspaceVSchema } from './keyspace/KeyspaceVSchema';
+
+interface RouteParams {
+    clusterID: string;
+    name: string;
+}
+
+export const Keyspace = () => {
+    const { clusterID, name } = useParams<RouteParams>();
+    let { path, url } = useRouteMatch();
+
+    useDocumentTitle(`${name} (${clusterID})`);
+
+    return (
+        <div>
+            <header className={style.header}>
+                <p>
+                    <Link to="/keyspaces">← All keyspaces</Link>
+                </p>
+                <code>
+                    <h1>{name}</h1>
+                </code>
+                <div className={style.headingMeta}>
+                    <span>
+                        Cluster: <code>{clusterID}</code>
+                    </span>
+                </div>
+            </header>
+
+            <TabList>
+                <Tab text="Shards" to={`${url}/shards`} />
+                <Tab text="Schemas" to={`${url}/schemas`} />
+                <Tab text="VSchema" to={`${url}/vschema`} />
+            </TabList>
+
+            <Switch>
+                <Route exact path={`${path}/shards`}>
+                    <KeyspaceShards />
+                </Route>
+
+                <Route exact path={`${path}/schemas`}>
+                    <KeyspaceSchemas />
+                </Route>
+
+                <Route exact path={`${path}/vschema`}>
+                    <KeyspaceVSchema />
+                </Route>
+
+                <Redirect exact from={`${path}`} to={`${path}/shards`} />
+            </Switch>
+        </div>
+    );
+};

@@ -15,6 +15,7 @@
  */
 import { orderBy } from 'lodash-es';
 import * as React from 'react';
+import { Link } from 'react-router-dom';
 import { useKeyspaces } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { vtadmin as pb } from '../../proto/vtadmin';
@@ -33,7 +34,15 @@ export const Keyspaces = () => {
         rows.map((keyspace, idx) => (
             <tr key={idx}>
                 <DataCell>{keyspace.cluster?.name}</DataCell>
-                <DataCell>{keyspace.keyspace?.name}</DataCell>
+                <DataCell className="font-weight-bold">
+                    {keyspace.cluster?.id && keyspace.keyspace?.name ? (
+                        <Link to={`/keyspace/${keyspace.cluster.id}/${keyspace.keyspace.name}`}>
+                            {keyspace.keyspace.name}
+                        </Link>
+                    ) : (
+                        <span>{keyspace.keyspace?.name}</span>
+                    )}
+                </DataCell>
             </tr>
         ));
 
