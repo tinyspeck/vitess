@@ -17,12 +17,12 @@ import { groupBy, orderBy, sortBy } from 'lodash';
 import * as React from 'react';
 
 import style from './KeyspaceShards.module.scss';
-import { useKeyspace, useTablets } from '../../../hooks/api';
+import { useKeyspace, useTablets, useWorkflows } from '../../../hooks/api';
 import { DataCell } from '../../dataTable/DataCell';
 import { DataTable } from '../../dataTable/DataTable';
 import { Pip } from '../../pips/Pip';
 import { TabletServingPip } from '../../pips/TabletServingPip';
-import { topodata, vtadmin as pb } from '../../../proto/vtadmin';
+import { topodata, vtadmin as pb, vtctldata } from '../../../proto/vtadmin';
 import { invertBy } from 'lodash-es';
 
 interface Props {
@@ -33,6 +33,7 @@ interface Props {
 export const KeyspaceShards = ({ clusterID, name }: Props) => {
     const { data: keyspace, ...kq } = useKeyspace({ clusterID, name });
     const { data: tablets, ...tq } = useTablets();
+    const { data: workflows, ...wq } = useWorkflows();
 
     const shards = React.useMemo(() => {
         const mapped = Object.values(keyspace?.shards || {}).map((s) => {
@@ -49,6 +50,15 @@ export const KeyspaceShards = ({ clusterID, name }: Props) => {
         return orderBy(mapped, 'shard.name');
     }, [clusterID, keyspace, name, tablets]);
 
+    const streams = (workflows || [])
+        .filter((wf) => wf.cluster?.id === clusterID && wf.keyspace === name)
+        .reduce((acc, wf) => {
+            Object.entries(wf.workflow?.shard_streams || {}).forEach(([sk, ss]) => {
+                (ss.streams || []).forEach((sss) => acc.push(sss));
+            });
+            return acc;
+        }, [] as vtctldata.Workflow.IStream[]);
+
     const renderRows = (rows: typeof shards) => {
         return rows.reduce((acc, row) => {
             if (!row.tablets.length) {
@@ -60,7 +70,7 @@ export const KeyspaceShards = ({ clusterID, name }: Props) => {
                                 {row.shard.name}({row.shard.shard?.is_master_serving ? 'SERVING' : 'NOT SERVING'})
                             </div>
                         </DataCell>
-                        <DataCell colSpan={3}>No tablets</DataCell>
+                        <DataCell colSpan={4}>No tablets</DataCell>
                     </tr>
                 );
                 return acc;
@@ -69,6 +79,12 @@ export const KeyspaceShards = ({ clusterID, name }: Props) => {
             const tabletsByType = groupBy(row.tablets, (t) => formatDisplayType(t));
 
             row.tablets.forEach((t, tdx) => {
+                const tabletStreams = streams.filter(
+                    (s) => s.tablet?.cell === t.tablet?.alias?.cell && s.tablet?.uid === t.tablet?.alias?.uid
+                );
+
+                const streamsByState = groupBy(tabletStreams, 'state');
+
                 acc.push(
                     <tr key={`${row.shard.name}--${t.tablet?.hostname}`}>
                         {tdx === 0 && (
@@ -96,29 +112,16 @@ export const KeyspaceShards = ({ clusterID, name }: Props) => {
                         <DataCell>{formatState(t)}</DataCell>
                         <DataCell>{formatAlias(t)}</DataCell>
                         <DataCell>{t.tablet?.hostname}</DataCell>
+                        <DataCell>
+                            {Object.entries(streamsByState).map(([streamState, streams]) => (
+                                <div key={streamState}>
+                                    {streams.length} <code>{streamState}</code> VReplication streams
+                                </div>
+                            ))}
+                        </DataCell>
                     </tr>
                 );
             });
-
-            // return (
-            //     <tr key={row.shard.name}>
-            //         <DataCell rowSpan={row.tablets.length || 1}>
-            //
-            //         </DataCell>
-            //         <DataCell rowSpan={row.tablets.length || 1}>
-            //             {row.shard.shard?.is_master_serving ? 'SERVING' : 'NOT SERVING'}
-            //         </DataCell>
-
-            //         {(row.tablets || []).map((t) => (
-            //             <>
-            //                 <DataCell></DataCell>
-            //                 <DataCell></DataCell>
-            //                 <DataCell></DataCell>
-            //                 <DataCell></DataCell>
-            //             </>
-            //         ))}
-            //     </tr>
-            // );
             return acc;
         }, [] as JSX.Element[]);
     };
@@ -126,7 +129,7 @@ export const KeyspaceShards = ({ clusterID, name }: Props) => {
     return (
         <div>
             <DataTable
-                columns={['Shard', 'Tablet Type', 'State', 'Alias', 'Hostname']}
+                columns={['Shard', 'Tablet Type', 'State', 'Alias', 'Hostname', '']}
                 data={shards}
                 renderRows={renderRows}
             />
