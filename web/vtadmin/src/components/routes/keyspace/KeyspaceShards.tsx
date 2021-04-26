@@ -76,7 +76,7 @@ export const KeyspaceShards = ({ clusterID, name }: Props) => {
                                 <DataCell rowSpan={row.tablets.length || 1}>
                                     <div>
                                         <Pip state={row.shard?.shard?.is_master_serving ? 'success' : 'danger'} />{' '}
-                                        {row.shard.name} (
+                                        <span className={style.shardName}>{row.shard.name}</span> (
                                         {row.shard.shard?.is_master_serving ? 'SERVING' : 'NOT SERVING'})
                                     </div>
 
