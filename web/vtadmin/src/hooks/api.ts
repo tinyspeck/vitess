@@ -88,6 +88,19 @@ export const useWorkflows = (...args: Parameters<typeof useWorkflowsResponse>) =
     return { data: workflows, ...query };
 };
 
+export const useKeyspace = (
+    params: { clusterID: string; name: string },
+    options?: UseQueryOptions<pb.Keyspace, Error> | undefined
+) => {
+    return useQuery(['keyspace', params], async () => {
+        const keyspaces = await fetchKeyspaces();
+        const keyspace = (keyspaces || []).find(
+            (k) => k.cluster?.id === params.clusterID && k.keyspace?.name === params.name
+        );
+        return keyspace;
+    });
+};
+
 /**
  * useSchema is a query hook that fetches a single schema for the given parameters.
  */

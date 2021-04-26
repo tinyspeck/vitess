@@ -15,6 +15,7 @@
  */
 import * as React from 'react';
 import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
+import { useKeyspace, useKeyspaces } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { Tab } from '../tabs/Tab';
 import { TabList } from '../tabs/TabList';
@@ -34,6 +35,13 @@ export const Keyspace = () => {
     let { path, url } = useRouteMatch();
 
     useDocumentTitle(`${name} (${clusterID})`);
+
+    const { data: keyspace, ...ksQuery } = useKeyspace({ clusterID, name });
+
+    const is404 = ksQuery.isSuccess && !keyspace;
+    if (is404) {
+        return <div>404</div>;
+    }
 
     return (
         <div>
