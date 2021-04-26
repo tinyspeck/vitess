@@ -79,7 +79,7 @@ export const Keyspace = () => {
                     </Route>
 
                     <Route exact path={`${path}/vschema`}>
-                        <KeyspaceVSchema />
+                        <KeyspaceVSchema clusterID={clusterID} name={name} />
                     </Route>
 
                     <Redirect exact from={`${path}`} to={`${path}/shards`} />

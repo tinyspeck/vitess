@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 import * as React from 'react';
-export const KeyspaceVSchema = () => {
-    return (
-        <div>
-            <h2>Keyspace vschema</h2>
-        </div>
-    );
+import { useVSchema } from '../../../hooks/api';
+import { Code } from '../../Code';
+
+interface Props {
+    clusterID: string;
+    name: string;
+}
+
+export const KeyspaceVSchema = ({ clusterID, name }: Props) => {
+    const { data: vschema, ...vq } = useVSchema({ clusterID, keyspace: name });
+
+    return <div>{vq.isLoading ? 'Loading' : <Code code={JSON.stringify(vschema, null, 2)} />}</div>;
 };
