@@ -60,7 +60,10 @@ export const Keyspace = () => {
             </header>
 
             <TabList>
-                <Tab text="Shards" to={`${url}/shards`} />
+                <Tab
+                    text={ksQuery.isLoading ? 'Shards' : `Shards (${Object.values(keyspace?.shards || {}).length})`}
+                    to={`${url}/shards`}
+                />
                 <Tab text="Schemas" to={`${url}/schemas`} />
                 <Tab text="VSchema" to={`${url}/vschema`} />
             </TabList>
