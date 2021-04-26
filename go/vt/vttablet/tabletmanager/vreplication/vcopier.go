@@ -435,16 +435,10 @@ func (vc *vcopier) copyTable(ctx context.Context, tableName string, copyState ma
 	}(dbClientPool)
 
 	err = vc.vr.sourceVStreamer.VStreamRows(ctx, initialPlan.SendRule.Filter, currentLastPKpb, func(rows *binlogdatapb.VStreamRowsResponse) error {
-		for {
-			select {
-			case <-ctx.Done():
-				return io.EOF
-			default:
-			}
-			// verify throttler is happy, otherwise keep looping
-			if vc.vr.vre.throttlerClient.ThrottleCheckOKOrWait(ctx) {
-				break
-			}
+		select {
+		case <-ctx.Done():
+			return io.EOF
+		default:
 		}
 		if vc.tablePlan == nil {
 			if len(rows.Fields) == 0 {
