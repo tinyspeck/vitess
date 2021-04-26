@@ -65,21 +65,23 @@ export const Keyspace = () => {
                 <Tab text="VSchema" to={`${url}/vschema`} />
             </TabList>
 
-            <Switch>
-                <Route exact path={`${path}/shards`}>
-                    <KeyspaceShards />
-                </Route>
+            <div className={style.container}>
+                <Switch>
+                    <Route exact path={`${path}/shards`}>
+                        <KeyspaceShards clusterID={clusterID} name={name} />
+                    </Route>
 
-                <Route exact path={`${path}/schemas`}>
-                    <KeyspaceSchemas />
-                </Route>
+                    <Route exact path={`${path}/schemas`}>
+                        <KeyspaceSchemas />
+                    </Route>
 
-                <Route exact path={`${path}/vschema`}>
-                    <KeyspaceVSchema />
-                </Route>
+                    <Route exact path={`${path}/vschema`}>
+                        <KeyspaceVSchema />
+                    </Route>
 
-                <Redirect exact from={`${path}`} to={`${path}/shards`} />
-            </Switch>
+                    <Redirect exact from={`${path}`} to={`${path}/shards`} />
+                </Switch>
+            </div>
         </div>
     );
 };

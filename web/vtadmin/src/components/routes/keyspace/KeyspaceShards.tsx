@@ -13,11 +13,149 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { groupBy, orderBy, sortBy } from 'lodash';
 import * as React from 'react';
-export const KeyspaceShards = () => {
+
+import style from './KeyspaceShards.module.scss';
+import { useKeyspace, useTablets } from '../../../hooks/api';
+import { DataCell } from '../../dataTable/DataCell';
+import { DataTable } from '../../dataTable/DataTable';
+import { Pip } from '../../pips/Pip';
+import { TabletServingPip } from '../../pips/TabletServingPip';
+import { topodata, vtadmin as pb } from '../../../proto/vtadmin';
+import { invertBy } from 'lodash-es';
+
+interface Props {
+    clusterID: string;
+    name: string;
+}
+
+export const KeyspaceShards = ({ clusterID, name }: Props) => {
+    const { data: keyspace, ...kq } = useKeyspace({ clusterID, name });
+    const { data: tablets, ...tq } = useTablets();
+
+    const shards = React.useMemo(() => {
+        const mapped = Object.values(keyspace?.shards || {}).map((s) => {
+            return {
+                shard: s,
+                tablets: orderBy(
+                    (tablets || []).filter(
+                        (t) => t.cluster?.id === clusterID && t.tablet?.keyspace === name && t.tablet?.shard === s.name
+                    ),
+                    'tablet.type'
+                ),
+            };
+        });
+        return orderBy(mapped, 'shard.name');
+    }, [clusterID, keyspace, name, tablets]);
+
+    const renderRows = (rows: typeof shards) => {
+        return rows.reduce((acc, row) => {
+            if (!row.tablets.length) {
+                acc.push(
+                    <tr key={row.shard.name}>
+                        <DataCell>
+                            <div>
+                                <Pip state={row.shard?.shard?.is_master_serving ? 'success' : 'danger'} />{' '}
+                                {row.shard.name}({row.shard.shard?.is_master_serving ? 'SERVING' : 'NOT SERVING'})
+                            </div>
+                        </DataCell>
+                        <DataCell colSpan={3}>No tablets</DataCell>
+                    </tr>
+                );
+                return acc;
+            }
+
+            const tabletsByType = groupBy(row.tablets, (t) => formatDisplayType(t));
+
+            row.tablets.forEach((t, tdx) => {
+                acc.push(
+                    <tr key={`${row.shard.name}--${t.tablet?.hostname}`}>
+                        {tdx === 0 && (
+                            <>
+                                <DataCell rowSpan={row.tablets.length || 1}>
+                                    <div>
+                                        <Pip state={row.shard?.shard?.is_master_serving ? 'success' : 'danger'} />{' '}
+                                        {row.shard.name} (
+                                        {row.shard.shard?.is_master_serving ? 'SERVING' : 'NOT SERVING'})
+                                    </div>
+
+                                    <div className={style.tabletCounts}>
+                                        {Object.entries(tabletsByType).map(([k, kt]) => (
+                                            <div>
+                                                {kt.length} {kt.length === 1 ? k : `${k}S`}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </DataCell>
+                            </>
+                        )}
+                        <DataCell className="white-space-nowrap">
+                            <TabletServingPip state={t.state} /> {formatDisplayType(t)}
+                        </DataCell>
+                        <DataCell>{formatState(t)}</DataCell>
+                        <DataCell>{formatAlias(t)}</DataCell>
+                        <DataCell>{t.tablet?.hostname}</DataCell>
+                    </tr>
+                );
+            });
+
+            // return (
+            //     <tr key={row.shard.name}>
+            //         <DataCell rowSpan={row.tablets.length || 1}>
+            //
+            //         </DataCell>
+            //         <DataCell rowSpan={row.tablets.length || 1}>
+            //             {row.shard.shard?.is_master_serving ? 'SERVING' : 'NOT SERVING'}
+            //         </DataCell>
+
+            //         {(row.tablets || []).map((t) => (
+            //             <>
+            //                 <DataCell></DataCell>
+            //                 <DataCell></DataCell>
+            //                 <DataCell></DataCell>
+            //                 <DataCell></DataCell>
+            //             </>
+            //         ))}
+            //     </tr>
+            // );
+            return acc;
+        }, [] as JSX.Element[]);
+    };
+
     return (
         <div>
-            <h2>Keyspace shards</h2>
+            <DataTable
+                columns={['Shard', 'Tablet Type', 'State', 'Alias', 'Hostname']}
+                data={shards}
+                renderRows={renderRows}
+            />
         </div>
     );
 };
+
+const SERVING_STATES = Object.keys(pb.Tablet.ServingState);
+
+// TABLET_TYPES maps numeric tablet types back to human readable strings.
+// Note that topodata.TabletType allows duplicate values: specifically,
+// both RDONLY (new name) and BATCH (old name) share the same numeric value.
+// So, we make the assumption that if there are duplicate keys, we will
+// always take the first value.
+const TABLET_TYPES = Object.entries(invertBy(topodata.TabletType)).reduce((acc, [k, vs]) => {
+    acc[k] = vs[0];
+    return acc;
+}, {} as { [k: string]: string });
+
+const formatAlias = (t: pb.Tablet) =>
+    t.tablet?.alias?.cell && t.tablet?.alias?.uid && `${t.tablet.alias.cell}-${t.tablet.alias.uid}`;
+
+const formatType = (t: pb.Tablet) => {
+    return t.tablet?.type && TABLET_TYPES[t.tablet?.type];
+};
+
+const formatDisplayType = (t: pb.Tablet) => {
+    const tt = formatType(t);
+    return tt === 'MASTER' ? 'PRIMARY' : tt;
+};
+
+const formatState = (t: pb.Tablet) => t.state && SERVING_STATES[t.state];
