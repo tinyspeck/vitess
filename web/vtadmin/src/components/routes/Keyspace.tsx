@@ -15,7 +15,7 @@
  */
 import * as React from 'react';
 import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
-import { useKeyspace, useKeyspaces } from '../../hooks/api';
+import { useKeyspace, useKeyspaces, useWorkflows } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { Tab } from '../tabs/Tab';
 import { TabList } from '../tabs/TabList';
@@ -24,6 +24,7 @@ import style from './Keyspace.module.scss';
 import { KeyspaceSchemas } from './keyspace/KeyspaceSchemas';
 import { KeyspaceShards } from './keyspace/KeyspaceShards';
 import { KeyspaceVSchema } from './keyspace/KeyspaceVSchema';
+import { KeyspaceWorkflows } from './keyspace/KeyspaceWorkflows';
 
 interface RouteParams {
     clusterID: string;
@@ -37,11 +38,18 @@ export const Keyspace = () => {
     useDocumentTitle(`${name} (${clusterID})`);
 
     const { data: keyspace, ...ksQuery } = useKeyspace({ clusterID, name });
+    const { data: workflows, ...wq } = useWorkflows();
 
     const is404 = ksQuery.isSuccess && !keyspace;
     if (is404) {
         return <div>404</div>;
     }
+
+    const workflowsForKs = (workflows || []).filter(
+        (w) =>
+            w.cluster?.id === clusterID &&
+            (w.workflow?.source?.keyspace === name || w.workflow?.target?.keyspace === name)
+    );
 
     return (
         <div>
@@ -66,6 +74,10 @@ export const Keyspace = () => {
                 />
                 <Tab text="Schemas" to={`${url}/schemas`} />
                 <Tab text="VSchema" to={`${url}/vschema`} />
+                <Tab
+                    text={wq.isLoading ? 'Workflows' : `Workflows (${workflowsForKs.length})`}
+                    to={`${url}/workflows`}
+                />
             </TabList>
 
             <div className={style.container}>
@@ -80,6 +92,10 @@ export const Keyspace = () => {
 
                     <Route exact path={`${path}/vschema`}>
                         <KeyspaceVSchema clusterID={clusterID} name={name} />
+                    </Route>
+
+                    <Route exact path={`${path}/workflows`}>
+                        <KeyspaceWorkflows clusterID={clusterID} name={name} />
                     </Route>
 
                     <Redirect exact from={`${path}`} to={`${path}/shards`} />
