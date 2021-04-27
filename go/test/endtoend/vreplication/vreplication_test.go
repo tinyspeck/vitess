@@ -72,6 +72,9 @@ func TestBasicVreplicationWorkflow(t *testing.T) {
 	materializeRollup(t)
 
 	shardCustomer(t, true, []*Cell{defaultCell}, defaultCellName)
+	// the tenant table was to test a specific case with binary sharding keys. Drop it now so that we don't
+	// have to update the rest of the tests
+	execVtgateQuery(t, vtgateConn, "customer", "drop table tenant")
 	validateRollupReplicates(t)
 	shardOrders(t)
 	shardMerchant(t)
@@ -254,11 +257,8 @@ func shardCustomer(t *testing.T, testReverse bool, cells []*Cell, sourceCellOrAl
 		dropSourcesDryRun(t, ksWorkflow, false, dryRunResultsDropSourcesDropCustomerShard)
 		dropSourcesDryRun(t, ksWorkflow, true, dryRunResultsDropSourcesRenameCustomerShard)
 
-		var exists bool
-		exists, err := checkIfBlacklistExists(t, vc, "product:0", "customer")
-		require.NoError(t, err, "Error getting blacklist for customer:0")
-		require.True(t, exists)
-		dropSources(t, ksWorkflow)
+		tables := "customer,tenant"
+		moveTables(t, sourceCellOrAlias, workflow, sourceKs, targetKs, tables)
 
 		exists, err = checkIfBlacklistExists(t, vc, "product:0", "customer")
 		require.NoError(t, err, "Error getting blacklist for customer:0")
@@ -268,7 +268,24 @@ func shardCustomer(t *testing.T, testReverse bool, cells []*Cell, sourceCellOrAl
 			expectNumberOfStreams(t, vtgateConn, "shardCustomerTargetStreams", "p2c", "customer:"+shard, 0)
 		}
 
-		expectNumberOfStreams(t, vtgateConn, "shardCustomerReverseStreams", "p2c_reverse", "product:0", 0)
+		productTab := vc.Cells[defaultCell.Name].Keyspaces["product"].Shards["0"].Tablets["zone1-100"].Vttablet
+		query := "select * from customer"
+		require.True(t, validateThatQueryExecutesOnTablet(t, vtgateConn, productTab, "product", query, query))
+		insertQuery1 := "insert into customer(cid, name) values(1001, 'tempCustomer1')"
+		matchInsertQuery1 := "insert into customer(cid, `name`) values (:vtg1, :vtg2)"
+		require.True(t, validateThatQueryExecutesOnTablet(t, vtgateConn, productTab, "product", insertQuery1, matchInsertQuery1))
+		execVtgateQuery(t, vtgateConn, "product", "update tenant set name='xyz'")
+		vdiff(t, ksWorkflow, "")
+		switchReadsDryRun(t, allCellNames, ksWorkflow, dryRunResultsReadCustomerShard)
+		switchReads(t, allCellNames, ksWorkflow)
+		require.True(t, validateThatQueryExecutesOnTablet(t, vtgateConn, productTab, "customer", query, query))
+		switchWritesDryRun(t, ksWorkflow, dryRunResultsSwitchWritesCustomerShard)
+		switchWrites(t, ksWorkflow, false)
+		ksShards := []string{"product/0", "customer/-80", "customer/80-"}
+		printShardPositions(vc, ksShards)
+		insertQuery2 := "insert into customer(name, cid) values('tempCustomer2', 100)"
+		matchInsertQuery2 := "insert into customer(`name`, cid) values (:vtg1, :_cid0)"
+		require.False(t, validateThatQueryExecutesOnTablet(t, vtgateConn, productTab, "customer", insertQuery2, matchInsertQuery2))
 
 		var found bool
 		found, err = checkIfTableExists(t, vc, "zone1-100", "customer")
