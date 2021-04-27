@@ -133,6 +133,7 @@ func buildUpdatePlan(upd *sqlparser.Update) (*controllerPlan, error) {
 		}, nil
 	case vreplicationTableName:
 		// no-op
+
 	default:
 		return nil, fmt.Errorf("invalid table name: %v", sqlparser.String(upd.TableExprs))
 	}
@@ -222,7 +223,7 @@ func buildDeletePlan(del *sqlparser.Delete) (*controllerPlan, error) {
 
 func buildSelectPlan(sel *sqlparser.Select) (*controllerPlan, error) {
 	switch sqlparser.String(sel.From) {
-	case vreplicationTableName, reshardingJournalTableName, copyStateTableName:
+	case vreplicationTableName, reshardingJournalTableName, copyStateTableName, vreplicationLogTableName:
 		return &controllerPlan{
 			opcode: selectQuery,
 		}, nil
