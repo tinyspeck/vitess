@@ -17,8 +17,11 @@ limitations under the License.
 package mysql
 
 import (
+	"time"
+
 	"vitess.io/vitess/go/sqltypes"
 
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 )
 
@@ -118,6 +121,8 @@ func (c *Conn) FetchNext() ([]sqltypes.Value, error) {
 		return nil, nil
 	}
 
+	log.Infof("YES THIS WORKS")
+	time.Sleep(2 * time.Second)
 	data, err := c.ReadPacket()
 	if err != nil {
 		return nil, err
