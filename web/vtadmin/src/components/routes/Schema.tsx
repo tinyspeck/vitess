@@ -21,6 +21,7 @@ import { useSchema, useVSchema } from '../../hooks/api';
 import { Code } from '../Code';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { getVindexesForTable } from '../../util/vschemas';
+import { KeyspaceLink } from './keyspace/KeyspaceLink';
 
 interface RouteParams {
     clusterID: string;
@@ -65,7 +66,10 @@ export const Schema = () => {
                             Cluster: <code>{clusterID}</code>
                         </span>
                         <span>
-                            Keyspace: <code>{keyspace}</code>
+                            Keyspace:{' '}
+                            <KeyspaceLink className="font-family-monospace" clusterID={clusterID} name={keyspace}>
+                                {keyspace}
+                            </KeyspaceLink>
                         </span>
                     </div>
                 </header>

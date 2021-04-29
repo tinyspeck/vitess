@@ -89,6 +89,34 @@ export const useWorkflows = (...args: Parameters<typeof useWorkflowsResponse>) =
 };
 
 /**
+ * useKeyspace is a query hook that fetches a single keyspace for the given parameters.
+ */
+export const useKeyspace = (
+    params: { clusterID: string; name: string },
+    options?: UseQueryOptions<pb.Keyspace, Error> | undefined
+) => {
+    return useQuery(
+        ['keyspace', params],
+        async () => {
+            // TODO(doeg) replace all of this with a single call to `fetchKeyspace`
+            // once vtadmin-api has an `/api/keyspace/...` endpoint
+            // https://github.com/vitessio/vitess/projects/12#card-59980087
+            const keyspaces = await fetchKeyspaces();
+            const keyspace = (keyspaces || []).find(
+                (k) => k.cluster?.id === params.clusterID && k.keyspace?.name === params.name
+            );
+
+            if (!keyspace) throw new Error('keyspace not found');
+            return keyspace;
+        },
+        {
+            // TODO queryClient cache
+            ...options,
+        }
+    );
+};
+
+/**
  * useSchema is a query hook that fetches a single schema for the given parameters.
  */
 export const useSchema = (params: FetchSchemaParams, options?: UseQueryOptions<pb.Schema, Error> | undefined) => {

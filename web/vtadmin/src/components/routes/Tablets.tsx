@@ -28,6 +28,7 @@ import { Button } from '../Button';
 import { DataCell } from '../dataTable/DataCell';
 import { TabletServingPip } from '../pips/TabletServingPip';
 import { useSyncedURLParam } from '../../hooks/useSyncedURLParam';
+import { KeyspaceLink } from './keyspace/KeyspaceLink';
 
 export const Tablets = () => {
     useDocumentTitle('Tablets');
@@ -43,7 +44,11 @@ export const Tablets = () => {
         return rows.map((t, tdx) => (
             <tr key={tdx}>
                 <DataCell>
-                    <div>{t.keyspace}</div>
+                    <div>
+                        <KeyspaceLink clusterID={t.clusterID as string} name={t.keyspace as string}>
+                            {t.keyspace}
+                        </KeyspaceLink>
+                    </div>
                     <div className="font-size-small text-color-secondary">{t.cluster}</div>
                 </DataCell>
                 <DataCell>{t.shard}</DataCell>
@@ -116,6 +121,7 @@ export const formatRows = (tablets: pb.Tablet[] | null | undefined, filter: stri
     // unexpected and a little weird to key on properties that you can't see.
     const mapped = tablets.map((t) => ({
         cluster: t.cluster?.name,
+        clusterID: t.cluster?.id,
         keyspace: t.tablet?.keyspace,
         shard: t.tablet?.shard,
         alias: formatAlias(t),

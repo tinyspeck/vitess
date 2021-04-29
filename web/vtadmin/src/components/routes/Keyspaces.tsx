@@ -28,6 +28,7 @@ import { TextInput } from '../TextInput';
 import { Pip } from '../pips/Pip';
 import { filterNouns } from '../../util/filterNouns';
 import { getShardsByState } from '../../util/keyspaces';
+import { KeyspaceLink } from './keyspace/KeyspaceLink';
 
 export const Keyspaces = () => {
     useDocumentTitle('Keyspaces');
@@ -55,7 +56,11 @@ export const Keyspaces = () => {
         rows.map((row, idx) => (
             <tr key={idx}>
                 <DataCell>
-                    <div className="font-weight-bold">{row.name}</div>
+                    <div className="font-weight-bold">
+                        <KeyspaceLink clusterID={row.clusterID as string} name={row.name as string}>
+                            {row.name}
+                        </KeyspaceLink>
+                    </div>
                     <div className="font-size-small text-color-secondary">{row.cluster}</div>
                 </DataCell>
                 <DataCell>

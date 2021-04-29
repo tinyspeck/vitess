@@ -28,6 +28,7 @@ import { DataCell } from '../dataTable/DataCell';
 import { DataTable } from '../dataTable/DataTable';
 import { Icons } from '../Icon';
 import { TextInput } from '../TextInput';
+import { KeyspaceLink } from './keyspace/KeyspaceLink';
 import style from './Schemas.module.scss';
 
 const TABLE_COLUMNS = [
@@ -75,7 +76,11 @@ export const Schemas = () => {
             return (
                 <tr key={idx}>
                     <DataCell>
-                        <div>{row.keyspace}</div>
+                        <div>
+                            <KeyspaceLink clusterID={row.clusterID as string} name={row.keyspace as string}>
+                                {row.keyspace}
+                            </KeyspaceLink>
+                        </div>
                         <div className="font-size-small text-color-secondary">{row.cluster}</div>
                     </DataCell>
                     <DataCell className="font-weight-bold">

@@ -26,6 +26,7 @@ import { DataTable } from '../dataTable/DataTable';
 import { Icons } from '../Icon';
 import { TextInput } from '../TextInput';
 import style from './Gates.module.scss';
+import { KeyspaceLink } from './keyspace/KeyspaceLink';
 
 export const Gates = () => {
     useDocumentTitle('Gates');
@@ -37,8 +38,9 @@ export const Gates = () => {
         const mapped = (data || []).map((g) => ({
             cell: g.cell,
             cluster: g.cluster?.name,
+            clusterID: g.cluster?.id,
             hostname: g.hostname,
-            keyspaces: g.keyspaces,
+            keyspaces: (g.keyspaces || []).sort(),
             pool: g.pool,
         }));
         const filtered = filterNouns(filter, mapped);
@@ -54,7 +56,16 @@ export const Gates = () => {
                 </DataCell>
                 <DataCell className="white-space-nowrap">{gate.hostname}</DataCell>
                 <DataCell className="white-space-nowrap">{gate.cell}</DataCell>
-                <DataCell>{(gate.keyspaces || []).join(', ')}</DataCell>
+                <DataCell>
+                    {(gate.keyspaces || []).map((k, kdx) => (
+                        <span key={k}>
+                            <KeyspaceLink clusterID={gate.clusterID} name={k}>
+                                {k}
+                            </KeyspaceLink>
+                            {kdx < (gate.keyspaces || []).length - 1 && ', '}
+                        </span>
+                    ))}
+                </DataCell>
             </tr>
         ));
 
