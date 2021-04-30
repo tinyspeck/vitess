@@ -154,7 +154,6 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 	// toposerver to make local calls
 	// tmc to make remote calls
 	// bootstrap defaults
-	log.Infof("hi hello we are here inside perform VDIFF\n")
 	df.sourceKeyspace = sourceKeyspace
 	df.targetKeyspace = tablet.GetKeyspace()
 	df.workflow = workflow
@@ -178,9 +177,7 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 	}
 	// todo: don't need to necessarily query master, just query tablet directly using dbclient
 	query := fmt.Sprintf("select id, source, message from _vt.vreplication where workflow=%s and db_name=%s", encodeString(df.workflow), encodeString(destinationMaster.DbName()))
-	log.Infof("query is %s", query)
 	p3qr, err := df.tmc.VReplicationExec(ctx, destinationMaster.Tablet, query)
-	log.Infof("query result is %v", p3qr)
 
 	if err != nil {
 		log.Infof("error result is %v", err)
@@ -204,7 +201,6 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		master: destinationMaster,
 	}
 
-	log.Infof("target is %v", target)
 	qr := sqltypes.Proto3ToResult(p3qr)
 	// get source information to start streaming rows
 	for _, row := range qr.Rows {
@@ -219,14 +215,12 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		}
 		target.sources[uint32(id)] = &bls
 	}
-	log.Infof("sources are %v", target.sources)
 	// now that we have the sources, we can start copying data
 	// dont need to do through tmc, should have tabletmanager in context and query local tablet
 	schm, err := df.tmc.GetSchema(ctx, destinationTi.Tablet, nil, nil, false)
 	if err != nil {
 		return nil, vterrors.Wrap(err, "GetSchema")
 	}
-	log.Infof("schema is success")
 
 	for _, bls := range df.target.sources {
 		sourcesi, err := topoServer.GetShard(ctx, bls.Keyspace, bls.Shard)
@@ -242,27 +236,21 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		}
 	}
 
-	// target.bls.filter
 	var oneFilter *binlogdatapb.Filter
 	for _, bls := range target.sources {
 		oneFilter = bls.Filter
 		break
 	}
 
-	log.Infof("sources after are %v", df.sources)
-
 	if err = df.buildVDiffPlan(ctx, oneFilter, schm); err != nil {
 		return nil, vterrors.Wrap(err, "buildVDiffPlan")
 	}
-	log.Infof("build plan buildvdiffplan %v", oneFilter)
 
 	if err := df.selectTablets(ctx); err != nil {
 		return nil, vterrors.Wrap(err, "selectTablets")
 	}
 
 	df.targetShardStreamer.tablet = tablet
-
-	log.Infof("selected tablets after SUCCESS")
 
 	defer func(ctx context.Context) {
 		if err := df.restartTarget(ctx); err != nil {
@@ -278,15 +266,12 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 
 	diffReports := make(map[string]*DiffReport)
 	jsonOutput := ""
-	log.Infof("differs are %+v", df.differs)
 	for table, td := range df.differs {
-		log.Infof("PROCESSING table %s td %v", table, td)
 
 		// Stop the target and record their source positions.
 		if err := df.stopTarget(ctx); err != nil {
 			return nil, vterrors.Wrap(err, "stopTargets")
 		}
-		log.Infof("stop targets successful %v", err)
 
 		// Make sure all sources are past the target's positions and start a query stream that records the current source positions.
 		// source keyspace == vreplication data??
@@ -294,7 +279,6 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		if err := df.startQueryStreams(ctx, df.sourceKeyspace, df.sources, td.sourceExpression, filteredReplicationWaitTime); err != nil {
 			return nil, vterrors.Wrap(err, "startQueryStreams(sources)")
 		}
-		log.Infof("start query streams successful %v", df.sources)
 
 		// Fast forward the targets to the newly recorded source positions.
 		if err := df.syncTargets(ctx, filteredReplicationWaitTime); err != nil {
@@ -308,20 +292,17 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 		if err := df.startQueryStreams(ctx, df.targetKeyspace, targets, td.targetExpression, filteredReplicationWaitTime); err != nil {
 			return nil, vterrors.Wrap(err, "startQueryStreams(targets)")
 		}
-		log.Infof("second start query streams successful %v", df.sources)
 
 		// Now that queries are running, target vreplication streams can be restarted.
 		if err := df.restartTarget(ctx); err != nil {
 			return nil, vterrors.Wrap(err, "restartTargets")
 		}
-		log.Infof("restart target successful")
 
 		// Perform the diff of source and target streams.
 		dr, err := td.diff(ctx)
 		if err != nil {
 			return nil, vterrors.Wrap(err, "diff")
 		}
-		log.Infof("DIFF successful %v", dr)
 
 		if format == "json" {
 			json, err := json.MarshalIndent(*dr, "", "")
@@ -341,7 +322,6 @@ func (df *tabletVdiffer) PerformVDiff(ctx context.Context, tablet *topodatapb.Ta
 	if format == "json" && jsonOutput != "" {
 		log.Info(`[ %s ]`, jsonOutput)
 	}
-	log.Infof("DIFF REPORT IS successful %+v", diffReports)
 
 	return diffReports, nil
 
@@ -548,19 +528,13 @@ func newMergeSorter(participants map[string]*shardStreamer, comparePKs []int) *e
 // selectTablets selects the tablets that will be used for the diff.
 func (df *tabletVdiffer) selectTablets(ctx context.Context) error {
 	var wg sync.WaitGroup
-	var err1, err2 error
-	log.Infof("HELLO target keyspace is %s", df.targetKeyspace)
-	log.Infof("HELLO source keyspace is %s", df.sourceKeyspace)
-	log.Infof("HELLO target cell is %s", df.targetCell)
-	log.Infof("HELLO source cell is %s", df.sourceCell)
-	log.Infof("HELLO tablettypesstr is %s", df.tabletTypesStr)
+	var err1 error
 
 	// Parallelize all discovery.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		err1 = df.forAll(df.sources, func(shard string, source *shardStreamer) error {
-			log.Infof("HELLO first shard cell is %s", shard)
 
 			tp, err := discovery.NewTabletPicker(df.topoServer, []string{df.sourceCell}, df.sourceKeyspace, shard, df.tabletTypesStr)
 			if err != nil {
@@ -580,7 +554,7 @@ func (df *tabletVdiffer) selectTablets(ctx context.Context) error {
 	if err1 != nil {
 		return err1
 	}
-	return err2
+	return nil
 }
 
 // stopTargets stops all the targets and records their source positions.
@@ -633,7 +607,6 @@ func (df *tabletVdiffer) startQueryStreams(ctx context.Context, keyspace string,
 	waitCtx, cancel := context.WithTimeout(ctx, filteredReplicationWaitTime)
 	defer cancel()
 	return df.forAll(participants, func(shard string, participant *shardStreamer) error {
-		log.Infof("participant pos is %v", participant.position)
 
 		// Iteration for each participant.
 		if err := df.tmc.WaitForPosition(waitCtx, participant.tablet, mysql.EncodePosition(participant.position)); err != nil {
@@ -714,16 +687,11 @@ func (df *tabletVdiffer) syncTargets(ctx context.Context, filteredReplicationWai
 	err := df.forAllUids(func(target *tabletTsTarget, uid uint32) error {
 		bls := target.sources[uid]
 		pos := df.sources[bls.Shard].snapshotPosition
-		log.Infof("IN SYNC TARGETS")
-		log.Infof("target master tablet is %v", target.master.Tablet)
-		log.Infof("pos is %v", pos)
-		log.Infof("uid is %v", uid)
 
 		query := fmt.Sprintf("update _vt.vreplication set state='Running', stop_pos='%s', message='synchronizing for vdiff' where id=%d", pos, uid)
 		if _, err := df.tmc.VReplicationExec(ctx, target.master.Tablet, query); err != nil {
 			return err
 		}
-		log.Infof("hi hello here after exec vrep thing")
 		if err := df.tmc.VReplicationWaitForPos(waitCtx, target.master.Tablet, int(uid), pos); err != nil {
 			return vterrors.Wrapf(err, "VReplicationWaitForPos for tablet %v", topoproto.TabletAliasString(target.master.Tablet.Alias))
 		}
