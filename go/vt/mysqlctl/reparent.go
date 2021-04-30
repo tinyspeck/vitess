@@ -110,7 +110,7 @@ func (mysqld *Mysqld) Promote(hookExtraEnv map[string]string) (mysql.Position, e
 		// This can cause commits that occur soon after the master is promoted to take a long time waiting
 		// for a semi-sync ACK, since replication is not fully set up.
 		// More details in: https://github.com/vitessio/vitess/issues/4161
-		"FLUSH BINARY LOGS",
+		//"FLUSH BINARY LOGS",
 	}
 
 	if err := mysqld.executeSuperQueryListConn(ctx, conn, cmds); err != nil {
