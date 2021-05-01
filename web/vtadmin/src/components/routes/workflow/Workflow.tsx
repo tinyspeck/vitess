@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
+import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
 
+import style from './Workflow.module.scss';
 import { useWorkflow } from '../../../hooks/api';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
 import { Code } from '../../Code';
 import { Tab } from '../../tabs/Tab';
 import { TabContainer } from '../../tabs/TabContainer';
 import { WorkflowStreams } from './WorkflowStreams';
+import { table } from 'console';
+import React from 'react';
 
 interface RouteParams {
     clusterID: string;
@@ -38,7 +41,26 @@ export const Workflow = () => {
 
     return (
         <div>
-            <h1>{name}</h1>
+            <header className={style.header}>
+                <p>
+                    <Link to="/workflows">← All schemas</Link>
+                </p>
+                <code>
+                    <h1>{name}</h1>
+                </code>
+                <div className={style.headingMeta}>
+                    <span>Workflow</span>
+                    <span>
+                        Cluster: <code>{clusterID}</code>
+                    </span>
+                    <span>
+                        Source: <code>{data?.workflow?.source?.keyspace || 'N/A'}</code>
+                    </span>
+                    <span>
+                        Target: <code>{data?.workflow?.target?.keyspace || 'N/A'}</code>
+                    </span>
+                </div>
+            </header>
 
             <TabContainer>
                 <Tab to={`${url}/streams`}>Streams</Tab>
