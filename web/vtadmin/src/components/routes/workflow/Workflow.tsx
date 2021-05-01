@@ -60,7 +60,7 @@ export const Workflow = () => {
                 </div>
             </header>
 
-            <TabContainer>
+            <TabContainer className={style.tabs}>
                 <Tab to={`${url}/streams`}>Streams</Tab>
                 <Tab to={`${url}/json`}>JSON</Tab>
             </TabContainer>
