@@ -76,7 +76,7 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                             {targetKeyspace}/{row.stream.shard}
                         </DataCell>
                         <DataCell>
-                            {row.stream.tablet?.cell}-${row.stream.tablet?.uid}
+                            {row.stream.tablet?.cell}-{row.stream.tablet?.uid}
                         </DataCell>
                     </tr>
                 );
