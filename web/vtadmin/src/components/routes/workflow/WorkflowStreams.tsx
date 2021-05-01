@@ -67,8 +67,8 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                             >
                                 <StreamStatePip state={row.stream.state} /> {row.id}
                             </NavLink>
+                            <div className="text-color-secondary font-size-small">{row.stream.state}</div>
                         </DataCell>
-                        <DataCell>{row.stream.state}</DataCell>
                         <DataCell>
                             {row.stream.binlog_source?.keyspace}/{row.stream.binlog_source?.shard}
                         </DataCell>
@@ -77,14 +77,6 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                         </DataCell>
                         <DataCell>
                             {row.stream.tablet?.cell}-{row.stream.tablet?.uid}
-                        </DataCell>
-                        <DataCell>
-                            <NavLink
-                                className="font-weight-bold"
-                                to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}
-                            >
-                                View stream
-                            </NavLink>
                         </DataCell>
                     </tr>
                 );
@@ -98,7 +90,7 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
             <div className={style.streamsContainer}>
                 <div className="max-width-content">
                     <DataTable
-                        columns={['Stream', 'State', 'Source', 'Target', 'Tablet']}
+                        columns={['Stream', 'Source', 'Target', 'Tablet']}
                         data={streams}
                         renderRows={renderRows}
                     />

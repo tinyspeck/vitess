@@ -40,9 +40,9 @@ export const Workflow = () => {
     return (
         <div className={style.container}>
             <header className={style.header}>
-                {/* <p>
+                <p>
                     <Link to="/workflows">← All workflows</Link>
-                </p> */}
+                </p>
                 <code>
                     <h1>{name}</h1>
                 </code>

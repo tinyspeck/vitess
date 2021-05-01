@@ -59,7 +59,8 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
                 <div className={style.header}>
                     <div className={style.title}>
                         <StreamStatePip state={stream.state} /> <span>{streamID}</span>
-                        <div className="text-color-secondary font-size-small">{stream.state}</div>
+                        {/* <div className="text-color-secondary font-size-small">{stream.state}</div> */}
+                        <div className="font-size-small text-color-secondary">View full screen</div>
                     </div>
                     <div>
                         <Link to={`/workflow/${clusterID}/${keyspace}/${workflowName}/streams`}>
@@ -70,11 +71,80 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
             </div>
 
             <div className={style.content}>
-                <Code code={JSON.stringify(stream, null, 2)} />
-                <Code code={JSON.stringify(stream, null, 2)} />
-                <Code code={JSON.stringify(stream, null, 2)} />
-                <Code code={JSON.stringify(stream, null, 2)} />
-                <Code code={JSON.stringify(stream, null, 2)} />
+                <div className={style.section}>
+                    <div className={style.sectionHeader}>General</div>
+                    <table className={style.table}>
+                        <thead>
+                            <tr>
+                                <th className={style.tableKey}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="text-align-right">State:</td>
+                                <td className="font-family-monospace">
+                                    <StreamStatePip state={stream.state} /> {stream.state}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="text-align-right">Source:</td>
+                                <td className="font-family-monospace">
+                                    {stream.binlog_source?.keyspace}/{stream.binlog_source?.shard}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="text-align-right">Target:</td>
+                                <td className="font-family-monospace">
+                                    {keyspace}/{stream.shard}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="text-align-right">Tablet:</td>
+                                <td className="font-family-monospace">
+                                    {stream.tablet?.cell}-{stream.tablet?.uid}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {stream.state === 'Error' && (
+                    <div className={style.section}>
+                        <div className={style.sectionHeader}>
+                            <StreamStatePip state={stream.state} /> Error
+                        </div>
+                        <div className="font-family-monospace"> {stream.message}</div>
+                    </div>
+                )}
+
+                <div className={style.section}>
+                    <div className={style.sectionHeader}>Replication lag</div>
+                </div>
+
+                <div className={style.section}>
+                    <div className={style.sectionHeader}>Timeline</div>
+                </div>
+
+                <div className={style.section}>
+                    <div className={style.sectionHeader}>Filter rules</div>
+                    <div className="font-family-monospace">
+                        <ol>
+                            {(stream.binlog_source?.filter?.rules || []).map((rule, rdx) => (
+                                <li>{JSON.stringify(rule, null, 2)}</li>
+                            ))}
+                        </ol>
+                    </div>
+                </div>
+
+                <div className={style.section}>
+                    <div className={style.sectionHeader}>Position</div>
+                    <div className={style.position}>{stream.position}</div>
+                </div>
+
+                <div className={style.section}>
+                    <div className={style.sectionHeader}>JSON</div>
+                    <Code code={JSON.stringify(stream, null, 2)} />
+                </div>
             </div>
         </div>
     );
