@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 import { useParams } from 'react-router-dom';
-import { useWorkflow } from '../../hooks/api';
-import { Code } from '../Code';
 
-interface RouteParams {
+import { useWorkflow } from '../../../hooks/api';
+import style from './WorkflowStreams.module.scss';
+
+interface Props {
     clusterID: string;
     keyspace: string;
     name: string;
 }
 
-export const Workflow = () => {
-    const { clusterID, keyspace, name } = useParams<RouteParams>();
+export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name });
 
-    // Placeholder
-    return (
-        <div>
-            <h1>{name}</h1>
-            <Code code={JSON.stringify(data, null, 2)} />
-        </div>
-    );
+    return <div>TODO</div>;
 };

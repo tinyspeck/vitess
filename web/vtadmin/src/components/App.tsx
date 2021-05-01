@@ -27,7 +27,7 @@ import { Keyspaces } from './routes/Keyspaces';
 import { Schemas } from './routes/Schemas';
 import { Schema } from './routes/Schema';
 import { Workflows } from './routes/Workflows';
-import { Workflow } from './routes/Workflow';
+import { Workflow } from './routes/workflow/Workflow';
 
 export const App = () => {
     return (
