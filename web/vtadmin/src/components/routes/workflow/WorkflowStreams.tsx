@@ -75,6 +75,9 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                         <DataCell>
                             {targetKeyspace}/{row.stream.shard}
                         </DataCell>
+                        <DataCell>
+                            {row.stream.tablet?.cell}-${row.stream.tablet?.uid}
+                        </DataCell>
                     </tr>
                 );
             });
@@ -85,7 +88,11 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     return (
         <div className={style.container}>
             <div className={style.streamsContainer}>
-                <DataTable columns={['Stream', 'State', 'Source', 'Target']} data={streams} renderRows={renderRows} />
+                <DataTable
+                    columns={['Stream', 'State', 'Source', 'Target', 'Tablet']}
+                    data={streams}
+                    renderRows={renderRows}
+                />
             </div>
 
             {streamID && (
