@@ -13,30 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-.container {
-  // display: grid;
-  // grid-template-columns: auto 600px;
-  // grid-template-areas: 'streams details';
-  // grid-template-rows: auto;
-  // overflow: hidden;
-  display: flex;
-  position: relative;
-  background: aqua;
+import style from './WorkflowStreamDetails.module.scss';
+
+interface Props {
+    clusterID: string;
+    keyspace: string;
+    workflowName: string;
+    streamID: string;
 }
 
-.streamsContainer {
-  flex: 1 1 100%;
-  background: greenyellow;
-
-  // background: lime;
-  // grid-template-areas: 'details';
-  // grid-template-rows: auto;
-  // z-index: 202;
-}
-
-.streamDetailsContainer {
-  flex: 0 0 0;
-  background: yellow;
-  // grid-template-areas: 'streams';
-  // grid-template-rows: auto;
-}
+export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, streamID }: Props) => {
+    return <div className={style.container}>Details</div>;
+};

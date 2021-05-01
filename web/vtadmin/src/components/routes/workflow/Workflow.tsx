@@ -22,8 +22,6 @@ import { Code } from '../../Code';
 import { Tab } from '../../tabs/Tab';
 import { TabContainer } from '../../tabs/TabContainer';
 import { WorkflowStreams } from './WorkflowStreams';
-import { table } from 'console';
-import React from 'react';
 
 interface RouteParams {
     clusterID: string;
@@ -43,7 +41,7 @@ export const Workflow = () => {
         <div>
             <header className={style.header}>
                 <p>
-                    <Link to="/workflows">← All schemas</Link>
+                    <Link to="/workflows">← All workflows</Link>
                 </p>
                 <code>
                     <h1>{name}</h1>
@@ -68,7 +66,7 @@ export const Workflow = () => {
             </TabContainer>
 
             <Switch>
-                <Route path={`${path}/streams`}>
+                <Route path={`${path}/streams/:streamID*`}>
                     <WorkflowStreams clusterID={clusterID} keyspace={keyspace} name={name} />
                 </Route>
 

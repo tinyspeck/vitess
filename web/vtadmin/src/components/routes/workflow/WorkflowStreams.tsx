@@ -13,21 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useCallback } from 'react';
+import { NavLink, useParams, useRouteMatch } from 'react-router-dom';
 
 import { useWorkflow } from '../../../hooks/api';
 import { vtctldata } from '../../../proto/vtadmin';
-import { getStreams } from '../../../util/workflows';
 import { DataCell } from '../../dataTable/DataCell';
 import { DataTable } from '../../dataTable/DataTable';
 import { StreamStatePip } from '../../pips/StreamStatePip';
+import { WorkflowStreamDetails } from './WorkflowStreamDetails';
 import style from './WorkflowStreams.module.scss';
 
 interface Props {
     clusterID: string;
     keyspace: string;
     name: string;
+}
+
+interface RouteParams {
+    streamID?: string;
 }
 
 interface StreamRow {
@@ -37,9 +41,11 @@ interface StreamRow {
 
 export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name });
-    console.log(data);
+    let { url } = useRouteMatch();
+    const { streamID } = useParams<RouteParams>();
 
     const targetKeyspace = data?.workflow?.target?.keyspace;
+
     const streams = Object.entries(data?.workflow?.shard_streams || {}).reduce((acc, [shardKey, shardStream]) => {
         (shardStream.streams || []).forEach((stream) => {
             acc.push({
@@ -50,43 +56,46 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
         return acc;
     }, [] as StreamRow[]);
 
-    const renderRows = useCallback((rows: typeof streams) => {
-        return rows.map((row) => {
-            return (
-                <tr>
-                    <DataCell>
-                        <StreamStatePip state={row.stream.state} /> {row.id}
-                    </DataCell>
-                    <DataCell>{row.stream.state}</DataCell>
-                    <DataCell>
-                        {row.stream.binlog_source?.keyspace}/{row.stream.binlog_source?.shard}
-                    </DataCell>
-                    <DataCell>
-                        {targetKeyspace}/{row.stream.shard}
-                    </DataCell>
-                </tr>
-            );
-        });
-    }, []);
+    const renderRows = useCallback(
+        (rows: typeof streams) => {
+            return rows.map((row) => {
+                return (
+                    <tr key={row.id}>
+                        <DataCell>
+                            <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}>
+                                <StreamStatePip state={row.stream.state} /> {row.id}
+                            </NavLink>
+                        </DataCell>
+                        <DataCell>{row.stream.state}</DataCell>
+                        <DataCell>
+                            {row.stream.binlog_source?.keyspace}/{row.stream.binlog_source?.shard}
+                        </DataCell>
+                        <DataCell>
+                            {targetKeyspace}/{row.stream.shard}
+                        </DataCell>
+                    </tr>
+                );
+            });
+        },
+        [clusterID, keyspace, name, targetKeyspace]
+    );
 
     return (
         <div className={style.container}>
-            <DataTable columns={['Stream', 'State', 'Source', 'Target']} data={streams} renderRows={renderRows} />
-            {/* <table>
-                <tbody>
-                    {streams.map((stream, sdx) => {
-                        return (
-                            <tr key={sdx}>
-                                <td>
-                                    <StreamStatePip state={stream.state} /> {stream.state}
-                                </td>
-                                <td>{stream.id}</td>
-                                <td>{stream.shard}</td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table> */}
+            <div className={style.streamsContainer}>
+                <DataTable columns={['Stream', 'State', 'Source', 'Target']} data={streams} renderRows={renderRows} />
+            </div>
+
+            {streamID && (
+                <div className={style.streamDetailsContainer}>
+                    <WorkflowStreamDetails
+                        clusterID={clusterID}
+                        keyspace={keyspace}
+                        streamID={streamID}
+                        workflowName={name}
+                    />
+                </div>
+            )}
         </div>
     );
 };
