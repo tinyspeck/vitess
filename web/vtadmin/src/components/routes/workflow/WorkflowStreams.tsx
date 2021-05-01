@@ -78,6 +78,14 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                         <DataCell>
                             {row.stream.tablet?.cell}-{row.stream.tablet?.uid}
                         </DataCell>
+                        <DataCell>
+                            <NavLink
+                                className="font-weight-bold"
+                                to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}
+                            >
+                                View stream
+                            </NavLink>
+                        </DataCell>
                     </tr>
                 );
             });
@@ -88,11 +96,13 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     return (
         <div className={style.container}>
             <div className={style.streamsContainer}>
-                <DataTable
-                    columns={['Stream', 'State', 'Source', 'Target', 'Tablet']}
-                    data={streams}
-                    renderRows={renderRows}
-                />
+                <div className="max-width-content">
+                    <DataTable
+                        columns={['Stream', 'State', 'Source', 'Target', 'Tablet']}
+                        data={streams}
+                        renderRows={renderRows}
+                    />
+                </div>
             </div>
 
             {streamID && (
