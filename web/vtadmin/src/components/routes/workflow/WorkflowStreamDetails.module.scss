@@ -14,7 +14,31 @@
  * limitations under the License.
  */
 .container {
-  background: lime;
-  min-width: 420px;
-  padding-left: 48px;
+  height: 100%;
+  min-width: 300px;
+  max-width: 30vw;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px;
+  position: relative;
+}
+
+.content {
+  height: 100%;
+  overflow: auto;
+}
+
+.title {
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeLarge);
+  font-weight: 700;
+  line-height: 2.4rem;
+}
+
+.section {
+  border-bottom: solid 1px var(--backgroundSecondaryHighlight);
 }

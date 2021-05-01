@@ -41,7 +41,6 @@ interface StreamRow {
 
 export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name });
-    let { url } = useRouteMatch();
     const { streamID } = useParams<RouteParams>();
 
     const targetKeyspace = data?.workflow?.target?.keyspace;
@@ -62,7 +61,10 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                 return (
                     <tr key={row.id}>
                         <DataCell>
-                            <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}>
+                            <NavLink
+                                className="font-weight-bold"
+                                to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}
+                            >
                                 <StreamStatePip state={row.stream.state} /> {row.id}
                             </NavLink>
                         </DataCell>

@@ -38,16 +38,16 @@ export const Workflow = () => {
     const { data } = useWorkflow({ clusterID, keyspace, name });
 
     return (
-        <div>
+        <div className={style.container}>
             <header className={style.header}>
-                <p>
+                {/* <p>
                     <Link to="/workflows">← All workflows</Link>
-                </p>
+                </p> */}
                 <code>
                     <h1>{name}</h1>
                 </code>
                 <div className={style.headingMeta}>
-                    <span>Workflow</span>
+                    {/* <span>Workflow</span> */}
                     <span>
                         Cluster: <code>{clusterID}</code>
                     </span>
@@ -65,17 +65,19 @@ export const Workflow = () => {
                 <Tab to={`${url}/json`}>JSON</Tab>
             </TabContainer>
 
-            <Switch>
-                <Route path={`${path}/streams/:streamID*`}>
-                    <WorkflowStreams clusterID={clusterID} keyspace={keyspace} name={name} />
-                </Route>
+            <div className={style.content}>
+                <Switch>
+                    <Route path={`${path}/streams/:streamID*`}>
+                        <WorkflowStreams clusterID={clusterID} keyspace={keyspace} name={name} />
+                    </Route>
 
-                <Route path={`${path}/json`}>
-                    <Code code={JSON.stringify(data, null, 2)} />
-                </Route>
+                    <Route path={`${path}/json`}>
+                        <Code code={JSON.stringify(data, null, 2)} />
+                    </Route>
 
-                <Redirect exact from={`${path}`} to={`${path}/streams`} />
-            </Switch>
+                    <Redirect exact from={`${path}`} to={`${path}/streams`} />
+                </Switch>
+            </div>
         </div>
     );
 };
