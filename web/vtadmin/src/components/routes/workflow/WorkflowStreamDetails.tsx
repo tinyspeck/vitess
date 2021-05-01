@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import { useWorkflow } from '../../../hooks/api';
 import { Code } from '../../Code';
 import { Icon, Icons } from '../../Icon';
+import { StreamStatePip } from '../../pips/StreamStatePip';
 import style from './WorkflowStreamDetails.module.scss';
 
 interface Props {
@@ -56,7 +57,10 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
         <div className={style.container}>
             <div className={style.section}>
                 <div className={style.header}>
-                    <div className={style.title}>{streamID}</div>
+                    <div className={style.title}>
+                        <StreamStatePip state={stream.state} /> <span>{streamID}</span>
+                        <div className="text-color-secondary font-size-small">{stream.state}</div>
+                    </div>
                     <div>
                         <Link to={`/workflow/${clusterID}/${keyspace}/${workflowName}/streams`}>
                             <Icon icon={Icons.delete} />
