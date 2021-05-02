@@ -40,24 +40,24 @@ export const Workflow = () => {
     return (
         <div className={style.container}>
             <header className={style.header}>
-                <p>
-                    <Link to="/workflows">← All workflows</Link>
-                </p>
+                <div className={style.headingMeta}>
+                    <span className="font-family-monospace">
+                        <Link to="/workflows">Workflows</Link>
+                    </span>
+                    <span className="font-family-monospace">{clusterID || data?.cluster?.name}</span>
+
+                    <span className="font-family-monospace">
+                        {data?.workflow?.source?.keyspace && (
+                            <>
+                                {data.workflow.source.keyspace} <span className="text-color-secondary">→</span>{' '}
+                            </>
+                        )}
+                        {data?.workflow?.target?.keyspace}
+                    </span>
+                </div>
                 <code>
                     <h1>{name}</h1>
                 </code>
-                <div className={style.headingMeta}>
-                    {/* <span>Workflow</span> */}
-                    <span>
-                        Cluster: <code>{clusterID}</code>
-                    </span>
-                    <span>
-                        Source: <code>{data?.workflow?.source?.keyspace || 'N/A'}</code>
-                    </span>
-                    <span>
-                        Target: <code>{data?.workflow?.target?.keyspace || 'N/A'}</code>
-                    </span>
-                </div>
             </header>
 
             <TabContainer className={style.tabs}>

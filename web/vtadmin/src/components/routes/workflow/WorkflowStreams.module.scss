@@ -32,3 +32,14 @@
   flex: 0 0 0;
   border-left: solid 1px var(--colorDisabled);
 }
+
+.controls {
+  display: grid;
+  grid-gap: 8px;
+  grid-template-columns: 1fr min-content;
+  margin-bottom: 24px;
+}
+
+.activeRow {
+  border-left: solid 4px var(--colorPrimary);
+}

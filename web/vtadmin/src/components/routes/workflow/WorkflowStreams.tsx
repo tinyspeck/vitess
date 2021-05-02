@@ -13,14 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useCallback } from 'react';
+import cx from 'classnames';
+import React, { useCallback } from 'react';
 import { NavLink, useParams, useRouteMatch } from 'react-router-dom';
 
 import { useWorkflow } from '../../../hooks/api';
+import { useSyncedURLParam } from '../../../hooks/useSyncedURLParam';
 import { vtctldata } from '../../../proto/vtadmin';
+import { formatDateTime } from '../../../util/time';
+import { Button } from '../../Button';
 import { DataCell } from '../../dataTable/DataCell';
 import { DataTable } from '../../dataTable/DataTable';
+import { Icons } from '../../Icon';
 import { StreamStatePip } from '../../pips/StreamStatePip';
+import { TextInput } from '../../TextInput';
 import { WorkflowStreamDetails } from './WorkflowStreamDetails';
 import style from './WorkflowStreams.module.scss';
 
@@ -40,6 +46,7 @@ interface StreamRow {
 }
 
 export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
+    const { value: filter, updateValue: updateFilter } = useSyncedURLParam('filter');
     const { data } = useWorkflow({ clusterID, keyspace, name });
     const { streamID } = useParams<RouteParams>();
 
@@ -58,39 +65,68 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const renderRows = useCallback(
         (rows: typeof streams) => {
             return rows.map((row) => {
+                const rowClass = cx({ [style.activeRow]: row.id === streamID });
                 return (
-                    <tr key={row.id}>
+                    <tr className={rowClass} key={row.id}>
                         <DataCell>
+                            <div className="font-weight-bold">
+                                {/* <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}> */}
+                                {row.id}
+                                {/* </NavLink> */}
+                            </div>
                             <NavLink
-                                className="font-weight-bold"
+                                className="font-size-small font-family-primary"
                                 to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}
                             >
-                                <StreamStatePip state={row.stream.state} /> {row.id}
+                                View details
                             </NavLink>
-                            <div className="text-color-secondary font-size-small">{row.stream.state}</div>
                         </DataCell>
                         <DataCell>
-                            {row.stream.binlog_source?.keyspace}/{row.stream.binlog_source?.shard}
+                            <a href="#">
+                                {row.stream.binlog_source?.keyspace}/{row.stream.binlog_source?.shard}
+                            </a>
                         </DataCell>
                         <DataCell>
-                            {targetKeyspace}/{row.stream.shard}
+                            <a href="#">
+                                {targetKeyspace}/{row.stream.shard}
+                            </a>
                         </DataCell>
                         <DataCell>
-                            {row.stream.tablet?.cell}-{row.stream.tablet?.uid}
+                            <a href="#">
+                                {row.stream.tablet?.cell}-{row.stream.tablet?.uid}
+                            </a>
+                        </DataCell>
+                        <DataCell>
+                            <StreamStatePip state={row.stream.state} /> {row.stream.state}
+                            <div className="text-color-secondary font-size-small">
+                                Updated {formatDateTime(row.stream.time_updated?.seconds)}
+                            </div>
                         </DataCell>
                     </tr>
                 );
             });
         },
-        [clusterID, keyspace, name, targetKeyspace]
+        [clusterID, keyspace, name, streamID, targetKeyspace]
     );
 
     return (
         <div className={style.container}>
             <div className={style.streamsContainer}>
                 <div className="max-width-content">
+                    <div className={style.controls}>
+                        <TextInput
+                            autoFocus
+                            iconLeft={Icons.search}
+                            onChange={(e) => updateFilter(e.target.value)}
+                            placeholder="Filter streams"
+                            value={filter || ''}
+                        />
+                        <Button disabled={!filter} onClick={() => updateFilter('')} secondary>
+                            Clear filters
+                        </Button>
+                    </div>
                     <DataTable
-                        columns={['Stream', 'Source', 'Target', 'Tablet']}
+                        columns={['Stream', 'Source', 'Target', 'Tablet', 'State']}
                         data={streams}
                         renderRows={renderRows}
                     />
