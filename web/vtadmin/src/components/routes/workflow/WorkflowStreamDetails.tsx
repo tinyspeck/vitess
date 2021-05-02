@@ -15,6 +15,9 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Highcharts from 'highcharts';
+import HighchartsReact from 'highcharts-react-official';
+
 import { useTabletDebugVars, useTablets, useWorkflow } from '../../../hooks/api';
 import { findStream } from '../../../util/workflows';
 import { Code } from '../../Code';
@@ -44,12 +47,32 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
           )
         : null;
 
-    const { data: tabletVars, ...tvq } = useTabletDebugVars({ clusterID, hostname: tablet?.tablet?.hostname || '' });
-    console.log(tabletVars, tvq);
+    const { data: tabletVars } = useTabletDebugVars({ clusterID, hostname: tablet?.tablet?.hostname || '' });
 
     if (!stream) {
         return null;
     }
+
+    const lagChartOptions: Highcharts.Options | null =
+        stream?.state === 'Running'
+            ? {
+                  credits: {
+                      enabled: false,
+                  },
+                  series: [
+                      {
+                          type: 'line',
+                          data: tabletVars?.VReplicationQPS?.All || [],
+                      },
+                  ],
+                  title: {
+                      text: undefined,
+                  },
+                  yAxis: {
+                      min: 0,
+                  },
+              }
+            : null;
 
     return (
         <div className={style.container}>
@@ -115,9 +138,12 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
                     </div>
                 )}
 
-                <div className={style.section}>
-                    <div className={style.sectionHeader}>Replication lag</div>
-                </div>
+                {stream.state === 'Running' && (
+                    <div className={style.section}>
+                        <div className={style.sectionHeader}>VReplication QPS</div>
+                        <HighchartsReact highcharts={Highcharts} options={lagChartOptions} />
+                    </div>
+                )}
 
                 <div className={style.section}>
                     <div className={style.sectionHeader}>Timeline</div>
@@ -128,7 +154,7 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
                     <div className="font-family-monospace">
                         <ol>
                             {(stream.binlog_source?.filter?.rules || []).map((rule, rdx) => (
-                                <li>{JSON.stringify(rule, null, 2)}</li>
+                                <li key={rdx}>{JSON.stringify(rule, null, 2)}</li>
                             ))}
                         </ol>
                     </div>
