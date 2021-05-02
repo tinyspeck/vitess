@@ -44,16 +44,6 @@ export const Workflow = () => {
                     <span className="font-family-monospace">
                         <Link to="/workflows">Workflows</Link>
                     </span>
-                    <span className="font-family-monospace">{clusterID || data?.cluster?.name}</span>
-
-                    <span className="font-family-monospace">
-                        {data?.workflow?.source?.keyspace && (
-                            <>
-                                {data.workflow.source.keyspace} <span className="text-color-secondary">→</span>{' '}
-                            </>
-                        )}
-                        {data?.workflow?.target?.keyspace}
-                    </span>
                 </div>
                 <code>
                     <h1>{name}</h1>

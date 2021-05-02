@@ -69,27 +69,22 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                 return (
                     <tr className={rowClass} key={row.id}>
                         <DataCell>
-                            <div className="font-weight-bold">
-                                {/* <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}> */}
-                                {row.id}
-                                {/* </NavLink> */}
-                            </div>
-                            <NavLink
-                                className="font-size-small font-family-primary"
-                                to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}
-                            >
-                                View details
+                            <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}>
+                                <div className="font-weight-bold">{row.id}</div>
+                                <div className="font-size-small font-family-primary">View details</div>
                             </NavLink>
                         </DataCell>
                         <DataCell>
                             <a href="#">
                                 {row.stream.binlog_source?.keyspace}/{row.stream.binlog_source?.shard}
                             </a>
+                            <div className="text-color-secondary font-size-small">{data?.cluster?.name}</div>
                         </DataCell>
                         <DataCell>
                             <a href="#">
                                 {targetKeyspace}/{row.stream.shard}
                             </a>
+                            <div className="text-color-secondary font-size-small">{data?.cluster?.name}</div>
                         </DataCell>
                         <DataCell>
                             <a href="#">
@@ -106,7 +101,7 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                 );
             });
         },
-        [clusterID, keyspace, name, streamID, targetKeyspace]
+        [clusterID, data?.cluster?.name, keyspace, name, streamID, targetKeyspace]
     );
 
     return (
@@ -115,7 +110,6 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                 <div className="max-width-content">
                     <div className={style.controls}>
                         <TextInput
-                            autoFocus
                             iconLeft={Icons.search}
                             onChange={(e) => updateFilter(e.target.value)}
                             placeholder="Filter streams"
