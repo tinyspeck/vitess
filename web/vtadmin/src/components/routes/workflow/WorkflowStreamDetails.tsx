@@ -24,6 +24,7 @@ import { Code } from '../../Code';
 import { Icon, Icons } from '../../Icon';
 import { StreamStatePip } from '../../pips/StreamStatePip';
 import style from './WorkflowStreamDetails.module.scss';
+import { Button } from '../../Button';
 
 interface Props {
     clusterID: string;
@@ -89,7 +90,12 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
                     <div className={style.title}>
                         <StreamStatePip state={stream.state} /> <span>{streamID}</span>
                         {/* <div className="text-color-secondary font-size-small">{stream.state}</div> */}
-                        <div className="font-size-small text-color-secondary">View full screen</div>
+                        {/* <div className="font-size-small text-color-secondary">View </div> */}
+                        <div className={style.buttonContainer}>
+                            <Button secondary size="small">
+                                View full-screen
+                            </Button>
+                        </div>
                     </div>
                     <div>
                         <Link to={`/workflow/${clusterID}/${keyspace}/${workflowName}/streams`}>
