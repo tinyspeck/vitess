@@ -31,6 +31,37 @@ export const getStreams = <W extends pb.IWorkflow>(workflow: W | null | undefine
     }, [] as vtctldata.Workflow.IStream[]);
 };
 
+export const findStream = <W extends pb.IWorkflow>(workflow: W | null | undefined, streamID: string) => {
+    if (!workflow || !streamID) {
+        return null;
+    }
+
+    const re = /(\S+)\-(\d+)$/.exec(streamID);
+
+    if (!Array.isArray(re) || re.length < 3) {
+        return null;
+    }
+
+    const shardKey = re[1];
+    const sid = parseInt(re[2]);
+
+    const shard =
+        shardKey && shardKey in (workflow?.workflow?.shard_streams || {})
+            ? (workflow?.workflow?.shard_streams || {})[shardKey]
+            : null;
+
+    if (!shard) {
+        return null;
+    }
+
+    const stream = (shard.streams || []).find((s) => s.id === sid);
+    if (!stream) {
+        return null;
+    }
+
+    return stream;
+};
+
 /**
  * getTimeUpdated returns the `time_updated` timestamp of the most recently
  * updated stream in the workflow.

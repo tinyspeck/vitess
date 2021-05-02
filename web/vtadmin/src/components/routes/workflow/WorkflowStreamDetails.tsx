@@ -15,7 +15,8 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useWorkflow } from '../../../hooks/api';
+import { useTabletDebugVars, useTablets, useWorkflow } from '../../../hooks/api';
+import { findStream } from '../../../util/workflows';
 import { Code } from '../../Code';
 import { Icon, Icons } from '../../Icon';
 import { StreamStatePip } from '../../pips/StreamStatePip';
@@ -30,25 +31,22 @@ interface Props {
 
 export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, streamID }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name: workflowName });
-    const re = /(\S+)\-(\d+)$/.exec(streamID);
+    const { data: tablets } = useTablets();
 
-    if (!Array.isArray(re) || re.length < 3) {
-        return null;
-    }
+    const stream = findStream(data, streamID);
 
-    const shardKey = re[1];
-    const sid = parseInt(re[2]);
+    const tablet = stream
+        ? (tablets || []).find(
+              (t) =>
+                  t.cluster?.id === clusterID &&
+                  t.tablet?.alias?.cell === stream.tablet?.cell &&
+                  t.tablet?.alias?.uid === stream.tablet?.uid
+          )
+        : null;
 
-    const shard =
-        shardKey && shardKey in (data?.workflow?.shard_streams || {})
-            ? (data?.workflow?.shard_streams || {})[shardKey]
-            : null;
+    const { data: tabletVars, ...tvq } = useTabletDebugVars({ clusterID, hostname: tablet?.tablet?.hostname || '' });
+    console.log(tabletVars, tvq);
 
-    if (!shard) {
-        return null;
-    }
-
-    const stream = (shard.streams || []).find((s) => s.id === sid);
     if (!stream) {
         return null;
     }

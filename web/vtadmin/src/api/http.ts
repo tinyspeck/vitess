@@ -213,3 +213,20 @@ export const fetchWorkflow = async (params: { clusterID: string; keyspace: strin
 
     return pb.Workflow.create(result);
 };
+
+export interface FetchTabletDebugVarsParams {
+    clusterID?: string;
+    hostname: string;
+}
+
+export interface TabletDebugVars {
+    [key: string]: any;
+}
+
+export const fetchTabletDebugVars = async ({
+    clusterID,
+    hostname,
+}: FetchTabletDebugVarsParams): Promise<TabletDebugVars | null> => {
+    const { result } = await vtfetch(`/api/experimental/tablet/${hostname}/debug/vars?cluster=${clusterID}`);
+    return result;
+};

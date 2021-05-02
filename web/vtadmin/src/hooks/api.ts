@@ -21,11 +21,14 @@ import {
     fetchSchema,
     FetchSchemaParams,
     fetchSchemas,
+    fetchTabletDebugVars,
+    FetchTabletDebugVarsParams,
     fetchTablets,
     fetchVSchema,
     FetchVSchemaParams,
     fetchWorkflow,
     fetchWorkflows,
+    TabletDebugVars,
 } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
 
@@ -152,4 +155,11 @@ export const useWorkflow = (
         },
         ...options,
     });
+};
+
+export const useTabletDebugVars = (
+    params: FetchTabletDebugVarsParams,
+    options?: UseQueryOptions<TabletDebugVars | null, Error> | undefined
+) => {
+    return useQuery(['tabletDebugVars', params], () => fetchTabletDebugVars(params), options);
 };
