@@ -56,6 +56,9 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
     const lagChartOptions: Highcharts.Options | null =
         stream?.state === 'Running'
             ? {
+                  chart: {
+                      animation: false,
+                  },
                   credits: {
                       enabled: false,
                   },
