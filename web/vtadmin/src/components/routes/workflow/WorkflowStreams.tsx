@@ -70,7 +70,7 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                     <tr className={rowClass} key={row.id}>
                         <DataCell>
                             <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}>
-                                <div className="font-weight-bold">{row.id}</div>
+                                <div className={style.streamID}>{row.id}</div>
                                 <div className="font-size-small font-family-primary">View details</div>
                             </NavLink>
                         </DataCell>

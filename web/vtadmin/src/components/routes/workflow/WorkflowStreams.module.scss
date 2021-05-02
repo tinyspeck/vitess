@@ -43,3 +43,8 @@
 .activeRow {
   border-left: solid 4px var(--colorPrimary);
 }
+
+.streamID {
+  color: var(--textColorPrimary) !important;
+  font-weight: 700;
+}
