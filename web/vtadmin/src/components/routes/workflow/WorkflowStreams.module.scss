@@ -48,3 +48,13 @@
   color: var(--textColorPrimary) !important;
   font-weight: 700;
 }
+
+.detailsHint {
+  font-family: var(--fontFamilyPrimary);
+  font-size: var(--fontSizeSmall);
+  // visibility: hidden;
+}
+
+.streamCell:hover .detailsHint {
+  visibility: visible;
+}
