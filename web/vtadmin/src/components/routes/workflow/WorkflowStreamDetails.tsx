@@ -62,6 +62,11 @@ export const WorkflowStreamDetails = ({ clusterID, keyspace, workflowName, strea
                   credits: {
                       enabled: false,
                   },
+                  plotOptions: {
+                      series: {
+                          animation: false,
+                      },
+                  },
                   series: [
                       {
                           type: 'line',
