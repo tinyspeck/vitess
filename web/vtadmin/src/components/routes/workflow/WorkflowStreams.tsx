@@ -70,9 +70,17 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                     <tr className={rowClass} key={row.id}>
                         <DataCell className={style.streamCell}>
                             <NavLink to={`/workflow/${clusterID}/${keyspace}/${name}/streams/${row.id}`}>
-                                <div className={style.streamID}>{row.id}</div>
+                                <div className={style.streamID}>
+                                    <StreamStatePip state={row.stream.state} /> {row.id}
+                                </div>
                                 <div className={style.detailsHint}>View details</div>
                             </NavLink>
+                        </DataCell>
+                        <DataCell>
+                            {row.stream.state}
+                            <div className="text-color-secondary font-size-small">
+                                Updated {formatDateTime(row.stream.time_updated?.seconds)}
+                            </div>
                         </DataCell>
                         <DataCell>
                             <a href="#">
@@ -90,12 +98,6 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                             <a href="#">
                                 {row.stream.tablet?.cell}-{row.stream.tablet?.uid}
                             </a>
-                        </DataCell>
-                        <DataCell>
-                            <StreamStatePip state={row.stream.state} /> {row.stream.state}
-                            <div className="text-color-secondary font-size-small">
-                                Updated {formatDateTime(row.stream.time_updated?.seconds)}
-                            </div>
                         </DataCell>
                     </tr>
                 );
