@@ -22,6 +22,7 @@ import { Code } from '../../Code';
 import { Tab } from '../../tabs/Tab';
 import { TabContainer } from '../../tabs/TabContainer';
 import { WorkflowStreams } from './WorkflowStreams';
+import { ButtonDropdown } from '../../ButtonDropdown';
 
 interface RouteParams {
     clusterID: string;
@@ -45,9 +46,29 @@ export const Workflow = () => {
                         <Link to="/workflows">Workflows</Link>
                     </span>
                 </div>
-                <code>
-                    <h1>{name}</h1>
-                </code>
+                <div className={style.titleContainer}>
+                    <code>
+                        <h1>{name}</h1>
+                    </code>
+                    <div>
+                        <ButtonDropdown label="Actions">
+                            <div className={style.actions}>
+                                <div className={style.command}>
+                                    <p className={style.commandTitle}>Stop the workflow</p>
+                                    <code className={style.commandCode}>
+                                        vtctlclient Workflow {keyspace}.{name} stop
+                                    </code>
+                                </div>
+                                <div className={style.command}>
+                                    <p className={style.commandTitle}>Delete the workflow</p>
+                                    <code className={style.commandCode}>
+                                        vtctlclient Workflow {keyspace}.{name} delete
+                                    </code>
+                                </div>
+                            </div>
+                        </ButtonDropdown>
+                    </div>
+                </div>
             </header>
 
             <TabContainer className={style.tabs}>

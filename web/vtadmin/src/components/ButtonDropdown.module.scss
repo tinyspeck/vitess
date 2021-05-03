@@ -1,0 +1,27 @@
+.button {
+  box-shadow: none !important;
+  padding-right: 8px !important;
+}
+
+.icon {
+  display: inline-block;
+  fill: var(--colorPrimary);
+  height: 1.4em;
+  margin-left: 0.4em;
+  vertical-align: middle;
+  width: 1.4em;
+}
+
+.popover {
+  background: var(--backgroundPrimary);
+  border: solid 1px var(--colorDisabled);
+  border-radius: 6px;
+  box-shadow: var(--boxShadowHover);
+  box-sizing: border-box;
+  height: min-content;
+  margin-top: 4px;
+  margin-left: -220px;
+  overflow: auto;
+  outline: none;
+  z-index: 1000;
+}

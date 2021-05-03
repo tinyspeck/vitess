@@ -58,3 +58,27 @@
 .tabs {
   padding: 0 24px;
 }
+
+.titleContainer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  max-width: var(--contentWidth);
+}
+
+.actions {
+  box-sizing: border-box;
+  padding: 16px;
+  max-width: 360px;
+}
+
+.command {
+  margin-bottom: 8px;
+}
+
+.commandCode {
+  background: var(--backgroundSecondaryHighlight);
+  display: block;
+  font-size: 1.2rem;
+  padding: 8px;
+}

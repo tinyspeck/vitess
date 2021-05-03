@@ -11,26 +11,20 @@ interface Props extends React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLB
     size?: 'large' | 'medium' | 'small';
 }
 
-export const Button: React.FunctionComponent<Props> = ({
-    children,
-    className,
-    icon,
-    secondary,
-    size = 'medium',
-    type = 'button',
-    ...props
-}) => {
-    const buttonClass = cx(className, style.button, {
-        [style.secondary]: !!secondary,
-        [style.sizeLarge]: size === 'large',
-        [style.sizeSmall]: size === 'small',
-        [style.withIcon]: !!icon,
-    });
+export const Button = React.forwardRef(
+    ({ children, className, icon, ref, secondary, size = 'medium', type = 'button', ...props }: Props) => {
+        const buttonClass = cx(className, style.button, {
+            [style.secondary]: !!secondary,
+            [style.sizeLarge]: size === 'large',
+            [style.sizeSmall]: size === 'small',
+            [style.withIcon]: !!icon,
+        });
 
-    return (
-        <button {...props} className={buttonClass} type={type}>
-            {icon && <Icon className={style.icon} icon={icon} />}
-            {children}
-        </button>
-    );
-};
+        return (
+            <button ref={ref} {...props} className={buttonClass} type={type}>
+                {icon && <Icon className={style.icon} icon={icon} />}
+                {children}
+            </button>
+        );
+    }
+);
