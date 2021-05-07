@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -59,6 +60,7 @@ type API struct {
 	clusterMap map[string]*cluster.Cluster
 	serv       *grpcserver.Server
 	router     *mux.Router
+	cfg        Config
 
 	// See https://github.com/vitessio/vitess/issues/7723 for why this exists.
 	vtexplainLock sync.Mutex
@@ -67,11 +69,11 @@ type API struct {
 // NewAPI returns a new API, configured to service the given set of clusters,
 // and configured with the given gRPC and HTTP server options.
 //
-// If opts.Services is nil, NewAPI will automatically add
+// If grpcOpts.Services is nil, NewAPI will automatically add
 // "vtadmin.VTAdminServer" to the list of services queryable in the healthcheck
 // service. Callers can opt-out of this behavior by explicitly setting this
 // value to the empty slice.
-func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadminhttp.Options) *API {
+func NewAPI(clusters []*cluster.Cluster, cfg Config, grpcOpts grpcserver.Options, httpOpts vtadminhttp.Options) *API {
 	clusterMap := make(map[string]*cluster.Cluster, len(clusters))
 	for _, cluster := range clusters {
 		clusterMap[cluster.ID] = cluster
@@ -81,11 +83,11 @@ func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadm
 		return c1.ID < c2.ID
 	}).Sort(clusters)
 
-	if opts.Services == nil {
-		opts.Services = []string{"vtadmin.VTAdminServer"}
+	if grpcOpts.Services == nil {
+		grpcOpts.Services = []string{"vtadmin.VTAdminServer"}
 	}
 
-	serv := grpcserver.New("vtadmin", opts)
+	serv := grpcserver.New("vtadmin", grpcOpts)
 	serv.Router().HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
@@ -97,6 +99,7 @@ func NewAPI(clusters []*cluster.Cluster, opts grpcserver.Options, httpOpts vtadm
 		clusterMap: clusterMap,
 		router:     router,
 		serv:       serv,
+		cfg:        cfg,
 	}
 
 	vtadminpb.RegisterVTAdminServer(serv.GRPCServer(), api)
@@ -595,7 +598,20 @@ func (api *API) GetTablet(ctx context.Context, req *vtadminpb.GetTabletRequest) 
 	case 0:
 		return nil, vterrors.Errorf(vtrpcpb.Code_NOT_FOUND, "%s: %s, searched clusters = %v", errors.ErrNoTablet, req.Hostname, ids)
 	case 1:
-		return tablets[0], nil
+		// (TODO:@ajm188) Push this down to cluster.GetTablet(s), but still
+		// storing a single metadata implementation in case the user wants to
+		// maintain/share state across clusters.
+		tablet := tablets[0]
+		if metadataFunc := api.cfg.TabletMetadataPlugin.Get(); metadataFunc != nil {
+			md, err := metadataFunc(proto.Clone(tablet).(*vtadminpb.Tablet))
+			if err != nil {
+				return nil, err
+			}
+
+			tablet.Metadata = md
+		}
+
+		return tablet, nil
 	}
 
 	return nil, vterrors.Errorf(vtrpcpb.Code_NOT_FOUND, "%s: %s, searched clusters = %v", errors.ErrAmbiguousTablet, req.Hostname, ids)

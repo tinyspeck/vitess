@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	opts                 grpcserver.Options
+	cfg                  vtadmin.Config
+	grpcOpts             grpcserver.Options
 	httpOpts             vtadminhttp.Options
 	clusterConfigs       cluster.ClustersFlag
 	clusterFileConfig    cluster.FileConfig
@@ -67,21 +68,21 @@ func run(cmd *cobra.Command, args []string) {
 		clusters[i] = cluster
 	}
 
-	s := vtadmin.NewAPI(clusters, opts, httpOpts)
+	s := vtadmin.NewAPI(clusters, cfg, grpcOpts, httpOpts)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func main() {
-	rootCmd.Flags().StringVar(&opts.Addr, "addr", ":15000", "address to serve on")
-	rootCmd.Flags().DurationVar(&opts.CMuxReadTimeout, "lmux-read-timeout", time.Second, "how long to spend connection muxing")
-	rootCmd.Flags().DurationVar(&opts.LameDuckDuration, "lame-duck-duration", time.Second*5, "length of lame duck period at shutdown")
+	rootCmd.Flags().StringVar(&grpcOpts.Addr, "addr", ":15000", "address to serve on")
+	rootCmd.Flags().DurationVar(&grpcOpts.CMuxReadTimeout, "lmux-read-timeout", time.Second, "how long to spend connection muxing")
+	rootCmd.Flags().DurationVar(&grpcOpts.LameDuckDuration, "lame-duck-duration", time.Second*5, "length of lame duck period at shutdown")
 	rootCmd.Flags().Var(&clusterConfigs, "cluster", "per-cluster configuration. any values here take precedence over those in -cluster-defaults or -cluster-config")
 	rootCmd.Flags().Var(&clusterFileConfig, "cluster-config", "path to a yaml cluster configuration. see clusters.example.yaml") // (TODO:@amason) provide example config.
 	rootCmd.Flags().Var(&defaultClusterConfig, "cluster-defaults", "default options for all clusters")
 
-	rootCmd.Flags().BoolVar(&opts.EnableTracing, "grpc-tracing", false, "whether to enable tracing on the gRPC server")
+	rootCmd.Flags().BoolVar(&grpcOpts.EnableTracing, "grpc-tracing", false, "whether to enable tracing on the gRPC server")
 	rootCmd.Flags().BoolVar(&httpOpts.EnableTracing, "http-tracing", false, "whether to enable tracing on the HTTP server")
 	rootCmd.Flags().BoolVar(&httpOpts.DisableCompression, "http-no-compress", false, "whether to disable compression of HTTP API responses")
 	rootCmd.Flags().StringSliceVar(&httpOpts.CORSOrigins, "http-origin", []string{}, "repeated, comma-separated flag of allowed CORS origins. omit to disable CORS")
@@ -91,6 +92,13 @@ func main() {
 		"[EXPERIMENTAL] Go template string to generate a reachable http "+
 			"address for a tablet. Currently used to make passthrough "+
 			"requests to /debug/vars endpoints.",
+	)
+
+	rootCmd.Flags().Var(&cfg.TabletMetadataPlugin,
+		"tablet-metadata-plugin",
+		"[EXPERIMENTAL] path to a go plugin that provides a symbol named "+
+			"TabletMetadataFunc of type "+
+			"`func(tablet *vtadminpb.Tablet) (map[string]string, error)`.",
 	)
 
 	// glog flags, no better way to do this
