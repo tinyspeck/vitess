@@ -127,6 +127,13 @@ message Tablet {
 
     ServingState state = 3;
     string FQDN = 4;
+
+    // Metadata is a map of arbitrary key-value pairs of metadata associated
+    // with a tablet, specific to your particular environment. VTAdmin on its
+    // own will never populate this field, but running with a custom
+    // tablet-metadata-plugin will cause this field to be populated with
+    // whatever specific metadata needs you have.
+    map<string, string> metadata = 5;
 }
 
 // VSchema represents the vschema for a keyspace in the cluster it belongs to.

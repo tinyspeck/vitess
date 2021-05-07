@@ -916,6 +916,9 @@ export namespace vtadmin {
 
         /** Tablet FQDN */
         FQDN?: (string|null);
+
+        /** Tablet metadata */
+        metadata?: ({ [k: string]: string }|null);
     }
 
     /** Represents a Tablet. */
@@ -938,6 +941,9 @@ export namespace vtadmin {
 
         /** Tablet FQDN. */
         public FQDN: string;
+
+        /** Tablet metadata. */
+        public metadata: { [k: string]: string };
 
         /**
          * Creates a new Tablet instance using the specified properties.
@@ -7007,6 +7013,198 @@ export namespace tabletmanagerdata {
 
         /**
          * Converts this UnlockTablesResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of an ExecuteQueryRequest. */
+    interface IExecuteQueryRequest {
+
+        /** ExecuteQueryRequest query */
+        query?: (Uint8Array|null);
+
+        /** ExecuteQueryRequest db_name */
+        db_name?: (string|null);
+
+        /** ExecuteQueryRequest max_rows */
+        max_rows?: (number|Long|null);
+    }
+
+    /** Represents an ExecuteQueryRequest. */
+    class ExecuteQueryRequest implements IExecuteQueryRequest {
+
+        /**
+         * Constructs a new ExecuteQueryRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: tabletmanagerdata.IExecuteQueryRequest);
+
+        /** ExecuteQueryRequest query. */
+        public query: Uint8Array;
+
+        /** ExecuteQueryRequest db_name. */
+        public db_name: string;
+
+        /** ExecuteQueryRequest max_rows. */
+        public max_rows: (number|Long);
+
+        /**
+         * Creates a new ExecuteQueryRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ExecuteQueryRequest instance
+         */
+        public static create(properties?: tabletmanagerdata.IExecuteQueryRequest): tabletmanagerdata.ExecuteQueryRequest;
+
+        /**
+         * Encodes the specified ExecuteQueryRequest message. Does not implicitly {@link tabletmanagerdata.ExecuteQueryRequest.verify|verify} messages.
+         * @param message ExecuteQueryRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: tabletmanagerdata.IExecuteQueryRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ExecuteQueryRequest message, length delimited. Does not implicitly {@link tabletmanagerdata.ExecuteQueryRequest.verify|verify} messages.
+         * @param message ExecuteQueryRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: tabletmanagerdata.IExecuteQueryRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes an ExecuteQueryRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ExecuteQueryRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): tabletmanagerdata.ExecuteQueryRequest;
+
+        /**
+         * Decodes an ExecuteQueryRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ExecuteQueryRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): tabletmanagerdata.ExecuteQueryRequest;
+
+        /**
+         * Verifies an ExecuteQueryRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates an ExecuteQueryRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ExecuteQueryRequest
+         */
+        public static fromObject(object: { [k: string]: any }): tabletmanagerdata.ExecuteQueryRequest;
+
+        /**
+         * Creates a plain object from an ExecuteQueryRequest message. Also converts values to other types if specified.
+         * @param message ExecuteQueryRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: tabletmanagerdata.ExecuteQueryRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ExecuteQueryRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of an ExecuteQueryResponse. */
+    interface IExecuteQueryResponse {
+
+        /** ExecuteQueryResponse result */
+        result?: (query.IQueryResult|null);
+    }
+
+    /** Represents an ExecuteQueryResponse. */
+    class ExecuteQueryResponse implements IExecuteQueryResponse {
+
+        /**
+         * Constructs a new ExecuteQueryResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: tabletmanagerdata.IExecuteQueryResponse);
+
+        /** ExecuteQueryResponse result. */
+        public result?: (query.IQueryResult|null);
+
+        /**
+         * Creates a new ExecuteQueryResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ExecuteQueryResponse instance
+         */
+        public static create(properties?: tabletmanagerdata.IExecuteQueryResponse): tabletmanagerdata.ExecuteQueryResponse;
+
+        /**
+         * Encodes the specified ExecuteQueryResponse message. Does not implicitly {@link tabletmanagerdata.ExecuteQueryResponse.verify|verify} messages.
+         * @param message ExecuteQueryResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: tabletmanagerdata.IExecuteQueryResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ExecuteQueryResponse message, length delimited. Does not implicitly {@link tabletmanagerdata.ExecuteQueryResponse.verify|verify} messages.
+         * @param message ExecuteQueryResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: tabletmanagerdata.IExecuteQueryResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes an ExecuteQueryResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ExecuteQueryResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): tabletmanagerdata.ExecuteQueryResponse;
+
+        /**
+         * Decodes an ExecuteQueryResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ExecuteQueryResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): tabletmanagerdata.ExecuteQueryResponse;
+
+        /**
+         * Verifies an ExecuteQueryResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates an ExecuteQueryResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ExecuteQueryResponse
+         */
+        public static fromObject(object: { [k: string]: any }): tabletmanagerdata.ExecuteQueryResponse;
+
+        /**
+         * Creates a plain object from an ExecuteQueryResponse message. Also converts values to other types if specified.
+         * @param message ExecuteQueryResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: tabletmanagerdata.ExecuteQueryResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ExecuteQueryResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
