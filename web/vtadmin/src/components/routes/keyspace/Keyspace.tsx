@@ -27,6 +27,7 @@ import { KeyspaceShards } from './KeyspaceShards';
 import { ContentContainer } from '../../layout/ContentContainer';
 import { TabContainer } from '../../tabs/TabContainer';
 import { Tab } from '../../tabs/Tab';
+import { KeyspaceSchemas } from './KeyspaceSchemas';
 
 interface RouteParams {
     clusterID: string;
@@ -71,7 +72,7 @@ export const Keyspace = () => {
                     </Route>
 
                     <Route path={`${path}/schemas`}>
-                        <KeyspaceShards keyspace={keyspace} />
+                        <KeyspaceSchemas keyspace={keyspace} />
                     </Route>
 
                     <Redirect exact from={path} to={`${path}/shards`} />

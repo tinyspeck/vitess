@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import * as React from 'react';
-
-import { useTablets } from '../../../hooks/api';
+import React from 'react';
+import { useSchemas } from '../../../hooks/api';
 import { vtadmin as pb } from '../../../proto/vtadmin.d';
+import { getTableDefinitions } from '../../../util/tableDefinitions';
 import { DataCell } from '../../dataTable/DataCell';
 import { DataTable } from '../../dataTable/DataTable';
 
@@ -24,29 +24,22 @@ interface Props {
     keyspace: pb.Keyspace | null | undefined;
 }
 
-export const KeyspaceShards = ({ keyspace }: Props) => {
-    const { data: tablets = [], ...tq } = useTablets();
+export const KeyspaceSchemas = ({ keyspace }: Props) => {
+    const { data: allSchemas = [] } = useSchemas();
 
-    const tableData = React.useMemo(() => {
-        if (!keyspace || tq.isLoading) {
-            return [];
-        }
+    const schemas = React.useMemo(() => {
+        if (!keyspace) return [];
 
-        return Object.values(keyspace.shards).map((shard) => ({
-            shard: shard.name,
-            tablets: tablets,
-        }));
-    }, [keyspace, tablets, tq.isLoading]);
+        return getTableDefinitions(allSchemas).filter(
+            (t) => t.cluster?.id === keyspace.cluster?.id && t.keyspace === keyspace?.keyspace?.name
+        );
+    }, [allSchemas, keyspace]);
 
-    if (!keyspace) {
-        return null;
-    }
-
-    const renderRows = (rows: typeof tableData) => {
-        return rows.map((row) => {
+    const renderRows = (rows: typeof schemas) => {
+        return rows.map((row, rdx) => {
             return (
-                <tr key={row.shard}>
-                    <DataCell>{row.shard}</DataCell>
+                <tr key={rdx}>
+                    <DataCell>{row.tableDefinition?.name}</DataCell>
                 </tr>
             );
         });
@@ -54,7 +47,7 @@ export const KeyspaceShards = ({ keyspace }: Props) => {
 
     return (
         <div>
-            <DataTable columns={['Shard']} data={tableData} renderRows={renderRows} />
+            <DataTable columns={['Table']} data={schemas} renderRows={renderRows} />
         </div>
     );
 };
