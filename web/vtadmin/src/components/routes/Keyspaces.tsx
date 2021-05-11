@@ -29,6 +29,7 @@ import { ContentContainer } from '../layout/ContentContainer';
 import { WorkspaceHeader } from '../layout/WorkspaceHeader';
 import { WorkspaceTitle } from '../layout/WorkspaceTitle';
 import { DataFilter } from '../dataTable/DataFilter';
+import { Link } from 'react-router-dom';
 
 export const Keyspaces = () => {
     useDocumentTitle('Keyspaces');
@@ -56,8 +57,10 @@ export const Keyspaces = () => {
         rows.map((row, idx) => (
             <tr key={idx}>
                 <DataCell>
-                    <div className="font-weight-bold">{row.name}</div>
-                    <div className="font-size-small text-color-secondary">{row.cluster}</div>
+                    <Link to={`/keyspace/${row.clusterID}/${row.name}`}>
+                        <div className="font-weight-bold">{row.name}</div>
+                        <div className="font-size-small text-color-secondary">{row.cluster}</div>
+                    </Link>
                 </DataCell>
                 <DataCell>
                     {!!row.servingShards && (
