@@ -22,12 +22,13 @@ import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
 import { NavCrumbs } from '../../layout/NavCrumbs';
 import { WorkspaceHeader } from '../../layout/WorkspaceHeader';
 import { WorkspaceTitle } from '../../layout/WorkspaceTitle';
-import { useKeyspaces } from '../../../hooks/api';
+import { useKeyspaces, useSchemas } from '../../../hooks/api';
 import { KeyspaceShards } from './KeyspaceShards';
 import { ContentContainer } from '../../layout/ContentContainer';
 import { TabContainer } from '../../tabs/TabContainer';
 import { Tab } from '../../tabs/Tab';
 import { KeyspaceSchemas } from './KeyspaceSchemas';
+import { getTableDefinitions } from '../../../util/tableDefinitions';
 
 interface RouteParams {
     clusterID: string;
@@ -41,7 +42,12 @@ export const Keyspace = () => {
     const { path, url } = useRouteMatch();
 
     const { data: keyspaces = [] } = useKeyspaces();
+    const { data: schemas = [] } = useSchemas();
+
     const keyspace = keyspaces.find((k) => k.cluster?.id === clusterID && k.keyspace?.name === name);
+    const schemaCount = getTableDefinitions(schemas).filter(
+        (t) => t.cluster?.id === keyspace?.cluster?.id && t.keyspace === keyspace?.keyspace?.name
+    ).length;
 
     const shardCount = Object.keys(keyspace?.shards || []).length;
 
@@ -64,7 +70,7 @@ export const Keyspace = () => {
             <ContentContainer>
                 <TabContainer>
                     <Tab text="Shards" to={`${url}/shards`} count={shardCount} size="large" />
-                    <Tab text="Schemas" to={`${url}/schemas`} size="large" />
+                    <Tab text="Schemas" to={`${url}/schemas`} count={schemaCount} size="large" />
                 </TabContainer>
                 <Switch>
                     <Route path={`${path}/shards`}>
