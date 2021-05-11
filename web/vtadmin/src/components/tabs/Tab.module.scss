@@ -1,0 +1,54 @@
+/**
+ * Copyright 2021 The Vitess Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+a.tab {
+  background: var(--backgroundPrimary);
+  border: solid 1px transparent;
+  border-bottom-color: var(--colorDisabled);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: var(--textColorSecondary);
+  display: inline-block;
+  font-weight: 500;
+  // Sneaky negative margin to overlay the tab on top of the TabContainer bottom border
+  margin-bottom: -1px;
+  min-width: 72px;
+  padding: 0.8em 1.2em;
+
+  &.large {
+    font-size: var(--fontSizeLarge);
+  }
+
+  &.small {
+    font-weight: 300;
+    font-size: var(--fontSizeSmall);
+  }
+
+  &.active {
+    border: solid 1px var(--colorDisabled);
+    border-bottom-color: var(--backgroundPrimary);
+    color: var(--textColorPrimary);
+  }
+}
+
+.count {
+  background-color: var(--backgroundSecondaryHighlight);
+  border-radius: 20px;
+  color: var(--textColorSecondary);
+  display: inline-block;
+  font-size: 0.8em;
+  margin: 0 0 0 0.5em;
+  padding: 0.1em 0.5em;
+}
