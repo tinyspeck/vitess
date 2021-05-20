@@ -15,6 +15,7 @@ package vtgate
 
 import (
 	"flag"
+	"fmt"
 	"time"
 
 	"golang.org/x/net/context"
@@ -22,6 +23,7 @@ import (
 
 	"vitess.io/vitess/go/vt/discovery"
 	"vitess.io/vitess/go/vt/srvtopo"
+	"vitess.io/vitess/go/vt/vterrors"
 	"vitess.io/vitess/go/vt/vttablet/queryservice"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -34,8 +36,9 @@ import (
 
 var (
 	// GatewayImplementation allows you to choose which gateway to use for vtgate routing. Defaults to discoverygateway, other option is tabletgateway
-	GatewayImplementation = flag.String("gateway_implementation", "tabletgateway", "Allowed values: discoverygateway (deprecated), tabletgateway (default)")
-	initialTabletTimeout  = flag.Duration("gateway_initial_tablet_timeout", 30*time.Second, "At startup, the gateway will wait up to that duration to get one tablet per keyspace/shard/tablettype")
+	GatewayImplementation       = flag.String("gateway_implementation", "tabletgateway", "Allowed values: discoverygateway (deprecated), tabletgateway (default)")
+	initialTabletTimeout        = flag.Duration("gateway_initial_tablet_timeout", 30*time.Second, "At startup, the gateway will wait up to that duration to get one tablet per keyspace/shard/tablettype")
+	errorOnInitialTabletTimeout = flag.Bool("gateway_error_on_initial_tablet_timeout", false, "At startup, gateway will return an error if gateway_initial_tablet_timeout is reached")
 	// RetryCount is the number of times a query will be retried on error
 	// Make this unexported after DiscoveryGateway is deprecated
 	RetryCount = flag.Int("retry-count", 2, "retry count")
@@ -109,9 +112,15 @@ func WaitForTablets(gw Gateway, tabletTypesToWait []topodatapb.TabletType) error
 	case context.DeadlineExceeded:
 		// In this scenario, we were able to reach the
 		// topology service, but some tablets may not be
-		// ready. We just warn and keep going.
-		log.Warningf("Timeout waiting for all keyspaces / shards to have healthy tablets of types %v, may be in degraded mode", tabletTypesToWait)
+		// ready. We just warn and keep going unless we're
+		// configured to return an error
+		msg := fmt.Sprintf("Timeout waiting for all keyspaces / shards to have healthy tablets of types %v, may be in degraded mode", tabletTypesToWait)
+		log.Warningf(msg)
 		err = nil
+
+		if *errorOnInitialTabletTimeout {
+			err = vterrors.NewWithoutCode(msg)
+		}
 	default:
 		// Nothing to do here, the caller will log.Fatalf.
 	}
