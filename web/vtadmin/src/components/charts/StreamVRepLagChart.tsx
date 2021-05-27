@@ -113,7 +113,8 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
             },
         ],
         title: {
-            text: 'My chart',
+            align: 'left',
+            text: 'VReplication Lag',
         },
         tooltip: {
             formatter: function () {
@@ -136,7 +137,7 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
         yAxis: {
             min: 0,
             title: {
-                text: 'VReplication Lag (seconds)',
+                text: 'Seconds',
             },
         },
     };
