@@ -70,6 +70,7 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
     const data = cache.map((d) => ({
         x: d.updatedAt * 1000,
         y: d.lag,
+        metadata: d,
     }));
 
     const options: Highcharts.Options = {
@@ -115,6 +116,15 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
             text: 'My chart',
         },
         tooltip: {
+            formatter: function () {
+                console.log(this);
+                return `
+					<b>VReplication Lag:</b> ${this.y}<br/>
+					<br/>
+					<b>Updated at:</b>  ${(this.point as any).metadata.updatedAt}<br/>
+					<b>Transaction ts:</b> ${(this.point as any).metadata.txnAt}
+				`;
+            },
             outside: true,
         },
         xAxis: {
