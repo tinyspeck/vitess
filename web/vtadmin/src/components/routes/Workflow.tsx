@@ -113,6 +113,7 @@ export const Workflow = () => {
                             <StreamVRepLagSparkline
                                 clusterID={clusterID}
                                 keyspace={keyspace}
+                                sparkline
                                 streamID={row.id}
                                 workflow={name}
                             />

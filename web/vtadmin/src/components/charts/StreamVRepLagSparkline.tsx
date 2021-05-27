@@ -16,7 +16,7 @@ import { useWorkflow } from '../../hooks/api';
  * limitations under the License.
  */
 import { useEffect, useMemo, useState } from 'react';
-import Highcharts from 'highcharts';
+import Highcharts, { merge } from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 
 import style from './StreamVRepLagSparkline.module.scss';
@@ -26,8 +26,9 @@ import { fill, takeRight } from 'lodash';
 interface Props {
     clusterID: string;
     keyspace: string;
-    workflow: string;
+    sparkline?: true;
     streamID: number | Long;
+    workflow: string;
 }
 
 // TODO https://reactjs.org/blog/2018/06/07/you-probably-dont-need-derived-state.html
@@ -36,7 +37,34 @@ interface Props {
 
 const CACHE_SIZE = 15;
 
-export const StreamVRepLagSparkline = ({ clusterID, keyspace, workflow, streamID }: Props) => {
+const DEFAULT_OPTS: Highcharts.Options = {};
+
+const SPARKLINE_OPTS: Highcharts.Options = {
+    chart: {
+        height: 20,
+        margin: [2, 0, 2, 0],
+        width: 120,
+    },
+    xAxis: {
+        labels: {
+            enabled: false,
+        },
+        title: {
+            text: null,
+        },
+    },
+    yAxis: {
+        gridLineWidth: 0,
+        labels: {
+            enabled: false,
+        },
+        title: {
+            text: null,
+        },
+    },
+};
+
+export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamID, workflow }: Props) => {
     const [cache, setCache] = useState<any[]>(() => {
         const INITIAL_CACHE = Array(CACHE_SIZE);
         const now = Date.now();
@@ -59,7 +87,6 @@ export const StreamVRepLagSparkline = ({ clusterID, keyspace, workflow, streamID
         }
     );
 
-    console.log(data?.workflow?.max_v_replication_lag);
     const stream = getStream(data, streamID);
 
     useEffect(() => {
@@ -74,78 +101,63 @@ export const StreamVRepLagSparkline = ({ clusterID, keyspace, workflow, streamID
     const lastPoint = cache[cache.length - 1];
     console.log(lastPoint?.y);
 
-    const options: Highcharts.Options = useMemo(
-        () => ({
-            chart: {
-                animation: {
-                    duration: 350,
+    const options: Highcharts.Options = useMemo(() => {
+        const opts: Highcharts.Options = merge(
+            { ...DEFAULT_OPTS },
+            {
+                credits: {
+                    enabled: false,
                 },
-                height: 20,
-                margin: [2, 50, 2, 0],
-                width: 120,
-            },
-            credits: {
-                enabled: false,
-            },
-            legend: {
-                enabled: false,
-            },
-            plotOptions: {
-                series: {
-                    animation: false,
-                    lineWidth: 1,
-                    shadow: false,
-                    states: {
-                        hover: {
-                            lineWidth: 1,
-                        },
-                    },
-                    marker: {
-                        enabled: false,
+                legend: {
+                    enabled: false,
+                },
+                plotOptions: {
+                    series: {
+                        animation: false,
+                        lineWidth: 1,
+                        shadow: false,
                         states: {
                             hover: {
-                                radius: 2,
+                                lineWidth: 1,
+                            },
+                        },
+                        marker: {
+                            enabled: false,
+                            states: {
+                                hover: {
+                                    radius: 2,
+                                },
                             },
                         },
                     },
                 },
-            },
-            series: [
-                {
-                    color: '#3d5afe',
-                    data: cache,
-                    fillOpacity: 0.25,
-                    type: 'area',
-                },
-            ],
-            title: {
-                text: '',
-            },
-            tooltip: {
-                outside: true,
-            },
-            xAxis: {
-                labels: {
-                    enabled: false,
-                },
+                series: [
+                    {
+                        color: '#3d5afe',
+                        data: cache,
+                        fillOpacity: 0.25,
+                        type: 'area',
+                    },
+                ],
                 title: {
-                    text: null,
+                    text: '',
                 },
-                type: 'datetime',
-            },
-            yAxis: [
-                {
-                    labels: {
-                        enabled: false,
-                    },
+                tooltip: {
+                    outside: true,
+                },
+                xAxis: {
+                    type: 'datetime',
+                },
+                yAxis: {
                     title: {
-                        text: null,
+                        text: 'Seconds',
                     },
                 },
-            ],
-        }),
-        [cache]
-    );
+            }
+        );
+
+        return sparkline ? merge(opts, SPARKLINE_OPTS) : opts;
+    }, [cache, sparkline]);
 
     return (
         <div>
