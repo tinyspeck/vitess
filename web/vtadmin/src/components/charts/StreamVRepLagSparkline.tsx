@@ -65,19 +65,7 @@ const SPARKLINE_OPTS: Highcharts.Options = {
 };
 
 export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamID, workflow }: Props) => {
-    const [cache, setCache] = useState<any[]>(() => {
-        const INITIAL_CACHE = Array(CACHE_SIZE);
-        const now = Date.now();
-        for (let i = CACHE_SIZE - 1; i >= 0; i--) {
-            INITIAL_CACHE[i] = {
-                x: now - i * 2 * 1000,
-                y: 0,
-            };
-        }
-
-        INITIAL_CACHE.reverse();
-        return INITIAL_CACHE;
-    });
+    const [cache, setCache] = useState<any[]>([]);
 
     const { data, ...query } = useWorkflow(
         { clusterID, keyspace, name: workflow },
@@ -102,59 +90,60 @@ export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamI
     console.log(lastPoint?.y);
 
     const options: Highcharts.Options = useMemo(() => {
-        const opts: Highcharts.Options = merge(
-            { ...DEFAULT_OPTS },
-            {
-                credits: {
-                    enabled: false,
-                },
-                legend: {
-                    enabled: false,
-                },
-                plotOptions: {
-                    series: {
-                        animation: false,
-                        lineWidth: 1,
-                        shadow: false,
+        const _opts: Highcharts.Options = {
+            credits: {
+                enabled: false,
+            },
+            legend: {
+                enabled: false,
+            },
+            plotOptions: {
+                series: {
+                    animation: false,
+                    lineWidth: 1,
+                    shadow: false,
+                    states: {
+                        hover: {
+                            lineWidth: 1,
+                        },
+                    },
+                    marker: {
+                        enabled: false,
                         states: {
                             hover: {
-                                lineWidth: 1,
-                            },
-                        },
-                        marker: {
-                            enabled: false,
-                            states: {
-                                hover: {
-                                    radius: 2,
-                                },
+                                radius: 2,
                             },
                         },
                     },
                 },
-                series: [
-                    {
-                        color: '#3d5afe',
-                        data: cache,
-                        fillOpacity: 0.25,
-                        type: 'area',
-                    },
-                ],
+            },
+            series: [
+                {
+                    color: '#3d5afe',
+                    data: cache,
+                    fillOpacity: 0.25,
+                    type: 'area',
+                },
+            ],
+            title: {
+                text: '',
+            },
+            tooltip: {
+                outside: true,
+            },
+            xAxis: {
+                softMin: Date.now() - 15 * 1000,
+                tickInterval: 1000,
+                type: 'datetime',
+            },
+            yAxis: {
+                min: 0,
                 title: {
-                    text: '',
+                    text: 'Seconds',
                 },
-                tooltip: {
-                    outside: true,
-                },
-                xAxis: {
-                    type: 'datetime',
-                },
-                yAxis: {
-                    title: {
-                        text: 'Seconds',
-                    },
-                },
-            }
-        );
+            },
+        };
+        const opts: Highcharts.Options = merge({ ...DEFAULT_OPTS }, _opts);
 
         return sparkline ? merge(opts, SPARKLINE_OPTS) : opts;
     }, [cache, sparkline]);
