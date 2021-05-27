@@ -145,7 +145,7 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
     return (
         <div>
             <HighchartsReact highcharts={Highcharts} options={options} />
-            <table>
+            {/* <table>
                 <thead>
                     <tr>
                         <th>Updated at</th>
@@ -168,7 +168,7 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
                         </tr>
                     ))}
                 </tbody>
-            </table>
+            </table> */}
         </div>
     );
 };
