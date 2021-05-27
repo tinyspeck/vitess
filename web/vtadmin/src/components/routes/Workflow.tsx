@@ -109,12 +109,12 @@ export const Workflow = () => {
                         </TabletLink>
                     </DataCell>
                     <td>
-                        {row.id && row.state?.toLowerCase() === 'running' && (
+                        {row.key && row.state?.toLowerCase() === 'running' && (
                             <StreamVRepLagSparkline
                                 clusterID={clusterID}
                                 keyspace={keyspace}
                                 sparkline
-                                streamID={row.id}
+                                streamKey={row.key}
                                 workflow={name}
                             />
                         )}

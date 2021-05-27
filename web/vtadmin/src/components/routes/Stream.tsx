@@ -17,7 +17,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { useWorkflow } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { formatStreamKey, getStreams } from '../../util/workflows';
+import { formatStreamKey, getStream, getStreams } from '../../util/workflows';
 import { StreamVRepLagSparkline } from '../charts/StreamVRepLagSparkline';
 import { Code } from '../Code';
 import { ContentContainer } from '../layout/ContentContainer';
@@ -53,9 +53,7 @@ export const Stream = () => {
 
     useDocumentTitle(`${streamKey} (${params.workflowName})`);
 
-    const stream = getStreams(workflow).find(
-        (s) => s.id === streamID && s.tablet?.cell === tabletAlias.cell && s.tablet?.uid === tabletAlias.uid
-    );
+    const stream = streamKey ? getStream(workflow, streamKey) : null;
 
     return (
         <div>
@@ -78,12 +76,12 @@ export const Stream = () => {
                 </div>
             </WorkspaceHeader>
             <ContentContainer>
-                {stream?.state && stream.state.toLowerCase() === 'running' && (
+                {streamKey && stream?.state && stream.state.toLowerCase() === 'running' && (
                     <StreamVRepLagSparkline
                         clusterID={params.clusterID}
                         keyspace={params.keyspace}
+                        streamKey={streamKey}
                         workflow={params.workflowName}
-                        streamID={streamID}
                     />
                 )}
 

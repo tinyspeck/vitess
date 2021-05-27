@@ -27,7 +27,7 @@ interface Props {
     clusterID: string;
     keyspace: string;
     sparkline?: true;
-    streamID: number | Long;
+    streamKey: string;
     workflow: string;
 }
 
@@ -37,34 +37,7 @@ interface Props {
 
 const CACHE_SIZE = 15;
 
-const DEFAULT_OPTS: Highcharts.Options = {};
-
-const SPARKLINE_OPTS: Highcharts.Options = {
-    chart: {
-        height: 20,
-        margin: [2, 0, 2, 0],
-        width: 120,
-    },
-    xAxis: {
-        labels: {
-            enabled: false,
-        },
-        title: {
-            text: null,
-        },
-    },
-    yAxis: {
-        gridLineWidth: 0,
-        labels: {
-            enabled: false,
-        },
-        title: {
-            text: null,
-        },
-    },
-};
-
-export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamID, workflow }: Props) => {
+export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamKey, workflow }: Props) => {
     const [cache, setCache] = useState<any[]>([]);
 
     const { data, ...query } = useWorkflow(
@@ -75,21 +48,52 @@ export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamI
         }
     );
 
-    const stream = getStream(data, streamID);
+    const stream = getStream(data, streamKey);
 
     useEffect(() => {
         const txnSec = stream?.transaction_timestamp?.seconds;
         const updateSec = stream?.time_updated?.seconds;
-        const lagSec = typeof txnSec === 'number' && typeof updateSec === 'number' ? updateSec - txnSec : null;
+        if (typeof updateSec !== 'number' || typeof txnSec !== 'number') {
+            return;
+        }
 
-        const nextCache = takeRight([...cache, { x: query.dataUpdatedAt, y: lagSec }], CACHE_SIZE);
+        const lagSec = typeof txnSec === 'number' && typeof updateSec === 'number' ? updateSec - txnSec : null;
+        console.log(stream?.shard, txnSec, updateSec, lagSec, stream);
+
+        const nextCache = takeRight([...cache, { x: updateSec * 1000, y: lagSec }], CACHE_SIZE);
         setCache(nextCache);
     }, [query.dataUpdatedAt, stream]);
 
-    const lastPoint = cache[cache.length - 1];
-    console.log(lastPoint?.y);
+    console.table(cache);
 
     const options: Highcharts.Options = useMemo(() => {
+        const DEFAULT_OPTS: Highcharts.Options = {};
+
+        const SPARKLINE_OPTS: Highcharts.Options = {
+            chart: {
+                height: 20,
+                margin: [2, 0, 2, 0],
+                width: 120,
+            },
+            xAxis: {
+                labels: {
+                    enabled: false,
+                },
+                title: {
+                    text: null,
+                },
+            },
+            yAxis: {
+                gridLineWidth: 0,
+                labels: {
+                    enabled: false,
+                },
+                title: {
+                    text: null,
+                },
+            },
+        };
+
         const _opts: Highcharts.Options = {
             credits: {
                 enabled: false,
@@ -143,7 +147,7 @@ export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamI
                 },
             },
         };
-        const opts: Highcharts.Options = merge({ ...DEFAULT_OPTS }, _opts);
+        const opts: Highcharts.Options = merge({}, { ...DEFAULT_OPTS }, _opts);
 
         return sparkline ? merge(opts, SPARKLINE_OPTS) : opts;
     }, [cache, sparkline]);
@@ -151,6 +155,7 @@ export const StreamVRepLagSparkline = ({ clusterID, keyspace, sparkline, streamI
     return (
         <div>
             <HighchartsReact highcharts={Highcharts} options={options} />
+            <pre>{JSON.stringify(cache, null, 2)}</pre>
         </div>
     );
 };
