@@ -28,10 +28,18 @@ interface Props {
     workflowName: string;
 }
 
-const CACHE_SIZE = 15;
+interface CacheValue {
+    lag: number | null;
+    txnAt: number;
+    updatedAt: number;
+}
+
+const CACHE_SIZE = 30;
 
 export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
-    const [cache, setCache] = useState<any[]>([]);
+    const [softMin, setSoftMin] = useState(Date.now() - CACHE_SIZE * 1000);
+    const [cache, setCache] = useState<CacheValue[]>([]);
+
     const { data: workflow, ...query } = useWorkflow(
         {
             clusterID: clusterID,
@@ -43,39 +51,83 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
             refetchInterval: 1000,
         }
     );
+
     const stream = getStream(workflow, streamKey);
     const currentLag = getStreamVRepLag(stream);
-    const currentUpdateSec = stream?.time_updated?.seconds;
+    const updatedAt = stream?.time_updated?.seconds;
+    const txnAt = stream?.transaction_timestamp?.seconds;
 
     const lastPoint = cache[cache.length - 1];
-    if (lastPoint?.updatedAt !== currentUpdateSec) {
-        const nextCache = [
-            ...cache,
-            { updatedAt: currentUpdateSec, lastTxnAt: stream?.transaction_timestamp?.seconds, lag: currentLag },
-        ];
 
+    // This is equivalent to using getDerivedStateFromProps, if this were a class component.
+    // See https://reactjs.org/docs/hooks-faq.html#how-do-i-implement-getderivedstatefromprops
+    if (typeof updatedAt === 'number' && typeof txnAt === 'number' && lastPoint?.updatedAt !== updatedAt) {
+        const nextCache = [...cache, { updatedAt, txnAt, lag: currentLag }];
         setCache(takeRight(nextCache, CACHE_SIZE));
+        setSoftMin(Date.now() - CACHE_SIZE * 1000);
     }
 
     const data = cache.map((d) => ({
-        x: d.updatedAt,
+        x: d.updatedAt * 1000,
         y: d.lag,
     }));
 
-    const options = {
+    const options: Highcharts.Options = {
+        chart: {
+            animation: {
+                duration: 250,
+            },
+        },
+        credits: {
+            enabled: false,
+        },
+        legend: {
+            enabled: false,
+        },
+        plotOptions: {
+            series: {
+                animation: false,
+                lineWidth: 1,
+                marker: {
+                    enabled: false,
+                    states: {
+                        hover: {
+                            radius: 4,
+                        },
+                    },
+                },
+                states: {
+                    hover: {
+                        lineWidth: 1,
+                    },
+                },
+            },
+        },
         series: [
             {
+                color: '#3d5afe', // TODO add javascript const for this
                 data,
+                fillOpacity: 0.2,
                 type: 'area',
             },
         ],
         title: {
             text: 'My chart',
         },
+        tooltip: {
+            outside: true,
+        },
         xAxis: {
-            softMin: Date.now() - CACHE_SIZE * 1000,
-            tickInterval: 1000,
+            crosshair: true,
+            softMin,
+            tickInterval: 5000,
             type: 'datetime',
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'VReplication Lag (seconds)',
+            },
         },
     };
 
@@ -92,14 +144,14 @@ export const StreamVRepLagChart = ({ clusterID, keyspace, streamKey, workflowNam
                 </thead>
                 <tbody>
                     {[...cache].reverse().map((d, i) => (
-                        <tr key={d.x}>
+                        <tr key={d.updatedAt}>
                             <td>
                                 <div>{new Date(d.updatedAt * 1000).toLocaleTimeString()}</div>
                                 <div className="font-size-small text-color-secondary">{d.updatedAt}</div>
                             </td>
                             <td>
-                                <div>{new Date(d.lastTxnAt * 1000).toLocaleTimeString()}</div>
-                                <div className="font-size-small text-color-secondary">{d.lastTxnAt}</div>
+                                <div>{new Date(d.txnAt * 1000).toLocaleTimeString()}</div>
+                                <div className="font-size-small text-color-secondary">{d.txnAt}</div>
                             </td>
                             <td>{d.lag}</td>
                         </tr>

@@ -39,7 +39,7 @@ interface RouteParams {
     name: string;
 }
 
-const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet', 'VRep Lag'];
+const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet'];
 
 export const Workflow = () => {
     const { clusterID, keyspace, name } = useParams<RouteParams>();
@@ -106,7 +106,6 @@ export const Workflow = () => {
                             {formatAlias(row.tablet)}
                         </TabletLink>
                     </DataCell>
-                    <DataCell>{getStreamVRepLag(row)}</DataCell>
                 </tr>
             );
         });
