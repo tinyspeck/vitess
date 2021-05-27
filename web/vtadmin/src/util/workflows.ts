@@ -32,6 +32,13 @@ export const getStreams = <W extends pb.IWorkflow>(workflow: W | null | undefine
     }, [] as vtctldata.Workflow.IStream[]);
 };
 
+export const getStream = <W extends pb.IWorkflow>(
+    workflow: W | null | undefined,
+    id: number | Long
+): vtctldata.Workflow.IStream | null => {
+    return getStreams(workflow).find((s) => s.id === id) || null;
+};
+
 export const formatStreamKey = <S extends vtctldata.Workflow.IStream>(stream: S | null | undefined): string | null => {
     return stream?.tablet && stream?.id ? `${formatAlias(stream.tablet)}/${stream.id}` : null;
 };

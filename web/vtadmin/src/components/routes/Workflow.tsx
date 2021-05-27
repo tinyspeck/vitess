@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { groupBy, orderBy } from 'lodash-es';
 import { Link, useParams } from 'react-router-dom';
 
@@ -32,6 +32,8 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime } from '../../util/time';
 import { KeyspaceLink } from '../links/KeyspaceLink';
 import { TabletLink } from '../links/TabletLink';
+import { StreamVRepLagSparkline } from '../charts/StreamVRepLagSparkline';
+import { HelpTooltip } from '../tooltip/HelpTooltip';
 
 interface RouteParams {
     clusterID: string;
@@ -39,7 +41,7 @@ interface RouteParams {
     name: string;
 }
 
-const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet'];
+const COLUMNS: any[] = ['Stream', 'Source', 'Target', 'Tablet'];
 
 export const Workflow = () => {
     const { clusterID, keyspace, name } = useParams<RouteParams>();
@@ -106,6 +108,16 @@ export const Workflow = () => {
                             {formatAlias(row.tablet)}
                         </TabletLink>
                     </DataCell>
+                    <td>
+                        {row.id && row.state?.toLowerCase() === 'running' && (
+                            <StreamVRepLagSparkline
+                                clusterID={clusterID}
+                                keyspace={keyspace}
+                                streamID={row.id}
+                                workflow={name}
+                            />
+                        )}
+                    </td>
                 </tr>
             );
         });
@@ -138,10 +150,20 @@ export const Workflow = () => {
                         return null;
                     }
 
+                    const columns = [...COLUMNS];
+                    if (streamState === 'Running') {
+                        columns.push(
+                            <span>
+                                VRep Lag{' '}
+                                <HelpTooltip text="VReplication Lag is the time between when the stream was last updated and its last transaction timestamp." />
+                            </span>
+                        );
+                    }
+
                     return (
                         <div className={style.streamTable} key={streamState}>
                             <DataTable
-                                columns={COLUMNS}
+                                columns={columns}
                                 data={streamsByState[streamState]}
                                 // TODO(doeg): make pagination optional in DataTable https://github.com/vitessio/vitess/projects/12#card-60810231
                                 pageSize={1000}
