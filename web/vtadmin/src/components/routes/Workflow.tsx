@@ -19,7 +19,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import style from './Workflow.module.scss';
 import { useWorkflow } from '../../hooks/api';
-import { formatStreamKey, getStreams, getStreamSource, getStreamTarget } from '../../util/workflows';
+import { formatStreamKey, getStreams, getStreamSource, getStreamTarget, getStreamVRepLag } from '../../util/workflows';
 import { DataCell } from '../dataTable/DataCell';
 import { DataTable } from '../dataTable/DataTable';
 import { ContentContainer } from '../layout/ContentContainer';
@@ -39,7 +39,7 @@ interface RouteParams {
     name: string;
 }
 
-const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet'];
+const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet', 'VRep Lag'];
 
 export const Workflow = () => {
     const { clusterID, keyspace, name } = useParams<RouteParams>();
@@ -106,6 +106,7 @@ export const Workflow = () => {
                             {formatAlias(row.tablet)}
                         </TabletLink>
                     </DataCell>
+                    <DataCell>{getStreamVRepLag(row)}</DataCell>
                 </tr>
             );
         });

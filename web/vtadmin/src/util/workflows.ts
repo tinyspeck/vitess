@@ -32,6 +32,31 @@ export const getStreams = <W extends pb.IWorkflow>(workflow: W | null | undefine
     }, [] as vtctldata.Workflow.IStream[]);
 };
 
+export const getStream = <W extends pb.IWorkflow>(
+    workflow: W | null | undefined,
+    streamKey: string | null | undefined
+): vtctldata.Workflow.IStream | null => {
+    if (!streamKey) {
+        return null;
+    }
+    return getStreams(workflow).find((s) => formatStreamKey(s) === streamKey) || null;
+};
+
+export const getStreamVRepLag = <S extends vtctldata.Workflow.IStream>(stream: S | null | undefined): number | null => {
+    if (!stream) {
+        return null;
+    }
+
+    const lastUpdateSec = stream?.time_updated?.seconds;
+    const lastTxnSec = stream?.transaction_timestamp?.seconds;
+
+    if (typeof lastUpdateSec !== 'number' || typeof lastTxnSec !== 'number') {
+        return null;
+    }
+
+    return lastUpdateSec - lastTxnSec;
+};
+
 export const formatStreamKey = <S extends vtctldata.Workflow.IStream>(stream: S | null | undefined): string | null => {
     return stream?.tablet && stream?.id ? `${formatAlias(stream.tablet)}/${stream.id}` : null;
 };

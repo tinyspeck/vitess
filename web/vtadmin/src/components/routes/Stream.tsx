@@ -18,6 +18,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useWorkflow } from '../../hooks/api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatStreamKey, getStreams } from '../../util/workflows';
+import { StreamVRepLagChart } from '../charts/StreamVRepLagChart';
 import { Code } from '../Code';
 import { ContentContainer } from '../layout/ContentContainer';
 import { NavCrumbs } from '../layout/NavCrumbs';
@@ -77,6 +78,14 @@ export const Stream = () => {
                 </div>
             </WorkspaceHeader>
             <ContentContainer>
+                {!!streamKey && stream?.state?.toLowerCase() === 'running' && (
+                    <StreamVRepLagChart
+                        clusterID={params.clusterID}
+                        keyspace={params.keyspace}
+                        streamKey={streamKey}
+                        workflowName={params.workflowName}
+                    />
+                )}
                 <Code code={JSON.stringify(stream, null, 2)} />
             </ContentContainer>
         </div>
