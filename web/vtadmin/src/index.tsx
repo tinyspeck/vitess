@@ -19,6 +19,9 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 
 import './index.css';
 import { App } from './components/App';
+import { initializeErrorHandling } from './util/errorHandler';
+
+initializeErrorHandling();
 
 const queryClient = new QueryClient();
 
