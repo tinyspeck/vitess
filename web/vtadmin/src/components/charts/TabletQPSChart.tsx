@@ -19,15 +19,16 @@ import HighchartsReact from 'highcharts-react-official';
 import { useMemo } from 'react';
 import { useExperimentalTabletDebugVars } from '../../hooks/api';
 import { ratesToTimeseries } from '../../util/timeseries';
-import { mergeOptions } from './options';
+import { mergeOptions, SPARKLINE_OPTIONS } from './options';
 
 interface Props {
     alias: string;
     chartOptions?: Highcharts.Options;
     clusterID: string;
+    sparkline?: boolean;
 }
 
-export const TabletQPSChart = ({ alias, chartOptions, clusterID }: Props) => {
+export const TabletQPSChart = ({ alias, chartOptions, clusterID, sparkline }: Props) => {
     const { data: debugVars, dataUpdatedAt } = useExperimentalTabletDebugVars(
         { alias, clusterID },
         {
@@ -41,7 +42,7 @@ export const TabletQPSChart = ({ alias, chartOptions, clusterID }: Props) => {
             ([seriesName, seriesData]) => ({
                 data: ratesToTimeseries(seriesData as number[], 5000, dataUpdatedAt),
                 name: seriesName,
-                type: 'line',
+                type: sparkline ? 'area' : 'line',
             })
         );
 
@@ -67,9 +68,14 @@ export const TabletQPSChart = ({ alias, chartOptions, clusterID }: Props) => {
                     },
                 },
             },
+            sparkline
+                ? {
+                      ...SPARKLINE_OPTIONS,
+                  }
+                : {},
             chartOptions || {},
         ]);
-    }, [chartOptions, dataUpdatedAt, debugVars?.QPS]);
+    }, [chartOptions, dataUpdatedAt, debugVars?.QPS, sparkline]);
 
     return <HighchartsReact highcharts={Highcharts} options={options} />;
 };

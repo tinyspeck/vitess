@@ -29,6 +29,7 @@ import { TabContainer } from '../../tabs/TabContainer';
 import { Tab } from '../../tabs/Tab';
 import { getStreams } from '../../../util/workflows';
 import { Code } from '../../Code';
+import { WorkflowTablets } from './WorkflowTablets';
 
 interface RouteParams {
     clusterID: string;
@@ -69,12 +70,17 @@ export const Workflow = () => {
             <ContentContainer>
                 <TabContainer>
                     <Tab text="Streams" to={`${url}/streams`} count={streams.length} />
+                    <Tab text="Tablets" to={`${url}/tablets`} />
                     <Tab text="JSON" to={`${url}/json`} />
                 </TabContainer>
 
                 <Switch>
                     <Route path={`${path}/streams`}>
                         <WorkflowStreams clusterID={clusterID} keyspace={keyspace} name={name} />
+                    </Route>
+
+                    <Route path={`${path}/tablets`}>
+                        <WorkflowTablets workflow={data} />
                     </Route>
 
                     <Route path={`${path}/json`}>
