@@ -18,6 +18,7 @@ import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import { useMemo } from 'react';
 import { useExperimentalTabletDebugVars } from '../../hooks/api';
+import { ratesToTimeseries } from '../../util/timeseries';
 import { mergeOptions } from './options';
 
 interface Props {
@@ -31,24 +32,14 @@ export const TabletQPSChart = ({ alias, chartOptions, clusterID }: Props) => {
         { alias, clusterID },
         {
             refetchIntervalInBackground: true,
-            refetchInterval: 1000,
+            refetchInterval: 2500,
         }
     );
 
     const options: Highcharts.Options = useMemo(() => {
         const series: Highcharts.SeriesOptionsType[] = Object.entries(debugVars?.QPS || {}).map(
             ([seriesName, seriesData]) => {
-                const sd = seriesData as number[];
-                const data = sd.map((d, di) => {
-                    // TODO Create data points, starting with the most recent timestamp.
-                    // (On the graph this means going from right to left.)
-                    // Time span: 15 minutes in 5 second intervals.
-                    return {
-                        x: dataUpdatedAt - (sd.length - di) * 5 * 1000,
-                        y: d,
-                    };
-                });
-
+                const data = ratesToTimeseries(seriesData as number[], 5000, dataUpdatedAt);
                 return {
                     data,
                     name: seriesName,
@@ -60,8 +51,23 @@ export const TabletQPSChart = ({ alias, chartOptions, clusterID }: Props) => {
         return mergeOptions([
             {
                 series,
+                time: {
+                    useUTC: false,
+                },
+                title: {
+                    align: 'left',
+                    text: 'QPS',
+                },
                 xAxis: {
                     type: 'datetime',
+                },
+                yAxis: {
+                    // Setting a positive value anchors the y=0 axis to the bottom
+                    // rather than the center of the chart when data is empty.
+                    softMax: 1,
+                    title: {
+                        text: undefined,
+                    },
                 },
             },
             chartOptions || {},

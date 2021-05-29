@@ -93,28 +93,28 @@ export const Tablet = () => {
                     <Tab text="Overview" exact to={`${url}`} />
                     <Tab text="JSON" to={`${url}/json`} />
                 </TabContainer>
+
+                {/* TODO skeleton placeholder */}
+                {!!tq.isLoading && <div className={style.placeholder}>Loading</div>}
+
+                <Switch>
+                    <Route exact path={`${path}`}>
+                        <div className={style.chartContainer}>
+                            <TabletQPSChart alias={alias} clusterID={clusterID} />
+                        </div>
+                    </Route>
+
+                    <Route path={`${path}/json`}>
+                        <>
+                            <Code code={JSON.stringify(tablet, null, 2)} />
+
+                            {process.env.REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS && (
+                                <Code code={JSON.stringify(debugVars, null, 2)} />
+                            )}
+                        </>
+                    </Route>
+                </Switch>
             </ContentContainer>
-
-            {/* TODO skeleton placeholder */}
-            {!!tq.isLoading && <div className={style.placeholder}>Loading</div>}
-
-            <Switch>
-                <Route exact path={`${path}`}>
-                    <div className={style.chartContainer}>
-                        <TabletQPSChart alias={alias} clusterID={clusterID} />
-                    </div>
-                </Route>
-
-                <Route path={`${path}/json`}>
-                    <>
-                        <Code code={JSON.stringify(tablet, null, 2)} />
-
-                        {process.env.REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS && (
-                            <Code code={JSON.stringify(debugVars, null, 2)} />
-                        )}
-                    </>
-                </Route>
-            </Switch>
         </div>
     );
 };
