@@ -38,14 +38,11 @@ export const TabletQPSChart = ({ alias, chartOptions, clusterID }: Props) => {
 
     const options: Highcharts.Options = useMemo(() => {
         const series: Highcharts.SeriesOptionsType[] = Object.entries(debugVars?.QPS || {}).map(
-            ([seriesName, seriesData]) => {
-                const data = ratesToTimeseries(seriesData as number[], 5000, dataUpdatedAt);
-                return {
-                    data,
-                    name: seriesName,
-                    type: 'line',
-                };
-            }
+            ([seriesName, seriesData]) => ({
+                data: ratesToTimeseries(seriesData as number[], 5000, dataUpdatedAt),
+                name: seriesName,
+                type: 'line',
+            })
         );
 
         return mergeOptions([
