@@ -1512,6 +1512,6 @@ func (e *Executor) startVStream(ctx context.Context, rss []*srvtopo.ResolvedShar
 		send:       callback,
 		rss:        rss,
 	}
-	vs.stream(ctx)
+	_ = vs.stream(ctx)
 	return nil
 }
