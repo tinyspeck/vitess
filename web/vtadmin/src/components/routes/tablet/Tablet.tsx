@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
 import { useExperimentalTabletDebugVars, useTablet } from '../../../hooks/api';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
+import { TabletQPSChart } from '../../charts/TabletQPSChart';
 import { Code } from '../../Code';
+import { ContentContainer } from '../../layout/ContentContainer';
 import { NavCrumbs } from '../../layout/NavCrumbs';
 import { WorkspaceHeader } from '../../layout/WorkspaceHeader';
 import { WorkspaceTitle } from '../../layout/WorkspaceTitle';
 import { ExternalTabletLink } from '../../links/ExternalTabletLink';
+import { Tab } from '../../tabs/Tab';
+import { TabContainer } from '../../tabs/TabContainer';
 import style from './Tablet.module.scss';
 
 interface RouteParams {
@@ -31,6 +35,7 @@ interface RouteParams {
 
 export const Tablet = () => {
     const { clusterID, alias } = useParams<RouteParams>();
+    const { path, url } = useRouteMatch();
 
     useDocumentTitle(alias);
 
@@ -83,14 +88,33 @@ export const Tablet = () => {
                 </div>
             </WorkspaceHeader>
 
+            <ContentContainer>
+                <TabContainer>
+                    <Tab text="Overview" exact to={`${url}`} />
+                    <Tab text="JSON" to={`${url}/json`} />
+                </TabContainer>
+            </ContentContainer>
+
             {/* TODO skeleton placeholder */}
             {!!tq.isLoading && <div className={style.placeholder}>Loading</div>}
 
-            <Code code={JSON.stringify(tablet, null, 2)} />
+            <Switch>
+                <Route exact path={`${path}`}>
+                    <div className={style.chartContainer}>
+                        <TabletQPSChart alias={alias} clusterID={clusterID} />
+                    </div>
+                </Route>
 
-            {process.env.REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS && (
-                <Code code={JSON.stringify(debugVars, null, 2)} />
-            )}
+                <Route path={`${path}/json`}>
+                    <>
+                        <Code code={JSON.stringify(tablet, null, 2)} />
+
+                        {process.env.REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS && (
+                            <Code code={JSON.stringify(debugVars, null, 2)} />
+                        )}
+                    </>
+                </Route>
+            </Switch>
         </div>
     );
 };

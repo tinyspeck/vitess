@@ -13,46 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-.headingMeta {
-  display: flex;
+
+.highcharts-background {
+  fill: var(--backgroundPrimary);
 }
 
-.headingMeta span {
-  display: inline-block;
-  line-height: 2;
-
-  &::after {
-    color: var(--colorScaffoldingHighlight);
-    content: '/';
-    display: inline-block;
-    margin: 0 1.2rem;
-  }
-
-  &:last-child::after {
-    content: none;
-  }
-}
-
-.placeholder {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  font-size: var(--fontSizeLarge);
-  justify-content: center;
-  margin: 25vh auto;
-  max-width: 720px;
-  text-align: center;
-
-  h1 {
-    margin: 1.6rem 0;
-  }
-}
-
-.errorEmoji {
-  display: block;
-  font-size: 5.6rem;
-}
-
-.chartContainer {
-  margin: 48px 0;
+.highcharts-plot-background {
+  fill: var(--backgroundPrimary);
 }

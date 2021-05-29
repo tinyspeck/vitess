@@ -23,14 +23,20 @@ interface Props {
     activeClassName?: string;
     className?: string;
     count?: number | null | undefined;
+    exact?: boolean;
     status?: PipState;
     text: string;
     to: LinkProps['to'];
 }
 
-export const Tab = ({ activeClassName, className, count, status, text, to }: Props) => {
+export const Tab = ({ activeClassName, className, count, exact, status, text, to }: Props) => {
     return (
-        <NavLink activeClassName={cx(style.active, activeClassName)} className={cx(style.tab, className)} to={to}>
+        <NavLink
+            activeClassName={cx(style.active, activeClassName)}
+            className={cx(style.tab, className)}
+            exact={exact}
+            to={to}
+        >
             {!!status && <Pip className={style.pip} state={status} />}
             {text}
             {typeof count === 'number' && <span className={style.count}>{count}</span>}
