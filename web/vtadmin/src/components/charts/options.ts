@@ -40,20 +40,6 @@ export const DEFAULT_OPTIONS: Options = {
     credits: {
         enabled: false,
     },
-    plotOptions: {
-        area: {
-            fillOpacity: 0.1,
-            lineWidth: 1,
-        },
-        areaspline: {
-            fillOpacity: 0.1,
-            lineWidth: 1,
-        },
-        series: {
-            animation: false,
-            lineWidth: 1,
-        },
-    },
 };
 
 export const SPARKLINE_OPTIONS: Options = {
@@ -68,6 +54,27 @@ export const SPARKLINE_OPTIONS: Options = {
     },
     legend: {
         enabled: false,
+    },
+    plotOptions: {
+        area: {
+            animation: false,
+            fillOpacity: 0.05,
+            lineWidth: 1,
+            marker: {
+                radius: 0,
+                states: {
+                    hover: {
+                        radius: 2,
+                    },
+                },
+            },
+            shadow: false,
+            states: {
+                hover: {
+                    lineWidth: 1,
+                },
+            },
+        },
     },
     title: {
         text: undefined,

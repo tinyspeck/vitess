@@ -33,7 +33,7 @@ export const TabletQPSChart = ({ alias, chartOptions, clusterID, sparkline }: Pr
         { alias, clusterID },
         {
             refetchIntervalInBackground: true,
-            refetchInterval: 2500,
+            refetchInterval: 1000,
         }
     );
 
