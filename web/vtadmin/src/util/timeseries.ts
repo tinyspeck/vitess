@@ -30,12 +30,20 @@ export interface Point {
 export const ratesToTimeseries = (rates: number[], interval: number, offset?: number): Point[] => {
     const _offset = typeof offset === 'number' ? offset : Date.now();
 
-    return rates.map((d, di) => {
+    const padCount = 180 - rates.length;
+    const padding = [];
+    for (let i = 0; i < padCount; i++) {
+        padding[i] = 0;
+    }
+
+    const _rates = [...padding, ...rates];
+
+    return _rates.map((d, di) => {
         // TODO Create data points, starting with the most recent timestamp.
         // (On the graph this means going from right to left.)
         // Time span: 15 minutes in 5 second intervals.
         return {
-            x: _offset - (((rates.length - di) * 60) / 5) * 1000,
+            x: _offset - (((_rates.length - di) * 60) / 5) * 1000,
             y: d,
         };
     });

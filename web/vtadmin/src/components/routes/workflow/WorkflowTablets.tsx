@@ -17,18 +17,21 @@
 import style from './WorkflowTablets.module.scss';
 import { useTablets } from '../../../hooks/api';
 import { vtadmin } from '../../../proto/vtadmin';
-import { formatAlias, formatDisplayType } from '../../../util/tablets';
+import { formatAlias, formatDisplayType, formatState } from '../../../util/tablets';
 import { TabletQPSChart } from '../../charts/TabletQPSChart';
+import { TabletVRepQPSChart } from '../../charts/TabletVRepQPSChart';
 import { DataCell } from '../../dataTable/DataCell';
 import { DataTable } from '../../dataTable/DataTable';
 import { ExternalTabletLink } from '../../links/ExternalTabletLink';
 import { TabletLink } from '../../links/TabletLink';
+import React from 'react';
+import { TabletServingPip } from '../../pips/TabletServingPip';
 
 interface Props {
     workflow: vtadmin.Workflow | null | undefined;
 }
 
-const COLUMNS = ['Tablet', 'Hostname', 'Type', 'QPS'];
+const COLUMNS = ['Tablet', 'Hostname', 'State', 'Type', 'QPS', 'VRep QPS'];
 
 export const WorkflowTablets = ({ workflow }: Props) => {
     const clusterID = workflow?.cluster?.id as string;
@@ -71,9 +74,15 @@ export const WorkflowTablets = ({ workflow }: Props) => {
                     <DataCell>
                         <ExternalTabletLink fqdn={row.FQDN}>{row.tablet?.hostname}</ExternalTabletLink>
                     </DataCell>
+                    <DataCell>
+                        <TabletServingPip state={row.state} /> {formatState(row)}
+                    </DataCell>
                     <DataCell>{formatDisplayType(row)}</DataCell>
                     <DataCell>
                         <TabletQPSChart alias={alias} clusterID={clusterID} sparkline />
+                    </DataCell>
+                    <DataCell>
+                        <TabletVRepQPSChart alias={alias} clusterID={clusterID} sparkline />
                     </DataCell>
                 </tr>
             );

@@ -18,6 +18,7 @@ import { Link, Route, Switch, useParams, useRouteMatch } from 'react-router-dom'
 import { useExperimentalTabletDebugVars, useTablet } from '../../../hooks/api';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
 import { TabletQPSChart } from '../../charts/TabletQPSChart';
+import { TabletVRepQPSChart } from '../../charts/TabletVRepQPSChart';
 import { Code } from '../../Code';
 import { ContentContainer } from '../../layout/ContentContainer';
 import { NavCrumbs } from '../../layout/NavCrumbs';
@@ -101,6 +102,9 @@ export const Tablet = () => {
                     <Route exact path={`${path}`}>
                         <div className={style.chartContainer}>
                             <TabletQPSChart alias={alias} clusterID={clusterID} />
+                        </div>
+                        <div className={style.chartContainer}>
+                            <TabletVRepQPSChart alias={alias} clusterID={clusterID} />
                         </div>
                     </Route>
 
