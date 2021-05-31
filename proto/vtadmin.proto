@@ -241,7 +241,7 @@ message GetSrvVSchemasRequest {
 }
 
 message GetSrvVSchemasResponse {
-    repeated SrvVSchema srvvschemas = 1;
+    repeated SrvVSchema srv_v_schemas = 1;
 }
 
 message GetSchemaTableSizeOptions {

@@ -576,7 +576,7 @@ func (api *API) GetSrvVSchemas(ctx context.Context, req *vtadminpb.GetSrvVSchema
 	}
 
 	return &vtadminpb.GetSrvVSchemasResponse{
-		Srvvschemas: svs,
+		SrvVSchemas: svs,
 	}, nil
 }
 

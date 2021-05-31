@@ -1469,10 +1469,10 @@ func (m *GetSrvVSchemasResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.Srvvschemas) > 0 {
-		for iNdEx := len(m.Srvvschemas) - 1; iNdEx >= 0; iNdEx-- {
+	if len(m.SrvVSchemas) > 0 {
+		for iNdEx := len(m.SrvVSchemas) - 1; iNdEx >= 0; iNdEx-- {
 			{
-				size, err := m.Srvvschemas[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
+				size, err := m.SrvVSchemas[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
 				if err != nil {
 					return 0, err
 				}
@@ -2701,8 +2701,8 @@ func (m *GetSrvVSchemasResponse) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if len(m.Srvvschemas) > 0 {
-		for _, e := range m.Srvvschemas {
+	if len(m.SrvVSchemas) > 0 {
+		for _, e := range m.SrvVSchemas {
 			l = e.SizeVT()
 			n += 1 + l + sov(uint64(l))
 		}
@@ -6472,7 +6472,7 @@ func (m *GetSrvVSchemasResponse) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Srvvschemas", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SrvVSchemas", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -6499,8 +6499,8 @@ func (m *GetSrvVSchemasResponse) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Srvvschemas = append(m.Srvvschemas, &SrvVSchema{})
-			if err := m.Srvvschemas[len(m.Srvvschemas)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+			m.SrvVSchemas = append(m.SrvVSchemas, &SrvVSchema{})
+			if err := m.SrvVSchemas[len(m.SrvVSchemas)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
