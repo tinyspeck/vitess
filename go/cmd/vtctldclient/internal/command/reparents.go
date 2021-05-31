@@ -39,11 +39,17 @@ var (
 		Use:  "EmergencyReparentShard <keyspace/shard>",
 		Args: cobra.ExactArgs(1),
 		Long: "Reparents the shard to the new primary. Assumes the old primary is dead and not responding",
+		Annotations: map[string]string{
+			"group": "Reparents",
+		},
 		RunE: commandEmergencyReparentShard,
 	}
 	// InitShardPrimary makes an InitShardPrimary gRPC call to a vtctld.
 	InitShardPrimary = &cobra.Command{
-		Use:  "InitShardPrimary <keyspace/shard> <primary alias>",
+		Use: "InitShardPrimary <keyspace/shard> <primary alias>",
+		Annotations: map[string]string{
+			"group": "Reparents",
+		},
 		Args: cobra.ExactArgs(2),
 		RunE: commandInitShardPrimary,
 	}
@@ -52,6 +58,9 @@ var (
 		Use:  "PlannedReparentShard <keyspace/shard>",
 		Args: cobra.ExactArgs(1),
 		Long: "string",
+		Annotations: map[string]string{
+			"group": "Reparents",
+		},
 		RunE: commandPlannedReparentShard,
 	}
 	// ReparentTablet makes a ReparentTablet gRPC call to a vtctld.
@@ -59,13 +68,19 @@ var (
 		Use: "ReparentTablet <alias>",
 		Long: "Reparent a tablet to the current primary in the shard. This only works if the current replica position " +
 			"matches the last known reparent action.",
+		Annotations: map[string]string{
+			"group": "Reparents",
+		},
 		Args: cobra.ExactArgs(1),
 		RunE: commandReparentTablet,
 	}
 	// TabletExternallyReparented makes a TabletExternallyReparented gRPC call
 	// to a vtctld.
 	TabletExternallyReparented = &cobra.Command{
-		Use:  "TabletExternallyReparented <alias>",
+		Use: "TabletExternallyReparented <alias>",
+		Annotations: map[string]string{
+			"group": "Reparents",
+		},
 		Args: cobra.ExactArgs(1),
 		RunE: commandTabletExternallyReparented,
 	}

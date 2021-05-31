@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -40,6 +41,7 @@ var (
 
 	// Root is the main entrypoint to the vtctldclient CLI.
 	Root = &cobra.Command{
+		Use: "vtctldclient",
 		// We use PersistentPreRun to set up the tracer, grpc client, and
 		// command context for every command.
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -75,7 +77,55 @@ var (
 	}
 )
 
+const rootHelpTmpl = `Available Commands:
+
+{{ range $group, $cmds := groupCommands . -}}
+{{ $group }}:{{ range $cmds }}
+  {{ rpad .Name .NamePadding }} {{ .Short }}{{ end }}
+
+{{ end }}
+{{- if .HasAvailableLocalFlags -}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+
+func groupCommands(cmd *cobra.Command) map[string][]*cobra.Command {
+	groups := map[string][]*cobra.Command{
+		"Generic": nil,
+	}
+
+	for _, child := range cmd.Commands() { // technically, this doesn't handle sub-subcommands, but we don't have those, so.
+		if child.Annotations == nil {
+			groups["Generic"] = append(groups["Generic"], child)
+			continue
+		}
+
+		group, ok := child.Annotations["group"]
+		if !ok {
+			groups["Generic"] = append(groups["Generic"], child)
+			continue
+		}
+
+		group = strings.Title(group)
+		groups[group] = append(groups[group], child)
+	}
+
+	return groups
+}
+
 func init() {
 	Root.PersistentFlags().StringVar(&server, "server", "", "server to use for connection")
 	Root.PersistentFlags().DurationVar(&actionTimeout, "action_timeout", time.Hour, "timeout for the total command")
+
+	cobra.AddTemplateFunc("groupCommands", groupCommands)
+	Root.SetHelpTemplate(rootHelpTmpl)
 }
