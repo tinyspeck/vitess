@@ -2589,6 +2589,25 @@ func TestGetSrvVSchema(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:       "cluster doesn't exist",
+			srvVSchema: nil,
+			req: &vtadminpb.GetSrvVSchemaRequest{
+				Cell:      "doesnt-matter",
+				ClusterId: "doesnt-exist",
+			},
+			shouldErr: true,
+		},
+		{
+
+			name:       "cell doesn't exist",
+			srvVSchema: nil,
+			req: &vtadminpb.GetSrvVSchemaRequest{
+				Cell:      "doesnt-exist",
+				ClusterId: clusterID,
+			},
+			shouldErr: true,
+		},
 	}
 
 	ctx := context.Background()
