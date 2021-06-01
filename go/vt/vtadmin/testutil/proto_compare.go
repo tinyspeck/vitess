@@ -29,6 +29,7 @@ import (
 // AssertKeyspaceSlicesEqual is a convenience function to assert that two
 // []*vtadminpb.Keyspaces slices are equal
 func AssertKeyspaceSlicesEqual(t *testing.T, expected []*vtadminpb.Keyspace, actual []*vtadminpb.Keyspace) {
+
 	t.Helper()
 	for _, ks := range [][]*vtadminpb.Keyspace{expected, actual} {
 		for _, k := range ks {
@@ -52,6 +53,20 @@ func AssertKeyspaceSlicesEqual(t *testing.T, expected []*vtadminpb.Keyspace, act
 // []*vtadminpb.Schema slices are equal
 func AssertSchemaSlicesEqual(t *testing.T, expected []*vtadminpb.Schema, actual []*vtadminpb.Schema) {
 	t.Helper()
+	sort.Slice(expected, func(i, j int) bool {
+		return fmt.Sprintf("%v", expected[i]) < fmt.Sprintf("%v", expected[j])
+	})
+	sort.Slice(actual, func(i, j int) bool {
+		return fmt.Sprintf("%v", actual[i]) < fmt.Sprintf("%v", actual[j])
+	})
+	utils.MustMatch(t, expected, actual)
+}
+
+// AssertSrvVSchemaSlicesEqual is a convenience function to assert that two
+// []*vtadminpb.SrvVSchema slices are equal
+func AssertSrvVSchemaSlicesEqual(t *testing.T, expected []*vtadminpb.SrvVSchema, actual []*vtadminpb.SrvVSchema) {
+	t.Helper()
+
 	sort.Slice(expected, func(i, j int) bool {
 		return fmt.Sprintf("%v", expected[i]) < fmt.Sprintf("%v", expected[j])
 	})

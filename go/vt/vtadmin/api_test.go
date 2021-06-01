@@ -43,6 +43,7 @@ import (
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
+	"vitess.io/vitess/go/vt/proto/vschema"
 	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
@@ -2658,7 +2659,159 @@ func TestGetSrvVSchema(t *testing.T) {
 
 func TestGetSrvVSchemas(t *testing.T) {
 	t.Parallel()
-	// TOdO
+
+	tests := []struct {
+		name  string
+		cells []string
+		// Maps cell name to the SrvVSchema for that cell.
+		// Not all cells in `cells` necessarily map to a SrvVSchema.
+		cellSrvVSchemas map[string]*vschemapb.SrvVSchema
+		req             *vtadminpb.GetSrvVSchemasRequest
+		expected        *vtadminpb.GetSrvVSchemasResponse
+		shouldErr       bool
+	}{
+		{
+			name:  "returns all cells",
+			cells: []string{"zone0", "zone1"},
+			cellSrvVSchemas: map[string]*vschemapb.SrvVSchema{
+				"zone0": {
+					Keyspaces: map[string]*vschemapb.Keyspace{
+						"commerce": {
+							Tables: map[string]*vschemapb.Table{
+								"customer": {},
+							},
+						},
+						"customer": {
+							Tables: map[string]*vschemapb.Table{
+								"customer": {},
+							},
+						},
+					},
+					RoutingRules: &vschemapb.RoutingRules{
+						Rules: []*vschemapb.RoutingRule{
+							{
+								FromTable: "customer",
+								ToTables:  []string{"commerce.customer"},
+							},
+							{
+								FromTable: "customer@rdonly",
+								ToTables:  []string{"customer.customer"},
+							},
+							{
+								FromTable: "customer.customer",
+								ToTables:  []string{"commerce.customer"},
+							},
+						},
+					},
+				},
+				"zone1": {
+					Keyspaces:    map[string]*vschemapb.Keyspace{},
+					RoutingRules: &vschemapb.RoutingRules{},
+				},
+			},
+			req: &vtadminpb.GetSrvVSchemasRequest{},
+			expected: &vtadminpb.GetSrvVSchemasResponse{
+				SrvVSchemas: []*vtadminpb.SrvVSchema{
+					{
+						Cell: "zone0",
+						Cluster: &vtadminpb.Cluster{
+							Id:   "c0",
+							Name: "cluster0",
+						},
+						SrvVSchema: &vschema.SrvVSchema{
+							Keyspaces: map[string]*vschemapb.Keyspace{
+								"commerce": {
+									Tables: map[string]*vschemapb.Table{
+										"customer": {},
+									},
+								},
+								"customer": {
+									Tables: map[string]*vschemapb.Table{
+										"customer": {},
+									},
+								},
+							},
+							RoutingRules: &vschemapb.RoutingRules{
+								Rules: []*vschemapb.RoutingRule{
+									{
+										FromTable: "customer",
+										ToTables:  []string{"commerce.customer"},
+									},
+									{
+										FromTable: "customer@rdonly",
+										ToTables:  []string{"customer.customer"},
+									},
+									{
+										FromTable: "customer.customer",
+										ToTables:  []string{"commerce.customer"},
+									},
+								},
+							},
+						},
+					},
+					{
+						Cell: "zone1",
+						Cluster: &vtadminpb.Cluster{
+							Id:   "c0",
+							Name: "cluster0",
+						},
+						SrvVSchema: &vschema.SrvVSchema{
+							Keyspaces: nil,
+							RoutingRules: &vschemapb.RoutingRules{
+								Rules: nil,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmc := testutil.TabletManagerClient{}
+
+			toposerver := memorytopo.NewServer(tt.cells...)
+
+			vtctldserver := testutil.NewVtctldServerWithTabletManagerClient(t, toposerver, &tmc, func(ts *topo.Server) vtctlservicepb.VtctldServer {
+				return grpcvtctldserver.NewVtctldServer(ts)
+			})
+
+			testutil.WithTestServer(t, vtctldserver, func(t *testing.T, vtctldClient vtctldclient.VtctldClient) {
+				for cell, svs := range tt.cellSrvVSchemas {
+					err := toposerver.UpdateSrvVSchema(ctx, cell, svs)
+					require.NoError(t, err)
+				}
+
+				clusters := []*cluster.Cluster{
+					vtadmintestutil.BuildCluster(vtadmintestutil.TestClusterConfig{
+						Cluster: &vtadminpb.Cluster{
+							Id:   "c0",
+							Name: "cluster0",
+						},
+						VtctldClient: vtctldClient,
+					}),
+				}
+
+				api := NewAPI(clusters, grpcserver.Options{}, http.Options{})
+				resp, err := api.GetSrvVSchemas(ctx, tt.req)
+
+				if tt.shouldErr {
+					assert.Error(t, err)
+					return
+				}
+
+				require.NoError(t, err)
+				vtadmintestutil.AssertSrvVSchemaSlicesEqual(t, tt.expected.SrvVSchemas, resp.SrvVSchemas)
+			})
+		})
+	}
 }
 
 func TestGetTablet(t *testing.T) {
