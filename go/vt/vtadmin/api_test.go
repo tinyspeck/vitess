@@ -2756,14 +2756,148 @@ func TestGetSrvVSchemas(t *testing.T) {
 							Name: "cluster0",
 						},
 						SrvVSchema: &vschema.SrvVSchema{
-							Keyspaces: nil,
-							RoutingRules: &vschemapb.RoutingRules{
-								Rules: nil,
-							},
+							RoutingRules: &vschemapb.RoutingRules{},
 						},
 					},
 				},
 			},
+		},
+		{
+			name:  "filtering by cell",
+			cells: []string{"zone0", "zone1"},
+			cellSrvVSchemas: map[string]*vschemapb.SrvVSchema{
+				"zone0": {
+					Keyspaces: map[string]*vschemapb.Keyspace{
+						"commerce": {
+							Tables: map[string]*vschemapb.Table{
+								"customer": {},
+							},
+						},
+						"customer": {
+							Tables: map[string]*vschemapb.Table{
+								"customer": {},
+							},
+						},
+					},
+					RoutingRules: &vschemapb.RoutingRules{
+						Rules: []*vschemapb.RoutingRule{
+							{
+								FromTable: "customer",
+								ToTables:  []string{"commerce.customer"},
+							},
+							{
+								FromTable: "customer@rdonly",
+								ToTables:  []string{"customer.customer"},
+							},
+							{
+								FromTable: "customer.customer",
+								ToTables:  []string{"commerce.customer"},
+							},
+						},
+					},
+				},
+				"zone1": {
+					Keyspaces:    map[string]*vschemapb.Keyspace{},
+					RoutingRules: &vschemapb.RoutingRules{},
+				},
+			},
+			req: &vtadminpb.GetSrvVSchemasRequest{
+				Cells: []string{"zone1"},
+			},
+			expected: &vtadminpb.GetSrvVSchemasResponse{
+				SrvVSchemas: []*vtadminpb.SrvVSchema{
+					{
+						Cell: "zone1",
+						Cluster: &vtadminpb.Cluster{
+							Id:   "c0",
+							Name: "cluster0",
+						},
+						SrvVSchema: &vschema.SrvVSchema{
+							RoutingRules: &vschemapb.RoutingRules{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "filtering by nonexistent cell",
+			cells: []string{"zone0"},
+			cellSrvVSchemas: map[string]*vschemapb.SrvVSchema{
+				"zone0": {
+					Keyspaces:    map[string]*vschemapb.Keyspace{},
+					RoutingRules: &vschemapb.RoutingRules{},
+				},
+			},
+			req: &vtadminpb.GetSrvVSchemasRequest{
+				Cells: []string{"doesnt-exist"},
+			},
+			expected: &vtadminpb.GetSrvVSchemasResponse{},
+		},
+		{
+			name:  "filtering with nonexistent cell",
+			cells: []string{"zone0"},
+			cellSrvVSchemas: map[string]*vschemapb.SrvVSchema{
+				"zone0": {
+					Keyspaces:    map[string]*vschemapb.Keyspace{},
+					RoutingRules: &vschemapb.RoutingRules{},
+				},
+			},
+			req: &vtadminpb.GetSrvVSchemasRequest{
+				Cells: []string{"doesnt-exist", "zone0"},
+			},
+			expected: &vtadminpb.GetSrvVSchemasResponse{
+				SrvVSchemas: []*vtadminpb.SrvVSchema{
+					{
+						Cell: "zone0",
+						Cluster: &vtadminpb.Cluster{
+							Id:   "c0",
+							Name: "cluster0",
+						},
+						SrvVSchema: &vschema.SrvVSchema{
+							RoutingRules: &vschemapb.RoutingRules{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "existing cell without SrvVSchema",
+			cells: []string{"zone0", "zone1"},
+			cellSrvVSchemas: map[string]*vschemapb.SrvVSchema{
+				"zone0": {
+					Keyspaces:    map[string]*vschemapb.Keyspace{},
+					RoutingRules: &vschemapb.RoutingRules{},
+				},
+			},
+			req: &vtadminpb.GetSrvVSchemasRequest{
+				Cells: []string{"zone1"},
+			},
+			expected: &vtadminpb.GetSrvVSchemasResponse{
+				SrvVSchemas: []*vtadminpb.SrvVSchema{
+					{
+						Cell: "zone1",
+						Cluster: &vtadminpb.Cluster{
+							Id:   "c0",
+							Name: "cluster0",
+						},
+						SrvVSchema: &vschema.SrvVSchema{},
+					},
+				},
+			},
+		},
+		{
+			name:  "filtering by nonexistent cluster",
+			cells: []string{"zone0"},
+			cellSrvVSchemas: map[string]*vschemapb.SrvVSchema{
+				"zone0": {
+					Keyspaces:    map[string]*vschemapb.Keyspace{},
+					RoutingRules: &vschemapb.RoutingRules{},
+				},
+			},
+			req: &vtadminpb.GetSrvVSchemasRequest{
+				ClusterIds: []string{"doesnt-exist"},
+			},
+			expected: &vtadminpb.GetSrvVSchemasResponse{},
 		},
 	}
 
