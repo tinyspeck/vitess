@@ -31,7 +31,7 @@ import {
     fetchWorkflows,
 } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
-import { formatAlias } from '../util/tablets';
+import { formatAlias, TabletDebugVars } from '../util/tablets';
 
 /**
  * useClusters is a query hook that fetches all clusters VTAdmin is configured to discover.
@@ -81,7 +81,7 @@ export const useTablet = (params: Parameters<typeof fetchTablet>[0], options?: U
 
 export const useExperimentalTabletDebugVars = (
     params: Parameters<typeof fetchExperimentalTabletDebugVars>[0],
-    options?: UseQueryOptions<any, Error>
+    options?: UseQueryOptions<TabletDebugVars, Error>
 ) => {
     return useQuery(
         ['experimental/tablet/debug/vars', params],
