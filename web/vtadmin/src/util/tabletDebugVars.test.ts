@@ -56,15 +56,22 @@ describe('formatTimeseriesMap', () => {
         const result = formatTimeseriesMap(...input);
         expect(result).toMatchSnapshot({}, name);
 
-        // While we can trust our snapshots, but additional validation doesn't hurt.
+        // While we can trust our snapshots, additional validation doesn't hurt.
         const [inputData, endAt] = input;
         const endAtExpected = typeof endAt === 'number' ? endAt : Date.now();
 
-        expect(Object.keys(result)).toEqual(Object.keys(inputData));
+        const inputKeys = Object.keys(inputData);
+        const outputKeys = Object.keys(result);
+
+        if (inputKeys.length) {
+            expect(outputKeys).toEqual(inputKeys);
+        } else {
+            expect(outputKeys).toEqual(['All']);
+        }
 
         Object.entries(result).forEach(([seriesName, seriesData]) => {
             expect(seriesData.length).toEqual(RATES_MAX_SPAN / RATES_INTERVAL);
-            expect(seriesData[seriesData.length - 1].timestamp).toEqual(endAtExpected);
+            expect(seriesData[seriesData.length - 1].x).toEqual(endAtExpected);
         });
     });
 });
