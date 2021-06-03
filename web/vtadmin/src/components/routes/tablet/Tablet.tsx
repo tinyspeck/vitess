@@ -17,12 +17,14 @@
 import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
 import { useExperimentalTabletDebugVars, useTablet } from '../../../hooks/api';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
+import { formatDisplayType, formatState } from '../../../util/tablets';
 import { Code } from '../../Code';
 import { ContentContainer } from '../../layout/ContentContainer';
 import { NavCrumbs } from '../../layout/NavCrumbs';
 import { WorkspaceHeader } from '../../layout/WorkspaceHeader';
 import { WorkspaceTitle } from '../../layout/WorkspaceTitle';
 import { ExternalTabletLink } from '../../links/ExternalTabletLink';
+import { TabletServingPip } from '../../pips/TabletServingPip';
 import { Tab } from '../../tabs/Tab';
 import { TabContainer } from '../../tabs/TabContainer';
 import style from './Tablet.module.scss';
@@ -80,22 +82,30 @@ export const Tablet = () => {
                     <span>
                         Cluster: <code>{clusterID}</code>
                     </span>
-                    <span>
-                        <ExternalTabletLink className="font-family-monospace" fqdn={tablet?.FQDN}>
-                            {tablet?.tablet?.hostname}
-                        </ExternalTabletLink>
-                    </span>
+                    {!!tablet && (
+                        <>
+                            <span className="font-family-monospace">
+                                <TabletServingPip state={tablet.state} /> {formatDisplayType(tablet)}
+                            </span>
+                            <span className="font-family-monospace">{formatState(tablet)}</span>
+                            <span>
+                                <ExternalTabletLink className="font-family-monospace" fqdn={tablet.FQDN}>
+                                    {tablet.tablet?.hostname}
+                                </ExternalTabletLink>
+                            </span>
+                        </>
+                    )}
                 </div>
             </WorkspaceHeader>
 
             <ContentContainer>
                 <TabContainer>
-                    <Tab text="Graphs" to={`${url}/graphs`} />
+                    <Tab text="QPS" to={`${url}/qps`} />
                     <Tab text="JSON" to={`${url}/json`} />
                 </TabContainer>
 
                 <Switch>
-                    <Route path={`${path}/graphs`}>
+                    <Route path={`${path}/qps`}>
                         <TabletCharts alias={alias} clusterID={clusterID} />
                     </Route>
 
@@ -108,7 +118,7 @@ export const Tablet = () => {
                             )}
                         </div>
                     </Route>
-                    <Redirect from={path} to={`${path}/graphs`} />
+                    <Redirect from={path} to={`${path}/qps`} />
                 </Switch>
             </ContentContainer>
 
