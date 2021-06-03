@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+// This is the easiest way to override the Highcharts colour palette when using
+// styled mode; see https://www.highcharts.com/docs/chart-design-and-style/custom-themes-in-styled-mode
+// Gradient generated with the very useful https://colordesigner.io/gradient-generator
+$colors: #3d5afe #8550f3 #af44e4 #cf38d4 #e72ec2 #fa29b0 #ff2d9e #ff398c #ff497b #ff5a6c #ff6c5e #ff7d52 #ff8d49 #ff9c42 #ffab40;
+
 /*
 * We use Highcharts' "styled mode" to style chart components
 * (SVGs under the hood) with CSS. This lets us rely on our
@@ -21,6 +26,7 @@
 *
 * See https://www.highcharts.com/docs/chart-design-and-style/style-by-css
 */
+@import 'highcharts/css/highcharts.scss';
 
 .highcharts-axis-labels {
   fill: var(--textColorSecondary);
@@ -40,6 +46,10 @@
 
 .highcharts-legend-item text {
   fill: var(--textColorPrimary);
+}
+
+.highcharts-graph {
+  stroke-width: 1px;
 }
 
 // Matches the root svg element of the chart. Use this to set styles
