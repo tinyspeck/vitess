@@ -17,33 +17,6 @@ import { invertBy } from 'lodash-es';
 import { topodata, vtadmin as pb } from '../proto/vtadmin';
 
 /**
- * TabletDebugVars is a best-effort typing of the /debug/vars tablet endpoint.
- * Only fields read by VTAdmin are defined here.
- *
- * A good future enhancement is a proto-typed gRPC endpoint in vtadmin.proto,
- * from which we can generate TypeScript typings vs. having to duplicate them here.
- * This would also offer us actual runtime type safety by way of protobufjs's
- * generated validate() functions. For now, everything in here is optional (hence
- * the Partial<>) and not guaranteed to be defined in every Vitess deployment.
- */
-export type TabletDebugVars = Partial<{
-    // Build vars
-    // See https://github.com/vitessio/vitess/blob/main/go/vt/servenv/buildinfo.go
-    BuildGitBranch: string;
-    BuildGitRev: string;
-    BuildHost: string;
-    BuildInformation: { [k: string]: number | string };
-    BuildNumber: string;
-    BuildTimestamp: string;
-    BuildUser: string;
-
-    QPS: { [k: string]: number[] };
-
-    // See https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletmanager/vreplication/stats.go
-    VReplicationQPS: number[];
-}>;
-
-/**
  * TABLET_TYPES maps numeric tablet types back to human readable strings.
  * Note that topodata.TabletType allows duplicate values: specifically,
  * both RDONLY (new name) and BATCH (old name) share the same numeric value.

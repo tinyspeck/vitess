@@ -1,0 +1,2179 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`formatTimeseriesMap empty input: empty input 1`] = `Object {}`;
+
+exports[`formatTimeseriesMap multiple series: multiple series 1`] = `
+Object {
+  "First": Array [
+    Object {
+      "timestamp": 999999105000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999110000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999115000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999120000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999125000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999130000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999135000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999140000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999145000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999150000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999155000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999160000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999165000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999170000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999175000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999180000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999185000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999190000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999195000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999200000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999205000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999210000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999215000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999220000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999225000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999230000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999235000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999240000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999245000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999250000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999255000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999260000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999265000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999270000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999275000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999280000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999285000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999290000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999295000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999300000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999305000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999310000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999315000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999320000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999325000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999330000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999335000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999340000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999345000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999350000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999355000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999360000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999365000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999370000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999375000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999380000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999385000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999390000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999395000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999400000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999405000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999410000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999415000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999420000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999425000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999430000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999435000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999440000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999445000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999450000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999455000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999460000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999465000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999470000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999475000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999480000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999485000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999490000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999495000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999500000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999505000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999510000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999515000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999520000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999525000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999530000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999535000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999540000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999545000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999550000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999555000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999560000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999565000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999570000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999575000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999580000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999585000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999590000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999595000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999600000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999605000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999610000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999615000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999620000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999625000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999630000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999635000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999640000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999645000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999650000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999655000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999660000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999665000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999670000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999675000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999680000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999685000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999690000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999695000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999700000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999705000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999710000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999715000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999720000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999725000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999730000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999735000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999740000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999745000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999750000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999755000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999760000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999765000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999770000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999775000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999780000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999785000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999790000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999795000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999800000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999805000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999810000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999815000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999820000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999825000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999830000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999835000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999840000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999845000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999850000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999855000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999860000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999865000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999870000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999875000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999880000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999885000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999890000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999895000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999900000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999905000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999910000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999915000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999920000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999925000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999930000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999935000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999940000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999945000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999950000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999955000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999960000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999965000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999970000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999975000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999980000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999985000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999990000,
+      "value": 1,
+    },
+    Object {
+      "timestamp": 999999995000,
+      "value": 2,
+    },
+    Object {
+      "timestamp": 1000000000000,
+      "value": 3,
+    },
+  ],
+  "Second": Array [
+    Object {
+      "timestamp": 999999105000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999110000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999115000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999120000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999125000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999130000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999135000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999140000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999145000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999150000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999155000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999160000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999165000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999170000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999175000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999180000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999185000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999190000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999195000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999200000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999205000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999210000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999215000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999220000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999225000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999230000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999235000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999240000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999245000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999250000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999255000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999260000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999265000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999270000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999275000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999280000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999285000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999290000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999295000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999300000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999305000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999310000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999315000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999320000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999325000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999330000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999335000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999340000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999345000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999350000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999355000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999360000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999365000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999370000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999375000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999380000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999385000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999390000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999395000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999400000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999405000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999410000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999415000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999420000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999425000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999430000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999435000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999440000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999445000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999450000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999455000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999460000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999465000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999470000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999475000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999480000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999485000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999490000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999495000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999500000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999505000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999510000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999515000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999520000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999525000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999530000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999535000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999540000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999545000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999550000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999555000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999560000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999565000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999570000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999575000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999580000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999585000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999590000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999595000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999600000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999605000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999610000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999615000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999620000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999625000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999630000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999635000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999640000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999645000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999650000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999655000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999660000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999665000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999670000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999675000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999680000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999685000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999690000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999695000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999700000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999705000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999710000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999715000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999720000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999725000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999730000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999735000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999740000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999745000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999750000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999755000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999760000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999765000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999770000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999775000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999780000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999785000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999790000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999795000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999800000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999805000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999810000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999815000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999820000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999825000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999830000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999835000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999840000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999845000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999850000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999855000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999860000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999865000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999870000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999875000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999880000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999885000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999890000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999895000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999900000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999905000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999910000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999915000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999920000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999925000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999930000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999935000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999940000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999945000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999950000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999955000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999960000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999965000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999970000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999975000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999980000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999985000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999990000,
+      "value": 4,
+    },
+    Object {
+      "timestamp": 999999995000,
+      "value": 5,
+    },
+    Object {
+      "timestamp": 1000000000000,
+      "value": 6,
+    },
+  ],
+}
+`;
+
+exports[`formatTimeseriesMap timespan < 15 minutes: timespan < 15 minutes 1`] = `
+Object {
+  "All": Array [
+    Object {
+      "timestamp": 999999105000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999110000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999115000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999120000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999125000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999130000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999135000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999140000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999145000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999150000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999155000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999160000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999165000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999170000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999175000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999180000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999185000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999190000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999195000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999200000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999205000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999210000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999215000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999220000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999225000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999230000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999235000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999240000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999245000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999250000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999255000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999260000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999265000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999270000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999275000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999280000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999285000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999290000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999295000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999300000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999305000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999310000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999315000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999320000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999325000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999330000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999335000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999340000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999345000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999350000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999355000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999360000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999365000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999370000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999375000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999380000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999385000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999390000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999395000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999400000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999405000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999410000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999415000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999420000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999425000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999430000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999435000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999440000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999445000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999450000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999455000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999460000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999465000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999470000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999475000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999480000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999485000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999490000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999495000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999500000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999505000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999510000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999515000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999520000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999525000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999530000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999535000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999540000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999545000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999550000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999555000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999560000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999565000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999570000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999575000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999580000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999585000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999590000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999595000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999600000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999605000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999610000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999615000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999620000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999625000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999630000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999635000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999640000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999645000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999650000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999655000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999660000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999665000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999670000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999675000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999680000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999685000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999690000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999695000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999700000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999705000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999710000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999715000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999720000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999725000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999730000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999735000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999740000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999745000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999750000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999755000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999760000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999765000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999770000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999775000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999780000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999785000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999790000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999795000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999800000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999805000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999810000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999815000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999820000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999825000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999830000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999835000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999840000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999845000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999850000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999855000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999860000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999865000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999870000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999875000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999880000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999885000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999890000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999895000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999900000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999905000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999910000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999915000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999920000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999925000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999930000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999935000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999940000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999945000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999950000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999955000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999960000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999965000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999970000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999975000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999980000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999985000,
+      "value": 0,
+    },
+    Object {
+      "timestamp": 999999990000,
+      "value": 1,
+    },
+    Object {
+      "timestamp": 999999995000,
+      "value": 2,
+    },
+    Object {
+      "timestamp": 1000000000000,
+      "value": 3,
+    },
+  ],
+}
+`;

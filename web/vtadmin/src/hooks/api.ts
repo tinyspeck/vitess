@@ -31,7 +31,8 @@ import {
     fetchWorkflows,
 } from '../api/http';
 import { vtadmin as pb } from '../proto/vtadmin';
-import { formatAlias, TabletDebugVars } from '../util/tablets';
+import { TabletDebugVars } from '../util/tabletDebugVars';
+import { formatAlias } from '../util/tablets';
 
 /**
  * useClusters is a query hook that fetches all clusters VTAdmin is configured to discover.
