@@ -18,7 +18,7 @@ import Highcharts from 'highcharts';
 import { useMemo } from 'react';
 
 import { useExperimentalTabletDebugVars } from '../../hooks/api';
-import { getVReplicationQPSTimeseries } from '../../util/tabletDebugVars';
+import { getVReplicationQPSTimeseries, QPS_REFETCH_INTERVAL } from '../../util/tabletDebugVars';
 import { mergeOptions } from './chartOptions';
 import { Timeseries } from './Timeseries';
 
@@ -31,7 +31,7 @@ export const TabletVReplicationQPSChart = ({ alias, clusterID }: Props) => {
     const { data: debugVars, ...query } = useExperimentalTabletDebugVars(
         { alias, clusterID },
         {
-            refetchInterval: 2500,
+            refetchInterval: QPS_REFETCH_INTERVAL,
             refetchIntervalInBackground: true,
         }
     );

@@ -54,6 +54,12 @@ export const getQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: 
 export const getVReplicationQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: number): TimeseriesMap =>
     formatTimeseriesMap(d?.VReplicationQPS || {}, endAt);
 
+/**
+ * REFETCH_INTERVAL defines a default for how often charts, etc.
+ * should refetch /debug/vars.
+ */
+export const QPS_REFETCH_INTERVAL = 2500;
+
 export const RATES_INTERVAL = 5; // 5 seconds
 export const RATES_MAX_SPAN = 15 * 60; // 15 minutes
 export const SERIES_LENGTH = RATES_MAX_SPAN / RATES_INTERVAL;
