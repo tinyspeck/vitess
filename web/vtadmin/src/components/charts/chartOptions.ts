@@ -22,8 +22,14 @@ export const mergeOptions = (
     return Highcharts.merge({}, DEFAULT_OPTIONS, o, ...opts);
 };
 
+/**
+ * Default options applicable to all Highcharts charts.
+ * Individual chart instances can override any/all of these
+ * default options with `mergeOptions`.
+ */
 export const DEFAULT_OPTIONS: Highcharts.Options = {
     chart: {
+        animation: false,
         // Enable styled mode by default, so we can use
         // our existing CSS variables.
         // See https://www.highcharts.com/docs/chart-design-and-style/style-by-css
@@ -31,6 +37,11 @@ export const DEFAULT_OPTIONS: Highcharts.Options = {
     },
     credits: {
         enabled: false,
+    },
+    plotOptions: {
+        series: {
+            animation: false,
+        },
     },
     time: {
         useUTC: false,

@@ -72,12 +72,22 @@ export const SERIES_LENGTH = RATES_MAX_SPAN / RATES_INTERVAL;
  * The `dataUpdatedAt` property of a query is recommended. Defaults to Date.now() if unspecified.
  */
 export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: number): TimeseriesMap => {
+    // This is a lil bit hacky, but... honestly, so is the rest of this. :)
+    //
+    // The Rates map we get back from the API will either:
+    //      (a) be empty, or
+    //      (b) contain a minimum of two series, one of them named "All".
+    //
+    // In the first case, inserting an empty "All" series renders more nicely
+    // on a Highcharts graph since it will include the axes, etc. So, we add it here.
+    let _rates = !!Object.keys(rates).length ? rates : { All: [] };
+
     // Rates stats are (unfortunately) not returned with timestamps, so we infer them here.
     // This behaviour matches that of the vtctld2 UI:
     // https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletserver/status.go#L178
     const _endAt = typeof endAt === 'number' ? endAt : Date.now();
 
-    return Object.entries(rates).reduce((acc, [seriesName, seriesRates]) => {
+    return Object.entries(_rates).reduce((acc, [seriesName, seriesRates]) => {
         const tsData = [];
 
         // Index into the input array, starting with the last value and working backwards.

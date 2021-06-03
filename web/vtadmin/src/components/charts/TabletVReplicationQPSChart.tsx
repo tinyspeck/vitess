@@ -21,6 +21,7 @@ import { useMemo } from 'react';
 import { useExperimentalTabletDebugVars } from '../../hooks/api';
 import { getVReplicationQPSTimeseries } from '../../util/tabletDebugVars';
 import { mergeOptions } from './chartOptions';
+import { Timeseries } from './Timeseries';
 
 interface Props {
     alias: string;
@@ -31,14 +32,13 @@ export const TabletVReplicationQPSChart = ({ alias, clusterID }: Props) => {
     const { data: debugVars, ...query } = useExperimentalTabletDebugVars(
         { alias, clusterID },
         {
-            refetchInterval: 1000,
+            refetchInterval: 2500,
             refetchIntervalInBackground: true,
         }
     );
 
     const options = useMemo(() => {
         const tsdata = getVReplicationQPSTimeseries(debugVars, query.dataUpdatedAt);
-        console.log(tsdata);
 
         const series: Highcharts.SeriesOptionsType[] = Object.entries(tsdata).map(([name, data]) => ({
             data,
@@ -51,20 +51,8 @@ export const TabletVReplicationQPSChart = ({ alias, clusterID }: Props) => {
             title: {
                 text: undefined,
             },
-            xAxis: {
-                type: 'datetime',
-            },
-            yAxis: {
-                // Setting softMax to any positive integer will anchor the y=0 gridline
-                // at the bottom of the chart even when there is no data to show.
-                softMax: 1,
-                softMin: 0,
-                title: {
-                    text: undefined,
-                },
-            },
         });
     }, [debugVars, query.dataUpdatedAt]);
 
-    return <HighchartsReact highcharts={Highcharts} options={options} />;
+    return <Timeseries options={options} />;
 };

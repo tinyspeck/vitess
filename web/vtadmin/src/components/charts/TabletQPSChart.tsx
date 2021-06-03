@@ -15,12 +15,12 @@
  */
 
 import Highcharts from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
 import { useMemo } from 'react';
 
 import { useExperimentalTabletDebugVars } from '../../hooks/api';
 import { getQPSTimeseries } from '../../util/tabletDebugVars';
 import { mergeOptions } from './chartOptions';
+import { Timeseries } from './Timeseries';
 
 interface Props {
     alias: string;
@@ -31,7 +31,7 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
     const { data: debugVars, ...query } = useExperimentalTabletDebugVars(
         { alias, clusterID },
         {
-            refetchInterval: 1000,
+            refetchInterval: 2500,
             refetchIntervalInBackground: true,
         }
     );
@@ -65,5 +65,5 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
         });
     }, [debugVars, query.dataUpdatedAt]);
 
-    return <HighchartsReact highcharts={Highcharts} options={options} />;
+    return <Timeseries options={options} />;
 };

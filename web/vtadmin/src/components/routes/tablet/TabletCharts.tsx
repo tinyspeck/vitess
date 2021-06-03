@@ -25,15 +25,20 @@ interface Props {
 
 export const TabletCharts = ({ alias, clusterID }: Props) => {
     return (
-        <div className={style.chartContainer}>
+        <div className={style.container}>
             <div>
                 <h3>QPS</h3>
-                <TabletQPSChart alias={alias} clusterID={clusterID} />
+                <div className={style.chartContainer}>
+                    <TabletQPSChart alias={alias} clusterID={clusterID} />
+                </div>
             </div>
 
             <div>
                 <h3>VReplication QPS</h3>
-                <TabletVReplicationQPSChart alias={alias} clusterID={clusterID} />
+                <p>VReplication operations aggregated across all streams.</p>
+                <div className={style.chartContainer}>
+                    <TabletVReplicationQPSChart alias={alias} clusterID={clusterID} />
+                </div>
             </div>
         </div>
     );

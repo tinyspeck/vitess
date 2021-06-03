@@ -22,6 +22,18 @@
 * See https://www.highcharts.com/docs/chart-design-and-style/style-by-css
 */
 
+.highcharts-axis-labels {
+  fill: var(--textColorSecondary);
+}
+
+.highcharts-background {
+  fill: none;
+}
+
+.highcharts-grid-line {
+  stroke: var(--backgroundPrimaryHighlight);
+}
+
 // Matches the root svg element of the chart. Use this to set styles
 // that should be inherited by all elements, like font-family or other text styles.
 .highcharts-root {
@@ -35,4 +47,17 @@
 .highcharts-title {
   font-family: var(--fontFamilyPrimary);
   font-weight: 700;
+}
+
+.highcharts-tooltip {
+  stroke: none;
+
+  text {
+    fill: #fff;
+  }
+}
+
+.highcharts-tooltip-box {
+  fill: rgba(0, 0, 0, 0.85);
+  fill-opacity: 0.95;
 }
