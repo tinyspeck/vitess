@@ -27,7 +27,6 @@ export const Timeseries = ({ options }: Props) => {
     const _options = useMemo(() => {
         return mergeOptions(
             {
-                colors: ['#3D5AFE', '#6874FF', '#8D90FF', '#AFADFF', '#D2CAFF'],
                 tooltip: {
                     hideDelay: 0,
                     shared: true,

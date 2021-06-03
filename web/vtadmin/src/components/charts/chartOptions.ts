@@ -30,8 +30,7 @@ export const mergeOptions = (
 export const DEFAULT_OPTIONS: Highcharts.Options = {
     chart: {
         animation: false,
-        // Enable styled mode by default, so we can use
-        // our existing CSS variables.
+        // Enable styled mode by default, so we can use our existing CSS variables.
         // See https://www.highcharts.com/docs/chart-design-and-style/style-by-css
         styledMode: true,
     },
