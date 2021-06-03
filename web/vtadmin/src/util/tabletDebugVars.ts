@@ -77,13 +77,9 @@ export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: nu
     // https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletserver/status.go#L178
     const _endAt = typeof endAt === 'number' ? endAt : Date.now();
 
-    // This is a lil bit hacky, but... so is the rest of this. :) At least until
-    // we implement proper proto/gRPC bindings for stats data.
-    //
-    // In the meantime, the `rates` map returned from the API, keyed by series name, will either:
+    // The `rates` map returned from the API, keyed by series name, will either:
     //      (a) be empty, or
     //      (b) contain a minimum of two series, one of them named "All".
-    //
     // In the first case, inserting an empty "All" series renders more nicely
     // on a Highcharts graph since it will include the axes, etc. So, we add it here.
     let _rates = !!Object.keys(rates).length ? rates : { All: [] };

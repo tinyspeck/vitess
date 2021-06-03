@@ -46,4 +46,11 @@ export const DEFAULT_OPTIONS: Highcharts.Options = {
     time: {
         useUTC: false,
     },
+    // Using Highcharts' built in `title` property is not recommended.
+    // In most cases, using a regular heading element like <h2>
+    // adjacent to the chart is more flexible and consistent,
+    // since we can't apply layout-type rules like line-height or margin.
+    title: {
+        text: undefined,
+    },
 };

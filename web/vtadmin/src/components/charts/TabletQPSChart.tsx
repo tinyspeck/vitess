@@ -58,9 +58,6 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
                 // at the bottom of the chart even when there is no data to show.
                 softMax: 1,
                 softMin: 0,
-                title: {
-                    text: undefined,
-                },
             },
         });
     }, [debugVars, query.dataUpdatedAt]);

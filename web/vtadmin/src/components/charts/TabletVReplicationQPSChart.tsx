@@ -15,7 +15,6 @@
  */
 
 import Highcharts from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
 import { useMemo } from 'react';
 
 import { useExperimentalTabletDebugVars } from '../../hooks/api';
@@ -48,9 +47,6 @@ export const TabletVReplicationQPSChart = ({ alias, clusterID }: Props) => {
 
         return mergeOptions({
             series,
-            title: {
-                text: undefined,
-            },
         });
     }, [debugVars, query.dataUpdatedAt]);
 
