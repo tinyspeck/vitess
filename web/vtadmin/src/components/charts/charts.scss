@@ -26,12 +26,20 @@
   fill: var(--textColorSecondary);
 }
 
+.highcharts-axis-title {
+  fill: var(--textColorSecondary);
+}
+
 .highcharts-background {
   fill: none;
 }
 
 .highcharts-grid-line {
   stroke: var(--backgroundPrimaryHighlight);
+}
+
+.highcharts-legend-item text {
+  fill: var(--textColorPrimary);
 }
 
 // Matches the root svg element of the chart. Use this to set styles
