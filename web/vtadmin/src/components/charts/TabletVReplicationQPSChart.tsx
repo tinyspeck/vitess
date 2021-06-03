@@ -45,9 +45,7 @@ export const TabletVReplicationQPSChart = ({ alias, clusterID }: Props) => {
             type: 'line',
         }));
 
-        return mergeOptions({
-            series,
-        });
+        return mergeOptions({ series });
     }, [debugVars, query.dataUpdatedAt]);
 
     return <Timeseries options={options} />;

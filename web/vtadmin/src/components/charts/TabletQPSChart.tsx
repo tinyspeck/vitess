@@ -45,21 +45,7 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
             type: 'line',
         }));
 
-        return mergeOptions({
-            series,
-            title: {
-                text: undefined,
-            },
-            xAxis: {
-                type: 'datetime',
-            },
-            yAxis: {
-                // Setting softMax to any positive integer will anchor the y=0 gridline
-                // at the bottom of the chart even when there is no data to show.
-                softMax: 1,
-                softMin: 0,
-            },
-        });
+        return mergeOptions({ series });
     }, [debugVars, query.dataUpdatedAt]);
 
     return <Timeseries options={options} />;
