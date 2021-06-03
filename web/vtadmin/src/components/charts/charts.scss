@@ -69,3 +69,11 @@
   fill: rgba(0, 0, 0, 0.85);
   fill-opacity: 0.95;
 }
+
+.highcharts-yaxis-grid .highcharts-grid-line {
+  stroke-width: 1px;
+}
+
+.highcharts-xaxis-grid .highcharts-grid-line {
+  stroke-width: 1px;
+}

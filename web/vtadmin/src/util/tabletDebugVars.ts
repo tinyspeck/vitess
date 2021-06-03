@@ -72,6 +72,11 @@ export const SERIES_LENGTH = RATES_MAX_SPAN / RATES_INTERVAL;
  * The `dataUpdatedAt` property of a query is recommended. Defaults to Date.now() if unspecified.
  */
 export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: number): TimeseriesMap => {
+    // Rates stats are (unfortunately) not returned with timestamps, so we infer them here.
+    // This behaviour matches that of the vtctld2 UI:
+    // https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletserver/status.go#L178
+    const _endAt = typeof endAt === 'number' ? endAt : Date.now();
+
     // This is a lil bit hacky, but... honestly, so is the rest of this. :)
     //
     // The Rates map we get back from the API will either:
@@ -82,33 +87,36 @@ export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: nu
     // on a Highcharts graph since it will include the axes, etc. So, we add it here.
     let _rates = !!Object.keys(rates).length ? rates : { All: [] };
 
-    // Rates stats are (unfortunately) not returned with timestamps, so we infer them here.
-    // This behaviour matches that of the vtctld2 UI:
-    // https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletserver/status.go#L178
-    const _endAt = typeof endAt === 'number' ? endAt : Date.now();
+    const planTypes = Object.keys(_rates);
 
-    return Object.entries(_rates).reduce((acc, [seriesName, seriesRates]) => {
-        const tsData = [];
+    const data: TimeseriesMap = {};
 
-        // Index into the input array, starting with the last value and working backwards.
-        let rdx = seriesRates.length - 1;
+    for (let i = 0; i < (15 * 60) / 5; i++) {
+        const x = sampleDate(_endAt, i);
 
-        // Keep track of the time offset.
-        let tdx = 0;
+        // Assume 0.0 QPS for older, non-existent data points.
+        let y = 0;
 
-        for (let idx = SERIES_LENGTH - 1; idx >= 0; idx--) {
-            const timestamp = _endAt - tdx * RATES_INTERVAL;
-            tdx++;
+        for (let j = 0; j < planTypes.length; j++) {
+            if (i < _rates[planTypes[j]].length) {
+                // Rates are ordered from least recent to most recent.
+                // Therefore, we have to start reading from the end of the array.
+                var idx = _rates[planTypes[j]].length - i - 1;
+                y = +_rates[planTypes[j]][idx].toFixed(2);
+            }
 
-            const value = rdx >= 0 ? seriesRates[rdx--] : 0;
-
-            tsData[idx] = {
-                x: timestamp,
-                y: value,
-            };
+            if (!Array.isArray(data[planTypes[j]])) {
+                data[planTypes[j]] = [];
+            }
+            data[planTypes[j]].unshift({ x, y });
         }
+    }
 
-        acc[seriesName] = tsData;
-        return acc;
-    }, {} as TimeseriesMap);
+    return data;
+};
+
+const sampleDate = (d: number, i: number): number => {
+    var copy = new Date(d);
+    copy.setTime(copy.getTime() - ((i * 60) / 5) * 1000);
+    return copy.getTime();
 };

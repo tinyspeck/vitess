@@ -59,6 +59,7 @@ describe('formatTimeseriesMap', () => {
         // While we can trust our snapshots, additional validation doesn't hurt.
         const [inputData, endAt] = input;
         const endAtExpected = typeof endAt === 'number' ? endAt : Date.now();
+        const startAtExpected = endAtExpected - ((179 * 60) / 5) * 1000;
 
         const inputKeys = Object.keys(inputData);
         const outputKeys = Object.keys(result);
@@ -71,6 +72,7 @@ describe('formatTimeseriesMap', () => {
 
         Object.entries(result).forEach(([seriesName, seriesData]) => {
             expect(seriesData.length).toEqual(RATES_MAX_SPAN / RATES_INTERVAL);
+            expect(seriesData[0].x).toEqual(startAtExpected);
             expect(seriesData[seriesData.length - 1].x).toEqual(endAtExpected);
         });
     });
