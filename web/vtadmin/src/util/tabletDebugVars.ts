@@ -42,16 +42,17 @@ export type TabletDebugVars = Partial<{
 }>;
 
 export interface TimeseriesPoint {
-    timestamp: number;
-    value: number;
+    x: number;
+    y: number;
 }
 
 export type TimeseriesMap = { [seriesName: string]: TimeseriesPoint[] };
 
-export const getQPSTimeseries = (d: TabletDebugVars): TimeseriesMap => formatTimeseriesMap(d.QPS || {});
+export const getQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: number): TimeseriesMap =>
+    formatTimeseriesMap(d?.QPS || {}, endAt);
 
-export const getVReplicationQPSTimeseries = (d: TabletDebugVars): TimeseriesMap =>
-    formatTimeseriesMap(d.VReplicationQPS || {});
+export const getVReplicationQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: number): TimeseriesMap =>
+    formatTimeseriesMap(d?.VReplicationQPS || {}, endAt);
 
 export const RATES_INTERVAL = 5 * 1000; // 5 seconds
 export const RATES_MAX_SPAN = 15 * 60 * 1000; // 15 minutes
@@ -92,8 +93,8 @@ export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: nu
             const value = rdx >= 0 ? seriesRates[rdx--] : 0;
 
             tsData[idx] = {
-                timestamp,
-                value,
+                x: timestamp,
+                y: value,
             };
         }
 

@@ -17,7 +17,12 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 
+// Required to use Highcharts styled mode.
+// See https://www.highcharts.com/docs/chart-design-and-style/style-by-css
+import 'highcharts/css/highcharts.css';
 import './index.css';
+import './components/charts/charts.scss';
+
 import { App } from './components/App';
 
 const queryClient = new QueryClient();

@@ -1,0 +1,38 @@
+/**
+ * Copyright 2021 The Vitess Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+* We use Highcharts' "styled mode" to style chart components
+* (SVGs under the hood) with CSS. This lets us rely on our
+* standard CSS variables for consistent theming.
+*
+* See https://www.highcharts.com/docs/chart-design-and-style/style-by-css
+*/
+
+// Matches the root svg element of the chart. Use this to set styles
+// that should be inherited by all elements, like font-family or other text styles.
+.highcharts-root {
+  font-family: var(--fontFamilyMonospace);
+}
+
+// Using Highcharts' built in `title` property is not recommended.
+// In most cases, using a regular heading element like <h2>
+// adjacent to the chart is more flexible and consistent,
+// since we can't apply layout-type rules like line-height or margin.
+.highcharts-title {
+  font-family: var(--fontFamilyPrimary);
+  font-weight: 700;
+}
