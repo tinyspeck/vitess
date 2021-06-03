@@ -54,8 +54,8 @@ export const getQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: 
 export const getVReplicationQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: number): TimeseriesMap =>
     formatTimeseriesMap(d?.VReplicationQPS || {}, endAt);
 
-export const RATES_INTERVAL = 5 * 1000; // 5 seconds
-export const RATES_MAX_SPAN = 15 * 60 * 1000; // 15 minutes
+export const RATES_INTERVAL = 5; // 5 seconds
+export const RATES_MAX_SPAN = 15 * 60; // 15 minutes
 export const SERIES_LENGTH = RATES_MAX_SPAN / RATES_INTERVAL;
 
 /**
@@ -65,8 +65,8 @@ export const SERIES_LENGTH = RATES_MAX_SPAN / RATES_INTERVAL;
  *
  * For Rates stats, see https://github.com/vitessio/vitess/blob/main/go/stats/rates.go
  *
- * @param rates - An array of numbers, inferred as data points at 5 minute intervals
- * for a maximum span of 15 minutes.
+ * @param rates - An array of numbers, inferred as data points at 5 second intervals
+ * for a maximum span of
  *
  * @param endAt - Optional. The timestamp for the last (most recent) data point in the series.
  * The `dataUpdatedAt` property of a query is recommended. Defaults to Date.now() if unspecified.
@@ -77,9 +77,10 @@ export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: nu
     // https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletserver/status.go#L178
     const _endAt = typeof endAt === 'number' ? endAt : Date.now();
 
-    // This is a lil bit hacky, but... honestly, so is the rest of this. :)
+    // This is a lil bit hacky, but... so is the rest of this. :) At least until
+    // we implement proper proto/gRPC bindings for stats data.
     //
-    // The Rates map we get back from the API will either:
+    // In the meantime, the `rates` map returned from the API, keyed by series name, will either:
     //      (a) be empty, or
     //      (b) contain a minimum of two series, one of them named "All".
     //
@@ -91,16 +92,14 @@ export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: nu
 
     const data: TimeseriesMap = {};
 
-    for (let i = 0; i < (15 * 60) / 5; i++) {
-        const x = sampleDate(_endAt, i);
-
-        // Assume 0.0 QPS for older, non-existent data points.
-        let y = 0;
+    for (let i = 0; i < RATES_MAX_SPAN / RATES_INTERVAL; i++) {
+        const x = _endAt - ((i * 60) / RATES_INTERVAL) * 1000;
 
         for (let j = 0; j < planTypes.length; j++) {
+            // Assume 0.0 QPS for older, non-existent data points.
+            let y = 0;
+
             if (i < _rates[planTypes[j]].length) {
-                // Rates are ordered from least recent to most recent.
-                // Therefore, we have to start reading from the end of the array.
                 var idx = _rates[planTypes[j]].length - i - 1;
                 y = +_rates[planTypes[j]][idx].toFixed(2);
             }
@@ -108,15 +107,10 @@ export const formatTimeseriesMap = (rates: { [k: string]: number[] }, endAt?: nu
             if (!Array.isArray(data[planTypes[j]])) {
                 data[planTypes[j]] = [];
             }
+
             data[planTypes[j]].unshift({ x, y });
         }
     }
 
     return data;
-};
-
-const sampleDate = (d: number, i: number): number => {
-    var copy = new Date(d);
-    copy.setTime(copy.getTime() - ((i * 60) / 5) * 1000);
-    return copy.getTime();
 };
