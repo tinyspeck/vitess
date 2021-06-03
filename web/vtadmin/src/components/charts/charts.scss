@@ -48,8 +48,17 @@ $colors: #3d5afe #8550f3 #af44e4 #cf38d4 #e72ec2 #fa29b0 #ff2d9e #ff398c #ff497b
   fill: var(--textColorPrimary);
 }
 
-.highcharts-graph {
+.highcharts-line-series .highcharts-graph {
   stroke-width: 1px;
+  transition: stroke-width 200ms; /* slow out */
+}
+
+.highcharts-series-hover .highcharts-graph {
+  transition: stroke-width 50ms ease-in-out; /* quick in */
+}
+
+.highcharts-line-series.highcharts-series-hover .highcharts-graph {
+  stroke-width: 3px;
 }
 
 // Matches the root svg element of the chart. Use this to set styles
