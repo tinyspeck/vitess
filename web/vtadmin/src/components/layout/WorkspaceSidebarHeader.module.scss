@@ -13,27 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import cx from 'classnames';
 
-import style from './WorkspaceSidebar.module.scss';
-
-interface Props {
-    hidden?: boolean;
+.container {
+  border-bottom: solid 1px var(--backgroundSecondaryHighlight);
+  min-height: 60px;
+  padding: 24px;
+  position: relative;
 }
 
-export const WorkspaceSidebar: React.FunctionComponent<Props> = ({ children, hidden }) => {
-    if (!children) return null;
+.title {
+  font-size: var(--fontSizeLarge);
+  grid-area: "title";
+  margin: 0;
+}
 
-    const containerClass = cx(style.container, {
-        [style.hidden]: !!hidden,
-    });
-
-    return (
-        <div className={containerClass}>
-            <div className={style.innerContainer}>
-                <div className={style.content}>{children}</div>
-                <div className={style.resizer} />
-            </div>
-        </div>
-    );
-};
+.closeTarget {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  grid-area: "closeTarget";
+  height: 60px;
+  justify-content: center;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 60px;
+}

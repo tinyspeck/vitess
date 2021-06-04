@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import cx from 'classnames';
 
-import style from './WorkspaceSidebar.module.scss';
+import React from 'react';
+import { Icon, Icons } from '../Icon';
+import style from './WorkspaceSidebarHeader.module.scss';
 
 interface Props {
-    hidden?: boolean;
+    onClose?: () => void;
+    title: string;
 }
 
-export const WorkspaceSidebar: React.FunctionComponent<Props> = ({ children, hidden }) => {
-    if (!children) return null;
-
-    const containerClass = cx(style.container, {
-        [style.hidden]: !!hidden,
-    });
-
+export const WorkspaceSidebarHeader: React.FunctionComponent<Props> = ({ onClose, title }) => {
     return (
-        <div className={containerClass}>
-            <div className={style.innerContainer}>
-                <div className={style.content}>{children}</div>
-                <div className={style.resizer} />
+        <div className={style.container}>
+            <h3 className={style.title}>{title}</h3>
+            <div className={style.closeTarget} onClick={onClose}>
+                <Icon icon={Icons.delete} />
             </div>
         </div>
     );

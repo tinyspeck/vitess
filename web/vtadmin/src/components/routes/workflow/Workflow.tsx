@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
 
 import style from './Workflow.module.scss';
@@ -33,6 +34,8 @@ import { Workspace } from '../../layout/Workspace';
 import { WorkspaceContent } from '../../layout/WorkspaceContent';
 import { WorkspaceSidebar } from '../../layout/WorkspaceSidebar';
 import { WorkspaceNav } from '../../layout/WorkspaceNav';
+import { useURLQuery } from '../../../hooks/useURLQuery';
+import { WorkflowStreamSidebar } from './WorkflowStreamSidebar';
 
 interface RouteParams {
     clusterID: string;
@@ -43,11 +46,16 @@ interface RouteParams {
 export const Workflow = () => {
     const { clusterID, keyspace, name } = useParams<RouteParams>();
     const { path, url } = useRouteMatch();
+    const { pushQuery, query } = useURLQuery();
 
     useDocumentTitle(`${name} (${keyspace})`);
 
     const { data } = useWorkflow({ clusterID, keyspace, name }, { refetchInterval: 1000 });
     const streams = getStreams(data);
+
+    const closeSidebar = () => {
+        pushQuery({ stream: undefined });
+    };
 
     return (
         <Workspace>
@@ -91,7 +99,17 @@ export const Workflow = () => {
                     </Switch>
                 </ContentContainer>
 
-                <WorkspaceSidebar>Stream sidebar</WorkspaceSidebar>
+                <WorkspaceSidebar>
+                    {typeof query.stream === 'string' && (
+                        <WorkflowStreamSidebar
+                            clusterID={clusterID}
+                            keyspace={keyspace}
+                            onClose={closeSidebar}
+                            streamKey={query.stream}
+                            workflowName={name}
+                        />
+                    )}
+                </WorkspaceSidebar>
             </WorkspaceContent>
         </Workspace>
     );

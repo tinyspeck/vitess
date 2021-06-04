@@ -29,6 +29,7 @@ import { DataTable } from '../../dataTable/DataTable';
 import { KeyspaceLink } from '../../links/KeyspaceLink';
 import { TabletLink } from '../../links/TabletLink';
 import { StreamStatePip } from '../../pips/StreamStatePip';
+import { useURLQuery } from '../../../hooks/useURLQuery';
 
 interface Props {
     clusterID: string;
@@ -39,7 +40,14 @@ interface Props {
 const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet'];
 
 export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
+    const { pushQuery } = useURLQuery();
     const { data } = useWorkflow({ clusterID, keyspace, name }, { refetchInterval: 1000 });
+
+    const onClickStream: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
+        e.preventDefault();
+        const streamKey = (e.target as HTMLAnchorElement).getAttribute('data-stream-key');
+        pushQuery({ stream: streamKey });
+    };
 
     const streams = useMemo(() => {
         const rows = getStreams(data).map((stream) => ({
@@ -66,7 +74,7 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                 <tr key={row.key}>
                     <DataCell>
                         <StreamStatePip state={row.state} />{' '}
-                        <Link className="font-weight-bold" to={href}>
+                        <Link className="font-weight-bold" data-stream-key={row.key} onClick={onClickStream} to={href}>
                             {row.key}
                         </Link>
                         <div className="font-size-small text-color-secondary">
