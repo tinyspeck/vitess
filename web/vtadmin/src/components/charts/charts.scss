@@ -54,6 +54,13 @@ $colors:  #3d5afe #9e4aeb #d237d2 #f429b6 #ff2f9a #ff457f #ff6067 #ff7b54 #ff944
   transition: stroke-width 200ms; /* slow out */
 }
 
+.highcharts-loading-inner {
+  color: var(--textColorSecondary);
+  font-family: var(--fontFamilyPrimary);
+  font-size: var(--fontSizeLarge);
+  font-weight: 500;
+}
+
 .highcharts-series-hover .highcharts-graph {
   transition: stroke-width 50ms ease-in-out; /* quick in */
 }
