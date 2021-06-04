@@ -16,9 +16,12 @@
 
 import style from './WorkflowStreamSidebar.module.scss';
 import { useWorkflow } from '../../../hooks/api';
-import { formatStreamKey, getStreams } from '../../../util/workflows';
+import { formatStreamKey, getStreams, getStreamSource, getStreamTarget } from '../../../util/workflows';
 import { WorkspaceSidebarHeader } from '../../layout/WorkspaceSidebarHeader';
 import { Button } from '../../Button';
+import { formatAlias } from '../../../util/tablets';
+import { StreamStatePip } from '../../pips/StreamStatePip';
+import { formatDateTime, formatRelativeTime } from '../../../util/time';
 
 interface Props {
     clusterID: string;
@@ -52,7 +55,49 @@ export const WorkflowStreamSidebar = ({ clusterID, keyspace, onClose, streamKey,
 
             <div className={style.content}>
                 <section>
+                    <table className={style.metadata}>
+                        <tbody>
+                            <tr>
+                                <td className={style.colKey}>Stream key:</td>{' '}
+                                <td className={style.colValue}>{streamKey}</td>
+                            </tr>
+                            <tr>
+                                <td className={style.colKey}>State:</td>{' '}
+                                <td className={style.colValue}>
+                                    <StreamStatePip state={stream?.state} /> {stream?.state}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className={style.colKey}>Source:</td>{' '}
+                                <td className={style.colValue}>{getStreamSource(stream)} </td>
+                            </tr>
+                            <tr>
+                                <td className={style.colKey}>Target:</td>{' '}
+                                <td className={style.colValue}>{getStreamTarget(stream, keyspace)}</td>
+                            </tr>
+                            <tr>
+                                <td className={style.colKey}>Tablet:</td>{' '}
+                                <td className={style.colValue}>{formatAlias(stream?.tablet)}</td>
+                            </tr>
+                            <tr>
+                                <td className={style.colKey}>Updated:</td>{' '}
+                                <td className={style.colValue}>{formatDateTime(stream?.time_updated?.seconds)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section>
                     <div className={style.sectionTitle}>Timeline</div>
+                    <div className={style.logsContainer}>
+                        {(stream?.logs || []).map((log) => (
+                            <div className={style.log}>
+                                <div>{formatDateTime(log.updated_at?.seconds)}</div>
+                                <div>{log.type}</div>
+                                {/* <div>{log.message}</div> */}
+                            </div>
+                        ))}
+                    </div>
                 </section>
 
                 <section>

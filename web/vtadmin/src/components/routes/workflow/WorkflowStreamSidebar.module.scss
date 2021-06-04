@@ -30,7 +30,10 @@
 
 .content section {
   border-top: solid 1px var(--backgroundSecondaryHighlight);
-  padding: 24px;
+  padding: 16px 24px;
+  max-width: 100%;
+  overflow: hidden;
+  word-wrap: break-word;
 
   &:first-child {
     border-top: none;
@@ -39,4 +42,45 @@
 
 .sectionTitle {
   font-size: var(--fontSizeLarge);
+  margin: 0 0 12px 0;
+}
+
+.logsContainer {
+  display: grid;
+  grid-gap: 8px;
+}
+
+.log {
+  margin: 0 0 12px 0;
+  max-width: 100%;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+
+.metadata {
+  border: none;
+  margin: 0;
+
+  tbody tr {
+    border: none;
+  }
+
+  tbody td {
+    line-height: 2.4rem;
+    padding: 0;
+  }
+
+  .colKey {
+    font-weight: bold;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .colValue {
+    font-family: var(--fontFamilyMonospace);
+    font-size: 1.4rem;
+    padding-left: 8px;
+    vertical-align: baseline;
+    width: 100%;
+  }
 }
