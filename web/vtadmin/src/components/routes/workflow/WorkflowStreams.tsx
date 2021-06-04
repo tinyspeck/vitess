@@ -49,6 +49,12 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
         pushQuery({ stream: streamKey });
     };
 
+    const onClickTablet: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
+        e.preventDefault();
+        const alias = (e.target as HTMLAnchorElement).getAttribute('data-tablet-alias');
+        pushQuery({ tablet: alias });
+    };
+
     const streams = useMemo(() => {
         const rows = getStreams(data).map((stream) => ({
             key: formatStreamKey(stream),
@@ -104,7 +110,12 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                         )}
                     </DataCell>
                     <DataCell>
-                        <TabletLink alias={formatAlias(row.tablet)} clusterID={clusterID}>
+                        <TabletLink
+                            alias={formatAlias(row.tablet)}
+                            clusterID={clusterID}
+                            data-tablet-alias={formatAlias(row.tablet)}
+                            onClick={onClickTablet}
+                        >
                             {formatAlias(row.tablet)}
                         </TabletLink>
                     </DataCell>

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, LinkProps } from 'react-router-dom';
 
-interface Props {
+interface Props extends Omit<LinkProps, 'to'> {
     alias: string | null | undefined;
     className?: string;
     clusterID: string | null | undefined;
 }
 
-export const TabletLink: React.FunctionComponent<Props> = ({ alias, children, className, clusterID }) => {
+export const TabletLink: React.FunctionComponent<Props> = ({ alias, children, className, clusterID, ...props }) => {
     if (!clusterID || !alias) {
         return <span className={className}>{children}</span>;
     }
@@ -30,7 +30,7 @@ export const TabletLink: React.FunctionComponent<Props> = ({ alias, children, cl
     const to = { pathname: `/tablet/${clusterID}/${alias}` };
 
     return (
-        <Link className={className} to={to}>
+        <Link {...props} className={className} to={to}>
             {children}
         </Link>
     );

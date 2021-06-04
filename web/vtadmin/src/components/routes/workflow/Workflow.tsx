@@ -36,6 +36,7 @@ import { WorkspaceSidebar } from '../../layout/WorkspaceSidebar';
 import { WorkspaceNav } from '../../layout/WorkspaceNav';
 import { useURLQuery } from '../../../hooks/useURLQuery';
 import { WorkflowStreamSidebar } from './WorkflowStreamSidebar';
+import { WorkflowTabletSidebar } from './WorkflowTabletSidebar';
 
 interface RouteParams {
     clusterID: string;
@@ -54,7 +55,7 @@ export const Workflow = () => {
     const streams = getStreams(data);
 
     const closeSidebar = () => {
-        pushQuery({ stream: undefined });
+        pushQuery({ stream: undefined, tablet: undefined });
     };
 
     return (
@@ -99,17 +100,23 @@ export const Workflow = () => {
                     </Switch>
                 </ContentContainer>
 
-                <WorkspaceSidebar>
-                    {typeof query.stream === 'string' && (
-                        <WorkflowStreamSidebar
-                            clusterID={clusterID}
-                            keyspace={keyspace}
-                            onClose={closeSidebar}
-                            streamKey={query.stream}
-                            workflowName={name}
-                        />
-                    )}
-                </WorkspaceSidebar>
+                {(!!query.stream || !!query.tablet) && (
+                    <WorkspaceSidebar>
+                        {typeof query.stream === 'string' && (
+                            <WorkflowStreamSidebar
+                                clusterID={clusterID}
+                                keyspace={keyspace}
+                                onClose={closeSidebar}
+                                streamKey={query.stream}
+                                workflowName={name}
+                            />
+                        )}
+
+                        {typeof query.tablet === 'string' && (
+                            <WorkflowTabletSidebar alias={query.tablet} clusterID={clusterID} />
+                        )}
+                    </WorkspaceSidebar>
+                )}
             </WorkspaceContent>
         </Workspace>
     );
