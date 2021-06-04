@@ -43,6 +43,7 @@ describe('formatTimeseriesMap', () => {
             name: 'multiple series',
             input: [
                 {
+                    All: [3, 4, 5],
                     First: [1, 2, 3],
                     Second: [4, 5, 6],
                 },
