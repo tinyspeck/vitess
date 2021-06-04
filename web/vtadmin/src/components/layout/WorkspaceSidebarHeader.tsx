@@ -23,13 +23,15 @@ interface Props {
     title: string;
 }
 
-export const WorkspaceSidebarHeader: React.FunctionComponent<Props> = ({ onClose, title }) => {
+export const WorkspaceSidebarHeader: React.FunctionComponent<Props> = ({ children, onClose, title }) => {
     return (
         <div className={style.container}>
             <h3 className={style.title}>{title}</h3>
             <div className={style.closeTarget} onClick={onClose}>
                 <Icon icon={Icons.delete} />
             </div>
+
+            <div className={style.content}>{children}</div>
         </div>
     );
 };

@@ -18,6 +18,7 @@ import style from './WorkflowStreamSidebar.module.scss';
 import { useWorkflow } from '../../../hooks/api';
 import { formatStreamKey, getStreams } from '../../../util/workflows';
 import { WorkspaceSidebarHeader } from '../../layout/WorkspaceSidebarHeader';
+import { Button } from '../../Button';
 
 interface Props {
     clusterID: string;
@@ -40,10 +41,25 @@ export const WorkflowStreamSidebar = ({ clusterID, keyspace, onClose, streamKey,
     const stream = getStreams(workflow).find((s) => formatStreamKey(s) === streamKey);
 
     return (
-        <div>
-            <WorkspaceSidebarHeader onClose={onClose} title={streamKey}></WorkspaceSidebarHeader>
+        <div className={style.container}>
+            <WorkspaceSidebarHeader onClose={onClose} title={streamKey}>
+                <div className={style.header}>
+                    <Button secondary size="small">
+                        View details
+                    </Button>
+                </div>
+            </WorkspaceSidebarHeader>
 
-            <div className={style.content}>{JSON.stringify(stream, null, 2)}</div>
+            <div className={style.content}>
+                <section>
+                    <div className={style.sectionTitle}>Timeline</div>
+                </section>
+
+                <section>
+                    <div className={style.sectionTitle}>Debug</div>
+                    {JSON.stringify(stream, null, 2)}
+                </section>
+            </div>
         </div>
     );
 };
