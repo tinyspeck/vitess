@@ -29,6 +29,10 @@ import { TabContainer } from '../../tabs/TabContainer';
 import { Tab } from '../../tabs/Tab';
 import { getStreams } from '../../../util/workflows';
 import { Code } from '../../Code';
+import { Workspace } from '../../layout/Workspace';
+import { WorkspaceContent } from '../../layout/WorkspaceContent';
+import { WorkspaceSidebar } from '../../layout/WorkspaceSidebar';
+import { WorkspaceNav } from '../../layout/WorkspaceNav';
 
 interface RouteParams {
     clusterID: string;
@@ -46,44 +50,49 @@ export const Workflow = () => {
     const streams = getStreams(data);
 
     return (
-        <div>
-            <WorkspaceHeader>
+        <Workspace>
+            <WorkspaceNav>
                 <NavCrumbs>
                     <Link to="/workflows">Workflows</Link>
                 </NavCrumbs>
+            </WorkspaceNav>
+            <WorkspaceContent>
+                <WorkspaceHeader>
+                    <WorkspaceTitle className="font-family-monospace">{name}</WorkspaceTitle>
+                    <div className={style.headingMeta}>
+                        <span>
+                            Cluster: <code>{clusterID}</code>
+                        </span>
+                        <span>
+                            Target keyspace:{' '}
+                            <KeyspaceLink clusterID={clusterID} name={keyspace}>
+                                <code>{keyspace}</code>
+                            </KeyspaceLink>
+                        </span>
+                    </div>
+                </WorkspaceHeader>
 
-                <WorkspaceTitle className="font-family-monospace">{name}</WorkspaceTitle>
-                <div className={style.headingMeta}>
-                    <span>
-                        Cluster: <code>{clusterID}</code>
-                    </span>
-                    <span>
-                        Target keyspace:{' '}
-                        <KeyspaceLink clusterID={clusterID} name={keyspace}>
-                            <code>{keyspace}</code>
-                        </KeyspaceLink>
-                    </span>
-                </div>
-            </WorkspaceHeader>
+                <ContentContainer>
+                    <TabContainer>
+                        <Tab text="Streams" to={`${url}/streams`} count={streams.length} />
+                        <Tab text="JSON" to={`${url}/json`} />
+                    </TabContainer>
 
-            <ContentContainer>
-                <TabContainer>
-                    <Tab text="Streams" to={`${url}/streams`} count={streams.length} />
-                    <Tab text="JSON" to={`${url}/json`} />
-                </TabContainer>
+                    <Switch>
+                        <Route path={`${path}/streams`}>
+                            <WorkflowStreams clusterID={clusterID} keyspace={keyspace} name={name} />
+                        </Route>
 
-                <Switch>
-                    <Route path={`${path}/streams`}>
-                        <WorkflowStreams clusterID={clusterID} keyspace={keyspace} name={name} />
-                    </Route>
+                        <Route path={`${path}/json`}>
+                            <Code code={JSON.stringify(data, null, 2)} />
+                        </Route>
 
-                    <Route path={`${path}/json`}>
-                        <Code code={JSON.stringify(data, null, 2)} />
-                    </Route>
+                        <Redirect exact from={path} to={`${path}/streams`} />
+                    </Switch>
+                </ContentContainer>
 
-                    <Redirect exact from={path} to={`${path}/streams`} />
-                </Switch>
-            </ContentContainer>
-        </div>
+                <WorkspaceSidebar>Stream sidebar</WorkspaceSidebar>
+            </WorkspaceContent>
+        </Workspace>
     );
 };
