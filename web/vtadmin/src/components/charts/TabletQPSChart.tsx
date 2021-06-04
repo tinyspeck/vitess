@@ -48,5 +48,5 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
         return mergeOptions({ series });
     }, [debugVars, query.dataUpdatedAt]);
 
-    return <Timeseries options={options} />;
+    return <Timeseries isLoading={query.isLoading} options={options} />;
 };

@@ -16,14 +16,33 @@
 
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { mergeOptions } from './chartOptions';
 
 interface Props {
+    isLoading?: boolean;
     options: Highcharts.Options | undefined;
 }
 
-export const Timeseries = ({ options }: Props) => {
+export const Timeseries = ({ isLoading, options }: Props) => {
+    // See https://github.com/highcharts/highcharts-react/issues/290#issuecomment-802914598
+    const ref = useRef<{
+        chart: Highcharts.Chart;
+        container: React.RefObject<HTMLDivElement>;
+    }>(null);
+
+    useEffect(() => {
+        if (!ref.current) {
+            return;
+        }
+
+        if (isLoading) {
+            ref.current.chart.showLoading();
+        } else {
+            ref.current.chart.hideLoading();
+        }
+    }, [isLoading]);
+
     const _options = useMemo(() => {
         return mergeOptions(
             {
@@ -50,5 +69,5 @@ export const Timeseries = ({ options }: Props) => {
         );
     }, [options]);
 
-    return <HighchartsReact highcharts={Highcharts} options={_options} />;
+    return <HighchartsReact highcharts={Highcharts} options={_options} ref={ref} />;
 };
