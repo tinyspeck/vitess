@@ -46,13 +46,13 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const onClickStream: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
         e.preventDefault();
         const streamKey = (e.target as HTMLAnchorElement).getAttribute('data-stream-key');
-        pushQuery({ stream: streamKey });
+        pushQuery({ stream: streamKey, tablet: undefined });
     };
 
     const onClickTablet: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
         e.preventDefault();
         const alias = (e.target as HTMLAnchorElement).getAttribute('data-tablet-alias');
-        pushQuery({ tablet: alias });
+        pushQuery({ stream: undefined, tablet: alias });
     };
 
     const streams = useMemo(() => {
