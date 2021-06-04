@@ -47,13 +47,21 @@ export const WorkflowTabletSidebar = ({ alias, clusterID, onClose }: Props) => {
                 <section>
                     <div className={style.sectionTitle}>QPS</div>
                     <div className={style.chart}>
-                        <TabletQPSChart alias={alias} clusterID={clusterID} />
+                        <TabletQPSChart
+                            alias={alias}
+                            clusterID={clusterID}
+                            options={{ chart: { height: 240 }, legend: { enabled: false } }}
+                        />
                     </div>
                 </section>
                 <section>
                     <div className={style.sectionTitle}>VReplication QPS</div>
                     <div className={style.chart}>
-                        <TabletVReplicationQPSChart alias={alias} clusterID={clusterID} />
+                        <TabletVReplicationQPSChart
+                            alias={alias}
+                            clusterID={clusterID}
+                            options={{ chart: { height: 240 }, legend: { enabled: false } }}
+                        />
                     </div>
                 </section>
                 <section>

@@ -25,9 +25,10 @@ import { Timeseries } from './Timeseries';
 interface Props {
     alias: string;
     clusterID: string;
+    options?: Highcharts.Options | undefined;
 }
 
-export const TabletQPSChart = ({ alias, clusterID }: Props) => {
+export const TabletQPSChart = ({ alias, clusterID, options }: Props) => {
     const { data: debugVars, ...query } = useExperimentalTabletDebugVars(
         { alias, clusterID },
         {
@@ -36,7 +37,7 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
         }
     );
 
-    const options = useMemo(() => {
+    const _options = useMemo(() => {
         const tsdata = getQPSTimeseries(debugVars, query.dataUpdatedAt);
 
         const series: Highcharts.SeriesOptionsType[] = Object.entries(tsdata).map(([name, data]) => ({
@@ -45,8 +46,8 @@ export const TabletQPSChart = ({ alias, clusterID }: Props) => {
             type: 'line',
         }));
 
-        return mergeOptions({ series });
-    }, [debugVars, query.dataUpdatedAt]);
+        return mergeOptions({ series }, options);
+    }, [debugVars, options, query.dataUpdatedAt]);
 
-    return <Timeseries isLoading={query.isLoading} options={options} />;
+    return <Timeseries isLoading={query.isLoading} options={_options} />;
 };

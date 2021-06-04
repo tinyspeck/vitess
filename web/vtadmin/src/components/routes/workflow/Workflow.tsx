@@ -113,7 +113,7 @@ export const Workflow = () => {
                         )}
 
                         {typeof query.tablet === 'string' && (
-                            <WorkflowTabletSidebar alias={query.tablet} clusterID={clusterID} />
+                            <WorkflowTabletSidebar alias={query.tablet} clusterID={clusterID} onClose={closeSidebar} />
                         )}
                     </WorkspaceSidebar>
                 )}
