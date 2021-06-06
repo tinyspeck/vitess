@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 The Vitess Authors.
+ * Copyright 2021 The Vitess Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
 
-import './index.css';
+import Highcharts from 'highcharts';
+import NoDataToDisplay from 'highcharts/modules/no-data-to-display';
 
-import { App } from './components/App';
-import { initializeCharts } from './components/charts/initializeCharts';
+import './charts.scss';
 
-initializeCharts();
-
-const queryClient = new QueryClient();
-
-ReactDOM.render(
-    <React.StrictMode>
-        <QueryClientProvider client={queryClient}>
-            <App />
-        </QueryClientProvider>
-    </React.StrictMode>,
-    document.getElementById('root')
-);
+/**
+ * Initializes Highcharts extensions, applied to all charts.
+ * Must be called before rendering any charts, such as before the
+ * initial ReactDOM.render() call.
+ */
+export const initializeCharts = () => {
+    NoDataToDisplay(Highcharts);
+};

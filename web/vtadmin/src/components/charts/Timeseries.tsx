@@ -16,6 +16,7 @@
 
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
+
 import { useEffect, useMemo, useRef } from 'react';
 import { mergeOptions } from './chartOptions';
 
