@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Link, useParams } from 'react-router-dom';
+import React from 'react';
+import { Link, Redirect, Route, Switch, useParams, useRouteMatch } from 'react-router-dom';
 
 import { useWorkflow } from '../../../hooks/api';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
@@ -24,6 +25,8 @@ import { ContentContainer } from '../../layout/ContentContainer';
 import { NavCrumbs } from '../../layout/NavCrumbs';
 import { WorkspaceHeader } from '../../layout/WorkspaceHeader';
 import { WorkspaceTitle } from '../../layout/WorkspaceTitle';
+import { Tab } from '../../tabs/Tab';
+import { TabContainer } from '../../tabs/TabContainer';
 import style from './Stream.module.scss';
 
 interface RouteParams {
@@ -37,6 +40,8 @@ interface RouteParams {
 
 export const Stream = () => {
     const params = useParams<RouteParams>();
+    const { path, url } = useRouteMatch();
+
     const { data: workflow } = useWorkflow(
         {
             clusterID: params.clusterID,
@@ -77,19 +82,34 @@ export const Stream = () => {
                     </span>
                 </div>
             </WorkspaceHeader>
+
             <ContentContainer>
-                {!!streamKey && (
-                    <div>
-                        <h3>Stream VReplication Lag</h3>
-                        <StreamLagChart
-                            clusterID={params.clusterID}
-                            keyspace={params.keyspace}
-                            streamKey={streamKey}
-                            workflowName={params.workflowName}
-                        />
-                    </div>
-                )}
-                <Code code={JSON.stringify(stream, null, 2)} />
+                <TabContainer>
+                    <Tab text="VReplication" to={`${url}/vreplication`} />
+                    <Tab text="JSON" to={`${url}/json`} />
+                </TabContainer>
+
+                <Switch>
+                    <Route path={`${path}/vreplication`}>
+                        {!!streamKey && (
+                            <div>
+                                <h3>Stream VReplication Lag</h3>
+                                <StreamLagChart
+                                    clusterID={params.clusterID}
+                                    keyspace={params.keyspace}
+                                    streamKey={streamKey}
+                                    workflowName={params.workflowName}
+                                />
+                            </div>
+                        )}
+                    </Route>
+
+                    <Route path={`${path}/json`}>
+                        <Code code={JSON.stringify(stream, null, 2)} />
+                    </Route>
+
+                    <Redirect exact from={path} to={`${path}/streams`} />
+                </Switch>
             </ContentContainer>
         </div>
     );

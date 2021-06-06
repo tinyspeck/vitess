@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import { take } from 'lodash';
-import { takeRight } from 'lodash-es';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWorkflow } from '../../hooks/api';
 import { getStream } from '../../util/workflows';
 import { Timeseries } from './Timeseries';
@@ -36,6 +34,8 @@ interface DataPoint {
 /**
  * StreamLagChart is a prototype that makes a best effort at visualizing
  * the VReplication lag for a stream.
+ *
+ *
  */
 export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
     const [lagData, setLagData] = useState<DataPoint[]>([]);
@@ -90,5 +90,5 @@ export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }:
         };
     }, [lagData]);
 
-    return <Timeseries options={options} />;
+    return <Timeseries isLoading={query.isLoading} options={options} />;
 };
