@@ -108,7 +108,7 @@ export const Stream = () => {
                         <Code code={JSON.stringify(stream, null, 2)} />
                     </Route>
 
-                    <Redirect exact from={path} to={`${path}/streams`} />
+                    <Redirect exact from={path} to={`${path}/vreplication`} />
                 </Switch>
             </ContentContainer>
         </div>

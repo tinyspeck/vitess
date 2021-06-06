@@ -23,7 +23,6 @@ import { Timeseries } from './Timeseries';
 interface Props {
     clusterID: string;
     keyspace: string;
-    sparkline?: boolean;
     streamKey: string;
     workflowName: string;
 }
@@ -36,7 +35,7 @@ interface DataPoint {
 /**
  * StreamLagChart makes a best effort at visualizing the VReplication lag for a stream.
  */
-export const StreamLagChart = ({ clusterID, keyspace, sparkline, streamKey, workflowName }: Props) => {
+export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
     const [lagData, setLagData] = useState<DataPoint[]>([]);
 
     const { data: workflow, ...query } = useWorkflow(
@@ -68,46 +67,26 @@ export const StreamLagChart = ({ clusterID, keyspace, sparkline, streamKey, work
         const firstTs = lastTs - 180 * 1000;
         const seriesData = lagData.filter((d) => d.x >= firstTs);
 
-        return mergeOptions(
-            {
-                legend: {
-                    enabled: false,
+        return mergeOptions({
+            legend: {
+                enabled: false,
+            },
+            series: [
+                {
+                    data: seriesData,
+                    type: 'line',
                 },
-                series: [
-                    {
-                        data: seriesData,
-                        type: 'line',
-                    },
-                ],
-                xAxis: {
-                    softMin: firstTs,
-                },
-                yAxis: {
-                    labels: {
-                        format: '{value} s',
-                    },
+            ],
+            xAxis: {
+                softMin: firstTs,
+            },
+            yAxis: {
+                labels: {
+                    format: '{value} s',
                 },
             },
-            sparkline
-                ? {
-                      chart: {
-                          height: 60,
-                          width: 200,
-                      },
-                      xAxis: {
-                          labels: {
-                              enabled: false,
-                          },
-                      },
-                      yAxis: {
-                          labels: {
-                              enabled: false,
-                          },
-                      },
-                  }
-                : {}
-        );
-    }, [lagData, sparkline]);
+        });
+    }, [lagData]);
 
     return <Timeseries isLoading={query.isLoading} options={options} />;
 };
