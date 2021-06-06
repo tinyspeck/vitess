@@ -51,6 +51,7 @@ const TIME_RANGE = 3 * 60 * 1000; // 3 minutes in milliseconds
  * stream.time_updated and stream.transaction_timestamp.
  *
  * Problem #1: Caching
+ * --
  * To go from "lag at a single point in time" to "lag over the last n seconds", we cache
  * these calculations on the client. This is undesirable not only because caching is hard,
  * but client-side caching is ephemeral. Namely: lag data does not persist between page refresh,
@@ -63,16 +64,19 @@ const TIME_RANGE = 3 * 60 * 1000; // 3 minutes in milliseconds
  * arguably better solution is noted below.
  *
  * Problem #2: Inconsistency
+ * --
  * This leads to a second, somewhat confusing complication: stream.time_updated and stream.transaction_timestamp
- * change very quickly. This means that different instances of the StreamLagChart (such as two browser tabs)
- * will use unsynchronized useWorkflow queries, each having different values and therefore
- * the timeseries will show different shapes.
+ * change very quickly. This means that different instances of the StreamVReplicationLagChart
+ * (such as two browser tabs) will use unsynchronized useWorkflow queries, each having different values
+ * and therefore the timeseries will show different shapes, even though the data is correct
+ * in both cases.
  *
  * A Solution...?
+ * --
  * A more desirable approach is for Vitess itself to track vreplication lag for each stream
  * with a rates gauge (as we do for tablet QPS, etc.). Then we wouldn't have to cache at all.
  */
-export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
+export const StreamVReplicationLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
     const [lagData, setLagData] = useState<DataPoint[]>([]);
 
     const { data: workflow, ...query } = useWorkflow(
