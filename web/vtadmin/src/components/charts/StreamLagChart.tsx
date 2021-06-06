@@ -84,8 +84,6 @@ export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }:
         { refetchInterval: 1000, refetchIntervalInBackground: true }
     );
 
-    console.log(workflow);
-
     const stream = getStream(workflow, streamKey);
 
     useEffect(() => {
