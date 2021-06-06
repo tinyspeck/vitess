@@ -17,11 +17,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useWorkflow } from '../../hooks/api';
 import { getStream } from '../../util/workflows';
+import { mergeOptions } from './chartOptions';
 import { Timeseries } from './Timeseries';
 
 interface Props {
     clusterID: string;
     keyspace: string;
+    sparkline?: boolean;
     streamKey: string;
     workflowName: string;
 }
@@ -32,12 +34,9 @@ interface DataPoint {
 }
 
 /**
- * StreamLagChart is a prototype that makes a best effort at visualizing
- * the VReplication lag for a stream.
- *
- *
+ * StreamLagChart makes a best effort at visualizing the VReplication lag for a stream.
  */
-export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
+export const StreamLagChart = ({ clusterID, keyspace, sparkline, streamKey, workflowName }: Props) => {
     const [lagData, setLagData] = useState<DataPoint[]>([]);
 
     const { data: workflow, ...query } = useWorkflow(
@@ -69,26 +68,46 @@ export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }:
         const firstTs = lastTs - 180 * 1000;
         const seriesData = lagData.filter((d) => d.x >= firstTs);
 
-        return {
-            legend: {
-                enabled: false,
-            },
-            series: [
-                {
-                    data: seriesData,
-                    type: 'line',
+        return mergeOptions(
+            {
+                legend: {
+                    enabled: false,
                 },
-            ],
-            xAxis: {
-                softMin: firstTs,
-            },
-            yAxis: {
-                labels: {
-                    format: '{value} s',
+                series: [
+                    {
+                        data: seriesData,
+                        type: 'line',
+                    },
+                ],
+                xAxis: {
+                    softMin: firstTs,
+                },
+                yAxis: {
+                    labels: {
+                        format: '{value} s',
+                    },
                 },
             },
-        };
-    }, [lagData]);
+            sparkline
+                ? {
+                      chart: {
+                          height: 60,
+                          width: 200,
+                      },
+                      xAxis: {
+                          labels: {
+                              enabled: false,
+                          },
+                      },
+                      yAxis: {
+                          labels: {
+                              enabled: false,
+                          },
+                      },
+                  }
+                : {}
+        );
+    }, [lagData, sparkline]);
 
     return <Timeseries isLoading={query.isLoading} options={options} />;
 };
