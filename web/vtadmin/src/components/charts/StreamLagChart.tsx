@@ -33,7 +33,10 @@ interface DataPoint {
     y: number;
 }
 
+const TIME_RANGE = 3 * 60 * 1000; // 3 minutes in milliseconds
+
 /*
+ * StreamLagChart makes a best effort at visualizing the VReplication lag for a stream.
  * The way we do this is... not perfectly desirable... and bears some explanation around trade-offs. :)
  * Vitess doesn't (currently) return timeseries data for stream VReplication lag. What we do have,
  * though, are two timestamps:
@@ -44,21 +47,22 @@ interface DataPoint {
  *  - stream.transaction_timestamp: the timestamp of the last transaction replicated
  *    the stream to the target, from the source primary.
  *
- * The VReplication lag of a stream *at a single point in time* is the difference between
+ * The VReplication lag of a stream *at a single point in time* is thus difference between
  * stream.time_updated and stream.transaction_timestamp.
  *
- * Problem #1: Client-side caching is necessary
+ * Problem #1: Caching
  * To go from "lag at a single point in time" to "lag over the last n seconds", we cache
  * these calculations on the client. This is undesirable not only because caching is hard,
  * but client-side caching is ephemeral. Namely: lag data does not persist between page refresh,
- * nor across browser tabs, nor (when using only component state) across component
+ * nor across browser tabs, nor (since we "cache" in component state) across component re-mounts,
+ * even for the same stream.
  *
- * Problem #2: Caching is hard
- * TODO: Explain file-level cache
- * TODO: potential weirdness with cache being updated by multiple sparklines on
- * the same page.
+ * One potential way to mitigate this is to maintain a cache by streamKey at the file-level,
+ * outside of component state. Because caching is hard, we want to minimize the amount of
+ * weird tricks we deploy, and so this is saved as a future "enhancement", since an
+ * arguably better solution is noted below.
  *
- * Problem #3: Inconsistency is unavoidable
+ * Problem #2: Inconsistency
  * This leads to a second, somewhat confusing complication: stream.time_updated and stream.transaction_timestamp
  * change very quickly. This means that different instances of the StreamLagChart (such as two browser tabs)
  * will use unsynchronized useWorkflow queries, each having different values and therefore
@@ -68,20 +72,8 @@ interface DataPoint {
  * A more desirable approach is for Vitess itself to track vreplication lag for each stream
  * with a rates gauge (as we do for tablet QPS, etc.). Then we wouldn't have to cache at all.
  */
-const CACHE: { [streamKey: string]: DataPoint[] } = {};
-const CACHE_SIZE = 200;
-
-const TIME_RANGE = 3 * 60 * 1000; // 3 minutes in milliseconds
-
-/**
- * StreamLagChart makes a best effort at visualizing the VReplication lag for a stream.
- */
 export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
-    const [lagData, setLagData] = useState<DataPoint[]>(() => {
-        // Hydrate lag data from the cache, if possible. If the cache data is stale,
-        // this will render as
-        return CACHE[streamKey] || [];
-    });
+    const [lagData, setLagData] = useState<DataPoint[]>([]);
 
     const { data: workflow, ...query } = useWorkflow(
         {
@@ -113,9 +105,7 @@ export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }:
         const lag = timeUpdated - txnTimestamp;
 
         setLagData((prevLagData) => {
-            const nextData = takeRight([...prevLagData, { x: timestamp, y: lag }], CACHE_SIZE);
-            CACHE[streamKey] = nextData;
-            return nextData;
+            return [...prevLagData, { x: timestamp, y: lag }];
         });
     }, [query.dataUpdatedAt, setLagData, stream, streamKey]);
 
