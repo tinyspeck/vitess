@@ -32,8 +32,36 @@ interface DataPoint {
     y: number;
 }
 
+const TIME_RANGE = 3 * 60 * 1000; // 3 minutes in milliseconds
+
 /**
  * StreamLagChart makes a best effort at visualizing the VReplication lag for a stream.
+ *
+ * The way we do this is... not perfectly desirable... and bears some explanation around trade-offs. :)
+ * Vitess doesn't (currently) return timeseries data for stream VReplication lag. What we do have,
+ * though, are two timestamps:
+ *
+ *  - stream.time_updated: the timestamp of the last updated applied by the stream
+ *    to the target, from the source primary.
+ *
+ *  - stream.transaction_timestamp: the timestamp of the last transaction replicated
+ *    the stream to the target, from the source primary.
+ *
+ * The VReplication lag of a stream *at a single point in time* is the difference between
+ * stream.time_updated and stream.transaction_timestamp.
+ *
+ * To go from "lag at a single point in time" to "lag over the last n seconds", we cache
+ * these calculations on the client. This is undesirable not only because caching is hard,
+ * but client-side caching is ephemeral. Namely: lag data does not persist between page refresh
+ * or across browser tabs.
+ *
+ * This leads to a second, somewhat confusing complication: stream.time_updated and stream.transaction_timestamp
+ * change very quickly. This means that different instances of the StreamLagChart (such as two browser tabs)
+ * will use unsynchronized useWorkflow queries, each having different values and therefore
+ * the timeseries will show different shapes.
+ *
+ * A more desirable approach is for Vitess itself to track vreplication lag for each stream
+ * with a rates gauge (as we do for tablet QPS, etc.). Then we wouldn't have to cache at all.
  */
 export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }: Props) => {
     const [lagData, setLagData] = useState<DataPoint[]>([]);
@@ -57,14 +85,24 @@ export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }:
             return;
         }
 
+        // For the x-axis, use the timestamp of the query rather than stream.time_updated.
+        // This results in regularly spaced data points that are synchronized
+        // with other timeseries derived from the /api/workflows response.
+        const timestamp = query.dataUpdatedAt;
+
+        // Stream replication lag is calculated as the difference between
+        // when the stream was updated and the timestamp of the corresponding
+        // transaction replicated from the primary.
         const lag = timeUpdated - txnTimestamp;
-        setLagData((prevLagData) => [...prevLagData, { x: query.dataUpdatedAt, y: lag }]);
+
+        setLagData((prevLagData) => [...prevLagData, { x: timestamp, y: lag }]);
     }, [query.dataUpdatedAt, setLagData, stream]);
 
     const options: Highcharts.Options = useMemo(() => {
         const lastPoint = lagData[lagData.length - 1];
         const lastTs = lastPoint ? lastPoint.x : Date.now();
-        const firstTs = lastTs - 180 * 1000;
+        const firstTs = lastTs - TIME_RANGE;
+
         const seriesData = lagData.filter((d) => d.x >= firstTs);
 
         return mergeOptions({
@@ -74,10 +112,17 @@ export const StreamLagChart = ({ clusterID, keyspace, streamKey, workflowName }:
             series: [
                 {
                     data: seriesData,
+                    name: 'Lag',
                     type: 'line',
                 },
             ],
+            tooltip: {
+                valueSuffix: ' seconds',
+            },
             xAxis: {
+                // Set `softMin` to ensure the chart consistently spans the full TIME_RANGE
+                // even when the data does not, such as when the view is first loaded and
+                // the cache is empty.
                 softMin: firstTs,
             },
             yAxis: {
