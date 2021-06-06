@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { takeRight } from 'lodash-es';
 import { useEffect, useMemo, useState } from 'react';
+
 import { useWorkflow } from '../../hooks/api';
 import { getStream } from '../../util/workflows';
 import { mergeOptions } from './chartOptions';
