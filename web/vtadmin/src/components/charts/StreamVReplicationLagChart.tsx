@@ -36,7 +36,7 @@ interface DataPoint {
 const TIME_RANGE = 3 * 60 * 1000; // 3 minutes in milliseconds
 
 /*
- * StreamLagChart makes a best effort at visualizing the VReplication lag for a stream.
+ * StreamVReplicationLagChart makes a best effort at visualizing the VReplication lag for a stream.
  * The way we do this is... not perfectly desirable... and bears some explanation around trade-offs. :)
  * Vitess doesn't (currently) return timeseries data for stream VReplication lag. What we do have,
  * though, are two timestamps:
