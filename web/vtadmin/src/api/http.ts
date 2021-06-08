@@ -15,68 +15,65 @@
  */
 
 import { vtadmin as pb } from '../proto/vtadmin';
+import * as errorHandler from '../errors/errorHandler';
+import {
+    HttpFetchError,
+    HttpOkResponse,
+    HttpResponseNotOkError,
+    MalformedHttpResponseError,
+ } from '../errors/errorTypes'
 
-interface HttpOkResponse {
-    ok: true;
-    result: any;
-}
-
-interface HttpErrorResponse {
-    ok: false;
-}
-
-export const MALFORMED_HTTP_RESPONSE_ERROR = 'MalformedHttpResponseError';
-
-// MalformedHttpResponseError is thrown when the JSON response envelope
-// is an unexpected shape.
-class MalformedHttpResponseError extends Error {
-    responseJson: object;
-
-    constructor(message: string, responseJson: object) {
-        super(message);
-        this.name = MALFORMED_HTTP_RESPONSE_ERROR;
-        this.responseJson = responseJson;
-    }
-}
-
-export const HTTP_RESPONSE_NOT_OK_ERROR = 'HttpResponseNotOkError';
-
-// HttpResponseNotOkError is throw when the `ok` is false in
-// the JSON response envelope.
-class HttpResponseNotOkError extends Error {
-    response: HttpErrorResponse | null;
-
-    constructor(endpoint: string, response: HttpErrorResponse) {
-        super(endpoint);
-        this.name = HTTP_RESPONSE_NOT_OK_ERROR;
-        this.response = response;
-    }
-}
-
-// vtfetch makes HTTP requests against the given vtadmin-api endpoint
-// and returns the parsed response.
-//
-// HttpResponse envelope types are not defined in vtadmin.proto (nor should they be)
-// thus we have to validate the shape of the API response with more care.
-//
-// Note that this only validates the HttpResponse envelope; it does not
-// do any type checking or validation on the result.
+/**
+ * vtfetch makes HTTP requests against the given vtadmin-api endpoint
+ * and returns the parsed response.
+ *
+ * HttpResponse envelope types are not defined in vtadmin.proto (nor should they be)
+ * thus we have to validate the shape of the API response with more care.
+ *
+ * Note that this only validates the HttpResponse envelope; it does not
+ * do any type checking or validation on the result. 
+ */
 export const vtfetch = async (endpoint: string): Promise<HttpOkResponse> => {
-    const { REACT_APP_VTADMIN_API_ADDRESS } = process.env;
+    try {
+        const { REACT_APP_VTADMIN_API_ADDRESS } = process.env;
 
-    const url = `${REACT_APP_VTADMIN_API_ADDRESS}${endpoint}`;
-    const opts = vtfetchOpts();
+        const url = `${REACT_APP_VTADMIN_API_ADDRESS}${endpoint}`;
+        const opts = vtfetchOpts();
 
-    const response = await global.fetch(url, opts);
+        let response = null;
+        try {
+            response = await global.fetch(url, opts);
+        } catch (error) {
+            // Capture fetch() promise rejections and rethrow as HttpFetchError.
+            // fetch() promises will reject with a TypeError when a network error is
+            // encountered or CORS is misconfigured, in which case the request never
+            // makes it to the server. 
+            // See https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#checking_that_the_fetch_was_successful
+            throw new HttpFetchError(url);
+        }
 
-    const json = await response.json();
-    if (!('ok' in json)) throw new MalformedHttpResponseError('invalid http envelope', json);
+        const json = await response.json();
+        if (!('ok' in json)) {
+            throw new MalformedHttpResponseError('invalid http envelope', json);
+        }
 
-    // Throw "not ok" responses so that react-query correctly interprets them as errors.
-    // See https://react-query.tanstack.com/guides/query-functions#handling-and-throwing-errors
-    if (!json.ok) throw new HttpResponseNotOkError(endpoint, json);
+        // Throw "not ok" responses so that react-query correctly interprets them as errors.
+        // See https://react-query.tanstack.com/guides/query-functions#handling-and-throwing-errors
+        if (!json.ok) {
+            throw new HttpResponseNotOkError(endpoint, json);
+        }
 
-    return json as HttpOkResponse;
+        return json as HttpOkResponse;
+    } catch (error) {
+        // Most commonly, react-query is the downstream consumer of
+        // errors thrown in vtfetch. Because react-query "handles" errors
+        // by propagating them to components (as it should!), any errors thrown
+        // from vtfetch are _not_ automatically logged as "unhandled errors".
+        // So, insteead we catch errors and manually notify our error handling serivce(s),
+        // and then rethrow the error for react-query to propagate.
+        errorHandler.notify(error);
+        throw error;
+    }
 };
 
 export const vtfetchOpts = (): RequestInit => {
