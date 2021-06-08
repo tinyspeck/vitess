@@ -18,10 +18,10 @@ import { vtadmin as pb } from '../proto/vtadmin';
 import * as errorHandler from '../errors/errorHandler';
 import {
     HttpFetchError,
-    HttpOkResponse,
     HttpResponseNotOkError,
     MalformedHttpResponseError,
  } from '../errors/errorTypes'
+import { HttpOkResponse } from './responseTypes';
 
 /**
  * vtfetch makes HTTP requests against the given vtadmin-api endpoint

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { HttpErrorResponse } from "../api/responseTypes";
+
 /**
  * ErrorHandler defines a common interface for bindings to
  * client-side monitoring services.
@@ -49,15 +51,6 @@ export interface ErrorHandler {
     notify: (error: Error, env: object, metadata?: object) => void;
 }
 
-
-export interface HttpOkResponse {
-    ok: true;
-    result: any;
-}
-
-export interface HttpErrorResponse {
-    ok: false;
-}
 
 export const MALFORMED_HTTP_RESPONSE_ERROR = 'MalformedHttpResponseError';
 
