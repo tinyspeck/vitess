@@ -65,6 +65,7 @@ type DiffReport struct {
 	MismatchedRowsSample  []*DiffMismatch
 }
 
+// DiffMismatch represent a rows mismatch
 type DiffMismatch struct {
 	Source *RowDiff
 	Target *RowDiff
@@ -238,18 +239,6 @@ func (wr *Wrangler) VDiff(ctx context.Context, targetKeyspace, workflow, sourceC
 		dr, err := td.diff(ctx, df.ts.wr, &rowsToCompare, debug, onlyPks)
 		if err != nil {
 			return nil, vterrors.Wrap(err, "diff")
-		}
-		if format == "json" {
-			json, err := json.MarshalIndent(*dr, "", "")
-			if err != nil {
-				wr.Logger().Printf("Error converting report to json: %v", err.Error())
-			}
-			if jsonOutput != "" {
-				jsonOutput += ","
-			}
-			jsonOutput += fmt.Sprintf("%s", json)
-		} else {
-			wr.Logger().Printf("Summary for %v: %+v\n", td.targetTable, *dr)
 		}
 		diffReports[table] = dr
 	}
