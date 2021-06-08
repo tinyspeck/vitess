@@ -103,7 +103,12 @@ export const vtfetchEntities = async <T>(opts: {
 
     const entities = opts.extract(res);
     if (!Array.isArray(entities)) {
-        throw Error(`expected entities to be an array, got ${entities}`);
+        // Since react-query is the downstream consumer of vtfetch + vtfetchEntities,
+        // errors thrown in either function will be "handled" and will not automatically
+        // propagate as "unhandled" errors, meaning we have to log them manually.
+        const error = Error(`expected entities to be an array, got ${entities}`);
+        errorHandler.notify(error);
+        throw error;
     }
 
     return entities.map(opts.transform);

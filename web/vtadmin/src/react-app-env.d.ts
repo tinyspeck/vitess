@@ -19,7 +19,7 @@ declare namespace NodeJS {
 
         // Optional, but recommended. When true, enables front-end components that query
         // vtadmin-api's /api/experimental/tablet/{tablet}/debug/vars endpoint.
-        REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS?: boolean;
+        REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS?: boolean | string;
 
         // Optional. Configures the `credentials` property for fetch requests.
         // made against vtadmin-api. If unspecified, uses fetch defaults.
