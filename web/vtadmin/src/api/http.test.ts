@@ -18,7 +18,8 @@ import { setupServer } from 'msw/node';
 
 import * as api from './http';
 import { vtadmin as pb } from '../proto/vtadmin';
-import { HTTP_RESPONSE_NOT_OK_ERROR, MALFORMED_HTTP_RESPONSE_ERROR } from './http';
+import { HTTP_RESPONSE_NOT_OK_ERROR, MALFORMED_HTTP_RESPONSE_ERROR } from '../errors/errorTypes';
+
 
 // This test suite uses Mock Service Workers (https://github.com/mswjs/msw)
 // to mock HTTP responses from vtadmin-api.
