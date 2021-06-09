@@ -30,11 +30,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"vitess.io/vitess/go/protoutil"
 	"vitess.io/vitess/go/textutil"
 	"vitess.io/vitess/go/trace"
 	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
+	"vitess.io/vitess/go/vt/mysqlctl"
 	"vitess.io/vitess/go/vt/topo/topoproto"
 	"vitess.io/vitess/go/vt/vtadmin/cluster/discovery"
 	"vitess.io/vitess/go/vt/vtadmin/errors"
@@ -405,6 +407,102 @@ func (c *Cluster) findWorkflows(ctx context.Context, keyspaces []string, opts Fi
 	return &vtadminpb.ClusterWorkflows{
 		Workflows: results,
 		Warnings:  rec.ErrorStrings(),
+	}, nil
+}
+
+// GetBackups returns a ClusterBackups object for all backups in the cluster.
+func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, error) {
+	span, ctx := trace.NewSpan(ctx, "Cluster.GetBackups")
+	defer span.Finish()
+
+	AnnotateSpan(c, span)
+
+	keyspaces, err := c.GetKeyspaces(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		m       sync.Mutex
+		wg      sync.WaitGroup
+		rec     concurrency.AllErrorRecorder
+		backups []*vtadminpb.Backup
+	)
+
+	for _, ks := range keyspaces {
+		for _, shard := range ks.Shards {
+			wg.Add(1)
+
+			go func(shard *vtctldatapb.Shard) {
+				defer wg.Done()
+
+				span, ctx := trace.NewSpan(ctx, "Cluster.getBackupsForShard")
+				defer span.Finish()
+
+				AnnotateSpan(c, span)
+				span.Annotate("keyspace", shard.Keyspace)
+				span.Annotate("shard", shard.Name)
+
+				resp, err := c.Vtctld.GetBackups(ctx, &vtctldatapb.GetBackupsRequest{
+					Keyspace: shard.Keyspace,
+					Shard:    shard.Name,
+				})
+				if err != nil {
+					rec.RecordError(fmt.Errorf("GetBackups(%s/%s): %w", shard.Keyspace, shard.Name, err))
+					return
+				}
+
+				shardBackups := make([]*vtadminpb.Backup, len(resp.Backups))
+
+				for i, bh := range resp.Backups {
+					backup := &vtadminpb.Backup{
+						Keyspace:  shard.Keyspace,
+						Shard:     shard.Name,
+						Name:      bh.Name,
+						Directory: bh.Directory,
+					}
+
+					if parts := strings.Split(backup.Name, "."); len(parts) == 3 {
+						// parts[0]: date part of mysqlctl.BackupTimestampFormat
+						// parts[1]: time part of mysqlctl.BackupTimestampFormat
+						// parts[2]: tablet alias
+						timestamp := strings.Join(parts[:2], ".")
+						aliasStr := parts[2]
+
+						backupTime, err := time.Parse(mysqlctl.BackupTimestampFormat, timestamp)
+						if err != nil {
+							log.Errorf("error parsing backup time for %s/%s (%s): %s", shard.Keyspace, shard.Name, backup.Name, err)
+						} else {
+							backup.Time = protoutil.TimeToProto(backupTime)
+						}
+
+						alias, err := topoproto.ParseTabletAlias(aliasStr)
+						if err != nil {
+							log.Errorf("error parsing tablet alias for %s/% (%s): %s", shard.Keyspace, shard.Name, backup.Name, err)
+						} else {
+							backup.TabletAlias = alias
+						}
+					}
+
+					shardBackups[i] = backup
+				}
+
+				m.Lock()
+				defer m.Unlock()
+
+				backups = append(backups, shardBackups...)
+			}(shard)
+		}
+	}
+
+	wg.Wait()
+
+	if rec.HasErrors() {
+		return nil, rec.Error()
+	}
+
+	return &vtadminpb.ClusterBackups{
+		Backups: backups,
 	}, nil
 }
 

@@ -253,6 +253,48 @@ func (api *API) FindSchema(ctx context.Context, req *vtadminpb.FindSchemaRequest
 	}
 }
 
+// GetBackups is part of the vtadminpb.VTAdminServer interface.
+func (api *API) GetBackups(ctx context.Context, req *vtadminpb.GetBackupsRequest) (*vtadminpb.GetBackupsResponse, error) {
+	span, ctx := trace.NewSpan(ctx, "API.GetBackups")
+	defer span.Finish()
+
+	clusters, _ := api.getClustersForRequest(req.ClusterIds)
+
+	var (
+		m       sync.Mutex
+		wg      sync.WaitGroup
+		rec     concurrency.AllErrorRecorder
+		backups = make(map[string]*vtadminpb.ClusterBackups, len(clusters))
+	)
+
+	for _, c := range clusters {
+		wg.Add(1)
+
+		go func(c *cluster.Cluster) {
+			bs, err := c.GetBackups(ctx)
+			if err != nil {
+				rec.RecordError(err)
+				return
+			}
+
+			m.Lock()
+			defer m.Unlock()
+
+			backups[c.ID] = bs
+		}(c)
+	}
+
+	wg.Wait()
+
+	if rec.HasErrors() {
+		return nil, rec.Error()
+	}
+
+	return &vtadminpb.GetBackupsResponse{
+		Backups: backups,
+	}, nil
+}
+
 // GetClusters is part of the vtadminpb.VTAdminServer interface.
 func (api *API) GetClusters(ctx context.Context, req *vtadminpb.GetClustersRequest) (*vtadminpb.GetClustersResponse, error) {
 	span, _ := trace.NewSpan(ctx, "API.GetClusters")
