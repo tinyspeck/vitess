@@ -84,6 +84,39 @@ $root.vtadmin = (function() {
          */
 
         /**
+         * Callback as used by {@link vtadmin.VTAdmin#getBackups}.
+         * @memberof vtadmin.VTAdmin
+         * @typedef GetBackupsCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {vtadmin.GetBackupsResponse} [response] GetBackupsResponse
+         */
+
+        /**
+         * Calls GetBackups.
+         * @function getBackups
+         * @memberof vtadmin.VTAdmin
+         * @instance
+         * @param {vtadmin.IGetBackupsRequest} request GetBackupsRequest message or plain object
+         * @param {vtadmin.VTAdmin.GetBackupsCallback} callback Node-style callback called with the error, if any, and GetBackupsResponse
+         * @returns {undefined}
+         * @variation 1
+         */
+        Object.defineProperty(VTAdmin.prototype.getBackups = function getBackups(request, callback) {
+            return this.rpcCall(getBackups, $root.vtadmin.GetBackupsRequest, $root.vtadmin.GetBackupsResponse, request, callback);
+        }, "name", { value: "GetBackups" });
+
+        /**
+         * Calls GetBackups.
+         * @function getBackups
+         * @memberof vtadmin.VTAdmin
+         * @instance
+         * @param {vtadmin.IGetBackupsRequest} request GetBackupsRequest message or plain object
+         * @returns {Promise<vtadmin.GetBackupsResponse>} Promise
+         * @variation 2
+         */
+
+        /**
          * Callback as used by {@link vtadmin.VTAdmin#getClusters}.
          * @memberof vtadmin.VTAdmin
          * @typedef GetClustersCallback
@@ -581,6 +614,406 @@ $root.vtadmin = (function() {
         return VTAdmin;
     })();
 
+    vtadmin.Backup = (function() {
+
+        /**
+         * Properties of a Backup.
+         * @memberof vtadmin
+         * @interface IBackup
+         * @property {string|null} [keyspace] Backup keyspace
+         * @property {string|null} [shard] Backup shard
+         * @property {string|null} [name] Backup name
+         * @property {string|null} [directory] Backup directory
+         * @property {topodata.ITabletAlias|null} [tablet_alias] Backup tablet_alias
+         * @property {vttime.ITime|null} [time] Backup time
+         * @property {string|null} [engine] Backup engine
+         * @property {vtadmin.Backup.Status|null} [status] Backup status
+         */
+
+        /**
+         * Constructs a new Backup.
+         * @memberof vtadmin
+         * @classdesc Represents a Backup.
+         * @implements IBackup
+         * @constructor
+         * @param {vtadmin.IBackup=} [properties] Properties to set
+         */
+        function Backup(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * Backup keyspace.
+         * @member {string} keyspace
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.keyspace = "";
+
+        /**
+         * Backup shard.
+         * @member {string} shard
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.shard = "";
+
+        /**
+         * Backup name.
+         * @member {string} name
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.name = "";
+
+        /**
+         * Backup directory.
+         * @member {string} directory
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.directory = "";
+
+        /**
+         * Backup tablet_alias.
+         * @member {topodata.ITabletAlias|null|undefined} tablet_alias
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.tablet_alias = null;
+
+        /**
+         * Backup time.
+         * @member {vttime.ITime|null|undefined} time
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.time = null;
+
+        /**
+         * Backup engine.
+         * @member {string} engine
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.engine = "";
+
+        /**
+         * Backup status.
+         * @member {vtadmin.Backup.Status} status
+         * @memberof vtadmin.Backup
+         * @instance
+         */
+        Backup.prototype.status = 0;
+
+        /**
+         * Creates a new Backup instance using the specified properties.
+         * @function create
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {vtadmin.IBackup=} [properties] Properties to set
+         * @returns {vtadmin.Backup} Backup instance
+         */
+        Backup.create = function create(properties) {
+            return new Backup(properties);
+        };
+
+        /**
+         * Encodes the specified Backup message. Does not implicitly {@link vtadmin.Backup.verify|verify} messages.
+         * @function encode
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {vtadmin.IBackup} message Backup message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        Backup.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.keyspace != null && Object.hasOwnProperty.call(message, "keyspace"))
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.keyspace);
+            if (message.shard != null && Object.hasOwnProperty.call(message, "shard"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.shard);
+            if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.name);
+            if (message.directory != null && Object.hasOwnProperty.call(message, "directory"))
+                writer.uint32(/* id 4, wireType 2 =*/34).string(message.directory);
+            if (message.tablet_alias != null && Object.hasOwnProperty.call(message, "tablet_alias"))
+                $root.topodata.TabletAlias.encode(message.tablet_alias, writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
+            if (message.time != null && Object.hasOwnProperty.call(message, "time"))
+                $root.vttime.Time.encode(message.time, writer.uint32(/* id 6, wireType 2 =*/50).fork()).ldelim();
+            if (message.engine != null && Object.hasOwnProperty.call(message, "engine"))
+                writer.uint32(/* id 7, wireType 2 =*/58).string(message.engine);
+            if (message.status != null && Object.hasOwnProperty.call(message, "status"))
+                writer.uint32(/* id 8, wireType 0 =*/64).int32(message.status);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified Backup message, length delimited. Does not implicitly {@link vtadmin.Backup.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {vtadmin.IBackup} message Backup message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        Backup.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a Backup message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtadmin.Backup} Backup
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        Backup.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.Backup();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.keyspace = reader.string();
+                    break;
+                case 2:
+                    message.shard = reader.string();
+                    break;
+                case 3:
+                    message.name = reader.string();
+                    break;
+                case 4:
+                    message.directory = reader.string();
+                    break;
+                case 5:
+                    message.tablet_alias = $root.topodata.TabletAlias.decode(reader, reader.uint32());
+                    break;
+                case 6:
+                    message.time = $root.vttime.Time.decode(reader, reader.uint32());
+                    break;
+                case 7:
+                    message.engine = reader.string();
+                    break;
+                case 8:
+                    message.status = reader.int32();
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a Backup message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtadmin.Backup} Backup
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        Backup.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a Backup message.
+         * @function verify
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        Backup.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                if (!$util.isString(message.keyspace))
+                    return "keyspace: string expected";
+            if (message.shard != null && message.hasOwnProperty("shard"))
+                if (!$util.isString(message.shard))
+                    return "shard: string expected";
+            if (message.name != null && message.hasOwnProperty("name"))
+                if (!$util.isString(message.name))
+                    return "name: string expected";
+            if (message.directory != null && message.hasOwnProperty("directory"))
+                if (!$util.isString(message.directory))
+                    return "directory: string expected";
+            if (message.tablet_alias != null && message.hasOwnProperty("tablet_alias")) {
+                var error = $root.topodata.TabletAlias.verify(message.tablet_alias);
+                if (error)
+                    return "tablet_alias." + error;
+            }
+            if (message.time != null && message.hasOwnProperty("time")) {
+                var error = $root.vttime.Time.verify(message.time);
+                if (error)
+                    return "time." + error;
+            }
+            if (message.engine != null && message.hasOwnProperty("engine"))
+                if (!$util.isString(message.engine))
+                    return "engine: string expected";
+            if (message.status != null && message.hasOwnProperty("status"))
+                switch (message.status) {
+                default:
+                    return "status: enum value expected";
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 5:
+                    break;
+                }
+            return null;
+        };
+
+        /**
+         * Creates a Backup message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtadmin.Backup} Backup
+         */
+        Backup.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtadmin.Backup)
+                return object;
+            var message = new $root.vtadmin.Backup();
+            if (object.keyspace != null)
+                message.keyspace = String(object.keyspace);
+            if (object.shard != null)
+                message.shard = String(object.shard);
+            if (object.name != null)
+                message.name = String(object.name);
+            if (object.directory != null)
+                message.directory = String(object.directory);
+            if (object.tablet_alias != null) {
+                if (typeof object.tablet_alias !== "object")
+                    throw TypeError(".vtadmin.Backup.tablet_alias: object expected");
+                message.tablet_alias = $root.topodata.TabletAlias.fromObject(object.tablet_alias);
+            }
+            if (object.time != null) {
+                if (typeof object.time !== "object")
+                    throw TypeError(".vtadmin.Backup.time: object expected");
+                message.time = $root.vttime.Time.fromObject(object.time);
+            }
+            if (object.engine != null)
+                message.engine = String(object.engine);
+            switch (object.status) {
+            case "UNKNOWN":
+            case 0:
+                message.status = 0;
+                break;
+            case "INCOMPLETE":
+            case 1:
+                message.status = 1;
+                break;
+            case "COMPLETE":
+            case 2:
+                message.status = 2;
+                break;
+            case "INVALID":
+            case 3:
+                message.status = 3;
+                break;
+            case "VALID":
+            case 5:
+                message.status = 5;
+                break;
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a Backup message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtadmin.Backup
+         * @static
+         * @param {vtadmin.Backup} message Backup
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        Backup.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults) {
+                object.keyspace = "";
+                object.shard = "";
+                object.name = "";
+                object.directory = "";
+                object.tablet_alias = null;
+                object.time = null;
+                object.engine = "";
+                object.status = options.enums === String ? "UNKNOWN" : 0;
+            }
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                object.keyspace = message.keyspace;
+            if (message.shard != null && message.hasOwnProperty("shard"))
+                object.shard = message.shard;
+            if (message.name != null && message.hasOwnProperty("name"))
+                object.name = message.name;
+            if (message.directory != null && message.hasOwnProperty("directory"))
+                object.directory = message.directory;
+            if (message.tablet_alias != null && message.hasOwnProperty("tablet_alias"))
+                object.tablet_alias = $root.topodata.TabletAlias.toObject(message.tablet_alias, options);
+            if (message.time != null && message.hasOwnProperty("time"))
+                object.time = $root.vttime.Time.toObject(message.time, options);
+            if (message.engine != null && message.hasOwnProperty("engine"))
+                object.engine = message.engine;
+            if (message.status != null && message.hasOwnProperty("status"))
+                object.status = options.enums === String ? $root.vtadmin.Backup.Status[message.status] : message.status;
+            return object;
+        };
+
+        /**
+         * Converts this Backup to JSON.
+         * @function toJSON
+         * @memberof vtadmin.Backup
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        Backup.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Status enum.
+         * @name vtadmin.Backup.Status
+         * @enum {number}
+         * @property {number} UNKNOWN=0 UNKNOWN value
+         * @property {number} INCOMPLETE=1 INCOMPLETE value
+         * @property {number} COMPLETE=2 COMPLETE value
+         * @property {number} INVALID=3 INVALID value
+         * @property {number} VALID=5 VALID value
+         */
+        Backup.Status = (function() {
+            var valuesById = {}, values = Object.create(valuesById);
+            values[valuesById[0] = "UNKNOWN"] = 0;
+            values[valuesById[1] = "INCOMPLETE"] = 1;
+            values[valuesById[2] = "COMPLETE"] = 2;
+            values[valuesById[3] = "INVALID"] = 3;
+            values[valuesById[5] = "VALID"] = 5;
+            return values;
+        })();
+
+        return Backup;
+    })();
+
     vtadmin.Cluster = (function() {
 
         /**
@@ -789,6 +1222,214 @@ $root.vtadmin = (function() {
         };
 
         return Cluster;
+    })();
+
+    vtadmin.ClusterBackups = (function() {
+
+        /**
+         * Properties of a ClusterBackups.
+         * @memberof vtadmin
+         * @interface IClusterBackups
+         * @property {Array.<vtadmin.IBackup>|null} [backups] ClusterBackups backups
+         */
+
+        /**
+         * Constructs a new ClusterBackups.
+         * @memberof vtadmin
+         * @classdesc Represents a ClusterBackups.
+         * @implements IClusterBackups
+         * @constructor
+         * @param {vtadmin.IClusterBackups=} [properties] Properties to set
+         */
+        function ClusterBackups(properties) {
+            this.backups = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * ClusterBackups backups.
+         * @member {Array.<vtadmin.IBackup>} backups
+         * @memberof vtadmin.ClusterBackups
+         * @instance
+         */
+        ClusterBackups.prototype.backups = $util.emptyArray;
+
+        /**
+         * Creates a new ClusterBackups instance using the specified properties.
+         * @function create
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {vtadmin.IClusterBackups=} [properties] Properties to set
+         * @returns {vtadmin.ClusterBackups} ClusterBackups instance
+         */
+        ClusterBackups.create = function create(properties) {
+            return new ClusterBackups(properties);
+        };
+
+        /**
+         * Encodes the specified ClusterBackups message. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
+         * @function encode
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {vtadmin.IClusterBackups} message ClusterBackups message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ClusterBackups.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.backups != null && message.backups.length)
+                for (var i = 0; i < message.backups.length; ++i)
+                    $root.vtadmin.Backup.encode(message.backups[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ClusterBackups message, length delimited. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {vtadmin.IClusterBackups} message ClusterBackups message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ClusterBackups.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a ClusterBackups message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtadmin.ClusterBackups} ClusterBackups
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ClusterBackups.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.ClusterBackups();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    if (!(message.backups && message.backups.length))
+                        message.backups = [];
+                    message.backups.push($root.vtadmin.Backup.decode(reader, reader.uint32()));
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a ClusterBackups message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtadmin.ClusterBackups} ClusterBackups
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ClusterBackups.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a ClusterBackups message.
+         * @function verify
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ClusterBackups.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.backups != null && message.hasOwnProperty("backups")) {
+                if (!Array.isArray(message.backups))
+                    return "backups: array expected";
+                for (var i = 0; i < message.backups.length; ++i) {
+                    var error = $root.vtadmin.Backup.verify(message.backups[i]);
+                    if (error)
+                        return "backups." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a ClusterBackups message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtadmin.ClusterBackups} ClusterBackups
+         */
+        ClusterBackups.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtadmin.ClusterBackups)
+                return object;
+            var message = new $root.vtadmin.ClusterBackups();
+            if (object.backups) {
+                if (!Array.isArray(object.backups))
+                    throw TypeError(".vtadmin.ClusterBackups.backups: array expected");
+                message.backups = [];
+                for (var i = 0; i < object.backups.length; ++i) {
+                    if (typeof object.backups[i] !== "object")
+                        throw TypeError(".vtadmin.ClusterBackups.backups: object expected");
+                    message.backups[i] = $root.vtadmin.Backup.fromObject(object.backups[i]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a ClusterBackups message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtadmin.ClusterBackups
+         * @static
+         * @param {vtadmin.ClusterBackups} message ClusterBackups
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ClusterBackups.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.backups = [];
+            if (message.backups && message.backups.length) {
+                object.backups = [];
+                for (var j = 0; j < message.backups.length; ++j)
+                    object.backups[j] = $root.vtadmin.Backup.toObject(message.backups[j], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this ClusterBackups to JSON.
+         * @function toJSON
+         * @memberof vtadmin.ClusterBackups
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ClusterBackups.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return ClusterBackups;
     })();
 
     vtadmin.ClusterWorkflows = (function() {
@@ -4021,6 +4662,438 @@ $root.vtadmin = (function() {
         };
 
         return FindSchemaRequest;
+    })();
+
+    vtadmin.GetBackupsRequest = (function() {
+
+        /**
+         * Properties of a GetBackupsRequest.
+         * @memberof vtadmin
+         * @interface IGetBackupsRequest
+         * @property {Array.<string>|null} [cluster_ids] GetBackupsRequest cluster_ids
+         */
+
+        /**
+         * Constructs a new GetBackupsRequest.
+         * @memberof vtadmin
+         * @classdesc Represents a GetBackupsRequest.
+         * @implements IGetBackupsRequest
+         * @constructor
+         * @param {vtadmin.IGetBackupsRequest=} [properties] Properties to set
+         */
+        function GetBackupsRequest(properties) {
+            this.cluster_ids = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * GetBackupsRequest cluster_ids.
+         * @member {Array.<string>} cluster_ids
+         * @memberof vtadmin.GetBackupsRequest
+         * @instance
+         */
+        GetBackupsRequest.prototype.cluster_ids = $util.emptyArray;
+
+        /**
+         * Creates a new GetBackupsRequest instance using the specified properties.
+         * @function create
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {vtadmin.IGetBackupsRequest=} [properties] Properties to set
+         * @returns {vtadmin.GetBackupsRequest} GetBackupsRequest instance
+         */
+        GetBackupsRequest.create = function create(properties) {
+            return new GetBackupsRequest(properties);
+        };
+
+        /**
+         * Encodes the specified GetBackupsRequest message. Does not implicitly {@link vtadmin.GetBackupsRequest.verify|verify} messages.
+         * @function encode
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {vtadmin.IGetBackupsRequest} message GetBackupsRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetBackupsRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.cluster_ids != null && message.cluster_ids.length)
+                for (var i = 0; i < message.cluster_ids.length; ++i)
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.cluster_ids[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified GetBackupsRequest message, length delimited. Does not implicitly {@link vtadmin.GetBackupsRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {vtadmin.IGetBackupsRequest} message GetBackupsRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetBackupsRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a GetBackupsRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtadmin.GetBackupsRequest} GetBackupsRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetBackupsRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.GetBackupsRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    if (!(message.cluster_ids && message.cluster_ids.length))
+                        message.cluster_ids = [];
+                    message.cluster_ids.push(reader.string());
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a GetBackupsRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtadmin.GetBackupsRequest} GetBackupsRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetBackupsRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a GetBackupsRequest message.
+         * @function verify
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        GetBackupsRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.cluster_ids != null && message.hasOwnProperty("cluster_ids")) {
+                if (!Array.isArray(message.cluster_ids))
+                    return "cluster_ids: array expected";
+                for (var i = 0; i < message.cluster_ids.length; ++i)
+                    if (!$util.isString(message.cluster_ids[i]))
+                        return "cluster_ids: string[] expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a GetBackupsRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtadmin.GetBackupsRequest} GetBackupsRequest
+         */
+        GetBackupsRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtadmin.GetBackupsRequest)
+                return object;
+            var message = new $root.vtadmin.GetBackupsRequest();
+            if (object.cluster_ids) {
+                if (!Array.isArray(object.cluster_ids))
+                    throw TypeError(".vtadmin.GetBackupsRequest.cluster_ids: array expected");
+                message.cluster_ids = [];
+                for (var i = 0; i < object.cluster_ids.length; ++i)
+                    message.cluster_ids[i] = String(object.cluster_ids[i]);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a GetBackupsRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtadmin.GetBackupsRequest
+         * @static
+         * @param {vtadmin.GetBackupsRequest} message GetBackupsRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        GetBackupsRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.cluster_ids = [];
+            if (message.cluster_ids && message.cluster_ids.length) {
+                object.cluster_ids = [];
+                for (var j = 0; j < message.cluster_ids.length; ++j)
+                    object.cluster_ids[j] = message.cluster_ids[j];
+            }
+            return object;
+        };
+
+        /**
+         * Converts this GetBackupsRequest to JSON.
+         * @function toJSON
+         * @memberof vtadmin.GetBackupsRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        GetBackupsRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return GetBackupsRequest;
+    })();
+
+    vtadmin.GetBackupsResponse = (function() {
+
+        /**
+         * Properties of a GetBackupsResponse.
+         * @memberof vtadmin
+         * @interface IGetBackupsResponse
+         * @property {Object.<string,vtadmin.IClusterBackups>|null} [backups] GetBackupsResponse backups
+         */
+
+        /**
+         * Constructs a new GetBackupsResponse.
+         * @memberof vtadmin
+         * @classdesc Represents a GetBackupsResponse.
+         * @implements IGetBackupsResponse
+         * @constructor
+         * @param {vtadmin.IGetBackupsResponse=} [properties] Properties to set
+         */
+        function GetBackupsResponse(properties) {
+            this.backups = {};
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * GetBackupsResponse backups.
+         * @member {Object.<string,vtadmin.IClusterBackups>} backups
+         * @memberof vtadmin.GetBackupsResponse
+         * @instance
+         */
+        GetBackupsResponse.prototype.backups = $util.emptyObject;
+
+        /**
+         * Creates a new GetBackupsResponse instance using the specified properties.
+         * @function create
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {vtadmin.IGetBackupsResponse=} [properties] Properties to set
+         * @returns {vtadmin.GetBackupsResponse} GetBackupsResponse instance
+         */
+        GetBackupsResponse.create = function create(properties) {
+            return new GetBackupsResponse(properties);
+        };
+
+        /**
+         * Encodes the specified GetBackupsResponse message. Does not implicitly {@link vtadmin.GetBackupsResponse.verify|verify} messages.
+         * @function encode
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {vtadmin.IGetBackupsResponse} message GetBackupsResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetBackupsResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.backups != null && Object.hasOwnProperty.call(message, "backups"))
+                for (var keys = Object.keys(message.backups), i = 0; i < keys.length; ++i) {
+                    writer.uint32(/* id 1, wireType 2 =*/10).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]);
+                    $root.vtadmin.ClusterBackups.encode(message.backups[keys[i]], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim().ldelim();
+                }
+            return writer;
+        };
+
+        /**
+         * Encodes the specified GetBackupsResponse message, length delimited. Does not implicitly {@link vtadmin.GetBackupsResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {vtadmin.IGetBackupsResponse} message GetBackupsResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetBackupsResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a GetBackupsResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtadmin.GetBackupsResponse} GetBackupsResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetBackupsResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.GetBackupsResponse(), key, value;
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    if (message.backups === $util.emptyObject)
+                        message.backups = {};
+                    var end2 = reader.uint32() + reader.pos;
+                    key = "";
+                    value = null;
+                    while (reader.pos < end2) {
+                        var tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                        case 1:
+                            key = reader.string();
+                            break;
+                        case 2:
+                            value = $root.vtadmin.ClusterBackups.decode(reader, reader.uint32());
+                            break;
+                        default:
+                            reader.skipType(tag2 & 7);
+                            break;
+                        }
+                    }
+                    message.backups[key] = value;
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a GetBackupsResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtadmin.GetBackupsResponse} GetBackupsResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetBackupsResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a GetBackupsResponse message.
+         * @function verify
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        GetBackupsResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.backups != null && message.hasOwnProperty("backups")) {
+                if (!$util.isObject(message.backups))
+                    return "backups: object expected";
+                var key = Object.keys(message.backups);
+                for (var i = 0; i < key.length; ++i) {
+                    var error = $root.vtadmin.ClusterBackups.verify(message.backups[key[i]]);
+                    if (error)
+                        return "backups." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a GetBackupsResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtadmin.GetBackupsResponse} GetBackupsResponse
+         */
+        GetBackupsResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtadmin.GetBackupsResponse)
+                return object;
+            var message = new $root.vtadmin.GetBackupsResponse();
+            if (object.backups) {
+                if (typeof object.backups !== "object")
+                    throw TypeError(".vtadmin.GetBackupsResponse.backups: object expected");
+                message.backups = {};
+                for (var keys = Object.keys(object.backups), i = 0; i < keys.length; ++i) {
+                    if (typeof object.backups[keys[i]] !== "object")
+                        throw TypeError(".vtadmin.GetBackupsResponse.backups: object expected");
+                    message.backups[keys[i]] = $root.vtadmin.ClusterBackups.fromObject(object.backups[keys[i]]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a GetBackupsResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtadmin.GetBackupsResponse
+         * @static
+         * @param {vtadmin.GetBackupsResponse} message GetBackupsResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        GetBackupsResponse.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.objects || options.defaults)
+                object.backups = {};
+            var keys2;
+            if (message.backups && (keys2 = Object.keys(message.backups)).length) {
+                object.backups = {};
+                for (var j = 0; j < keys2.length; ++j)
+                    object.backups[keys2[j]] = $root.vtadmin.ClusterBackups.toObject(message.backups[keys2[j]], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this GetBackupsResponse to JSON.
+         * @function toJSON
+         * @memberof vtadmin.GetBackupsResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        GetBackupsResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return GetBackupsResponse;
     })();
 
     vtadmin.GetClustersRequest = (function() {
@@ -60226,6 +61299,518 @@ $root.vtctldata = (function() {
         };
 
         return ApplyRoutingRulesResponse;
+    })();
+
+    vtctldata.ApplyVSchemaRequest = (function() {
+
+        /**
+         * Properties of an ApplyVSchemaRequest.
+         * @memberof vtctldata
+         * @interface IApplyVSchemaRequest
+         * @property {string|null} [keyspace] ApplyVSchemaRequest keyspace
+         * @property {boolean|null} [skip_rebuild] ApplyVSchemaRequest skip_rebuild
+         * @property {boolean|null} [dry_run] ApplyVSchemaRequest dry_run
+         * @property {Array.<string>|null} [cells] ApplyVSchemaRequest cells
+         * @property {vschema.IKeyspace|null} [v_schema] ApplyVSchemaRequest v_schema
+         * @property {string|null} [sql] ApplyVSchemaRequest sql
+         */
+
+        /**
+         * Constructs a new ApplyVSchemaRequest.
+         * @memberof vtctldata
+         * @classdesc Represents an ApplyVSchemaRequest.
+         * @implements IApplyVSchemaRequest
+         * @constructor
+         * @param {vtctldata.IApplyVSchemaRequest=} [properties] Properties to set
+         */
+        function ApplyVSchemaRequest(properties) {
+            this.cells = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * ApplyVSchemaRequest keyspace.
+         * @member {string} keyspace
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         */
+        ApplyVSchemaRequest.prototype.keyspace = "";
+
+        /**
+         * ApplyVSchemaRequest skip_rebuild.
+         * @member {boolean} skip_rebuild
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         */
+        ApplyVSchemaRequest.prototype.skip_rebuild = false;
+
+        /**
+         * ApplyVSchemaRequest dry_run.
+         * @member {boolean} dry_run
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         */
+        ApplyVSchemaRequest.prototype.dry_run = false;
+
+        /**
+         * ApplyVSchemaRequest cells.
+         * @member {Array.<string>} cells
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         */
+        ApplyVSchemaRequest.prototype.cells = $util.emptyArray;
+
+        /**
+         * ApplyVSchemaRequest v_schema.
+         * @member {vschema.IKeyspace|null|undefined} v_schema
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         */
+        ApplyVSchemaRequest.prototype.v_schema = null;
+
+        /**
+         * ApplyVSchemaRequest sql.
+         * @member {string} sql
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         */
+        ApplyVSchemaRequest.prototype.sql = "";
+
+        /**
+         * Creates a new ApplyVSchemaRequest instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {vtctldata.IApplyVSchemaRequest=} [properties] Properties to set
+         * @returns {vtctldata.ApplyVSchemaRequest} ApplyVSchemaRequest instance
+         */
+        ApplyVSchemaRequest.create = function create(properties) {
+            return new ApplyVSchemaRequest(properties);
+        };
+
+        /**
+         * Encodes the specified ApplyVSchemaRequest message. Does not implicitly {@link vtctldata.ApplyVSchemaRequest.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {vtctldata.IApplyVSchemaRequest} message ApplyVSchemaRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ApplyVSchemaRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.keyspace != null && Object.hasOwnProperty.call(message, "keyspace"))
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.keyspace);
+            if (message.skip_rebuild != null && Object.hasOwnProperty.call(message, "skip_rebuild"))
+                writer.uint32(/* id 2, wireType 0 =*/16).bool(message.skip_rebuild);
+            if (message.dry_run != null && Object.hasOwnProperty.call(message, "dry_run"))
+                writer.uint32(/* id 3, wireType 0 =*/24).bool(message.dry_run);
+            if (message.cells != null && message.cells.length)
+                for (var i = 0; i < message.cells.length; ++i)
+                    writer.uint32(/* id 4, wireType 2 =*/34).string(message.cells[i]);
+            if (message.v_schema != null && Object.hasOwnProperty.call(message, "v_schema"))
+                $root.vschema.Keyspace.encode(message.v_schema, writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
+            if (message.sql != null && Object.hasOwnProperty.call(message, "sql"))
+                writer.uint32(/* id 6, wireType 2 =*/50).string(message.sql);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ApplyVSchemaRequest message, length delimited. Does not implicitly {@link vtctldata.ApplyVSchemaRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {vtctldata.IApplyVSchemaRequest} message ApplyVSchemaRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ApplyVSchemaRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes an ApplyVSchemaRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.ApplyVSchemaRequest} ApplyVSchemaRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ApplyVSchemaRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.ApplyVSchemaRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.keyspace = reader.string();
+                    break;
+                case 2:
+                    message.skip_rebuild = reader.bool();
+                    break;
+                case 3:
+                    message.dry_run = reader.bool();
+                    break;
+                case 4:
+                    if (!(message.cells && message.cells.length))
+                        message.cells = [];
+                    message.cells.push(reader.string());
+                    break;
+                case 5:
+                    message.v_schema = $root.vschema.Keyspace.decode(reader, reader.uint32());
+                    break;
+                case 6:
+                    message.sql = reader.string();
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes an ApplyVSchemaRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.ApplyVSchemaRequest} ApplyVSchemaRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ApplyVSchemaRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies an ApplyVSchemaRequest message.
+         * @function verify
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ApplyVSchemaRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                if (!$util.isString(message.keyspace))
+                    return "keyspace: string expected";
+            if (message.skip_rebuild != null && message.hasOwnProperty("skip_rebuild"))
+                if (typeof message.skip_rebuild !== "boolean")
+                    return "skip_rebuild: boolean expected";
+            if (message.dry_run != null && message.hasOwnProperty("dry_run"))
+                if (typeof message.dry_run !== "boolean")
+                    return "dry_run: boolean expected";
+            if (message.cells != null && message.hasOwnProperty("cells")) {
+                if (!Array.isArray(message.cells))
+                    return "cells: array expected";
+                for (var i = 0; i < message.cells.length; ++i)
+                    if (!$util.isString(message.cells[i]))
+                        return "cells: string[] expected";
+            }
+            if (message.v_schema != null && message.hasOwnProperty("v_schema")) {
+                var error = $root.vschema.Keyspace.verify(message.v_schema);
+                if (error)
+                    return "v_schema." + error;
+            }
+            if (message.sql != null && message.hasOwnProperty("sql"))
+                if (!$util.isString(message.sql))
+                    return "sql: string expected";
+            return null;
+        };
+
+        /**
+         * Creates an ApplyVSchemaRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.ApplyVSchemaRequest} ApplyVSchemaRequest
+         */
+        ApplyVSchemaRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.ApplyVSchemaRequest)
+                return object;
+            var message = new $root.vtctldata.ApplyVSchemaRequest();
+            if (object.keyspace != null)
+                message.keyspace = String(object.keyspace);
+            if (object.skip_rebuild != null)
+                message.skip_rebuild = Boolean(object.skip_rebuild);
+            if (object.dry_run != null)
+                message.dry_run = Boolean(object.dry_run);
+            if (object.cells) {
+                if (!Array.isArray(object.cells))
+                    throw TypeError(".vtctldata.ApplyVSchemaRequest.cells: array expected");
+                message.cells = [];
+                for (var i = 0; i < object.cells.length; ++i)
+                    message.cells[i] = String(object.cells[i]);
+            }
+            if (object.v_schema != null) {
+                if (typeof object.v_schema !== "object")
+                    throw TypeError(".vtctldata.ApplyVSchemaRequest.v_schema: object expected");
+                message.v_schema = $root.vschema.Keyspace.fromObject(object.v_schema);
+            }
+            if (object.sql != null)
+                message.sql = String(object.sql);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from an ApplyVSchemaRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @static
+         * @param {vtctldata.ApplyVSchemaRequest} message ApplyVSchemaRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ApplyVSchemaRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.cells = [];
+            if (options.defaults) {
+                object.keyspace = "";
+                object.skip_rebuild = false;
+                object.dry_run = false;
+                object.v_schema = null;
+                object.sql = "";
+            }
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                object.keyspace = message.keyspace;
+            if (message.skip_rebuild != null && message.hasOwnProperty("skip_rebuild"))
+                object.skip_rebuild = message.skip_rebuild;
+            if (message.dry_run != null && message.hasOwnProperty("dry_run"))
+                object.dry_run = message.dry_run;
+            if (message.cells && message.cells.length) {
+                object.cells = [];
+                for (var j = 0; j < message.cells.length; ++j)
+                    object.cells[j] = message.cells[j];
+            }
+            if (message.v_schema != null && message.hasOwnProperty("v_schema"))
+                object.v_schema = $root.vschema.Keyspace.toObject(message.v_schema, options);
+            if (message.sql != null && message.hasOwnProperty("sql"))
+                object.sql = message.sql;
+            return object;
+        };
+
+        /**
+         * Converts this ApplyVSchemaRequest to JSON.
+         * @function toJSON
+         * @memberof vtctldata.ApplyVSchemaRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ApplyVSchemaRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return ApplyVSchemaRequest;
+    })();
+
+    vtctldata.ApplyVSchemaResponse = (function() {
+
+        /**
+         * Properties of an ApplyVSchemaResponse.
+         * @memberof vtctldata
+         * @interface IApplyVSchemaResponse
+         * @property {vschema.IKeyspace|null} [v_schema] ApplyVSchemaResponse v_schema
+         */
+
+        /**
+         * Constructs a new ApplyVSchemaResponse.
+         * @memberof vtctldata
+         * @classdesc Represents an ApplyVSchemaResponse.
+         * @implements IApplyVSchemaResponse
+         * @constructor
+         * @param {vtctldata.IApplyVSchemaResponse=} [properties] Properties to set
+         */
+        function ApplyVSchemaResponse(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * ApplyVSchemaResponse v_schema.
+         * @member {vschema.IKeyspace|null|undefined} v_schema
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @instance
+         */
+        ApplyVSchemaResponse.prototype.v_schema = null;
+
+        /**
+         * Creates a new ApplyVSchemaResponse instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {vtctldata.IApplyVSchemaResponse=} [properties] Properties to set
+         * @returns {vtctldata.ApplyVSchemaResponse} ApplyVSchemaResponse instance
+         */
+        ApplyVSchemaResponse.create = function create(properties) {
+            return new ApplyVSchemaResponse(properties);
+        };
+
+        /**
+         * Encodes the specified ApplyVSchemaResponse message. Does not implicitly {@link vtctldata.ApplyVSchemaResponse.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {vtctldata.IApplyVSchemaResponse} message ApplyVSchemaResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ApplyVSchemaResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.v_schema != null && Object.hasOwnProperty.call(message, "v_schema"))
+                $root.vschema.Keyspace.encode(message.v_schema, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ApplyVSchemaResponse message, length delimited. Does not implicitly {@link vtctldata.ApplyVSchemaResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {vtctldata.IApplyVSchemaResponse} message ApplyVSchemaResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ApplyVSchemaResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes an ApplyVSchemaResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.ApplyVSchemaResponse} ApplyVSchemaResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ApplyVSchemaResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.ApplyVSchemaResponse();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.v_schema = $root.vschema.Keyspace.decode(reader, reader.uint32());
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes an ApplyVSchemaResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.ApplyVSchemaResponse} ApplyVSchemaResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ApplyVSchemaResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies an ApplyVSchemaResponse message.
+         * @function verify
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ApplyVSchemaResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.v_schema != null && message.hasOwnProperty("v_schema")) {
+                var error = $root.vschema.Keyspace.verify(message.v_schema);
+                if (error)
+                    return "v_schema." + error;
+            }
+            return null;
+        };
+
+        /**
+         * Creates an ApplyVSchemaResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.ApplyVSchemaResponse} ApplyVSchemaResponse
+         */
+        ApplyVSchemaResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.ApplyVSchemaResponse)
+                return object;
+            var message = new $root.vtctldata.ApplyVSchemaResponse();
+            if (object.v_schema != null) {
+                if (typeof object.v_schema !== "object")
+                    throw TypeError(".vtctldata.ApplyVSchemaResponse.v_schema: object expected");
+                message.v_schema = $root.vschema.Keyspace.fromObject(object.v_schema);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from an ApplyVSchemaResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @static
+         * @param {vtctldata.ApplyVSchemaResponse} message ApplyVSchemaResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ApplyVSchemaResponse.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults)
+                object.v_schema = null;
+            if (message.v_schema != null && message.hasOwnProperty("v_schema"))
+                object.v_schema = $root.vschema.Keyspace.toObject(message.v_schema, options);
+            return object;
+        };
+
+        /**
+         * Converts this ApplyVSchemaResponse to JSON.
+         * @function toJSON
+         * @memberof vtctldata.ApplyVSchemaResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ApplyVSchemaResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return ApplyVSchemaResponse;
     })();
 
     vtctldata.ChangeTabletTypeRequest = (function() {

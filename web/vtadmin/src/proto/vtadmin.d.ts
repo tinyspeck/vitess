@@ -37,6 +37,20 @@ export namespace vtadmin {
         public findSchema(request: vtadmin.IFindSchemaRequest): Promise<vtadmin.Schema>;
 
         /**
+         * Calls GetBackups.
+         * @param request GetBackupsRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and GetBackupsResponse
+         */
+        public getBackups(request: vtadmin.IGetBackupsRequest, callback: vtadmin.VTAdmin.GetBackupsCallback): void;
+
+        /**
+         * Calls GetBackups.
+         * @param request GetBackupsRequest message or plain object
+         * @returns Promise
+         */
+        public getBackups(request: vtadmin.IGetBackupsRequest): Promise<vtadmin.GetBackupsResponse>;
+
+        /**
          * Calls GetClusters.
          * @param request GetClustersRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and GetClustersResponse
@@ -257,6 +271,13 @@ export namespace vtadmin {
         type FindSchemaCallback = (error: (Error|null), response?: vtadmin.Schema) => void;
 
         /**
+         * Callback as used by {@link vtadmin.VTAdmin#getBackups}.
+         * @param error Error, if any
+         * @param [response] GetBackupsResponse
+         */
+        type GetBackupsCallback = (error: (Error|null), response?: vtadmin.GetBackupsResponse) => void;
+
+        /**
          * Callback as used by {@link vtadmin.VTAdmin#getClusters}.
          * @param error Error, if any
          * @param [response] GetClustersResponse
@@ -362,6 +383,150 @@ export namespace vtadmin {
         type VTExplainCallback = (error: (Error|null), response?: vtadmin.VTExplainResponse) => void;
     }
 
+    /** Properties of a Backup. */
+    interface IBackup {
+
+        /** Backup keyspace */
+        keyspace?: (string|null);
+
+        /** Backup shard */
+        shard?: (string|null);
+
+        /** Backup name */
+        name?: (string|null);
+
+        /** Backup directory */
+        directory?: (string|null);
+
+        /** Backup tablet_alias */
+        tablet_alias?: (topodata.ITabletAlias|null);
+
+        /** Backup time */
+        time?: (vttime.ITime|null);
+
+        /** Backup engine */
+        engine?: (string|null);
+
+        /** Backup status */
+        status?: (vtadmin.Backup.Status|null);
+    }
+
+    /** Represents a Backup. */
+    class Backup implements IBackup {
+
+        /**
+         * Constructs a new Backup.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtadmin.IBackup);
+
+        /** Backup keyspace. */
+        public keyspace: string;
+
+        /** Backup shard. */
+        public shard: string;
+
+        /** Backup name. */
+        public name: string;
+
+        /** Backup directory. */
+        public directory: string;
+
+        /** Backup tablet_alias. */
+        public tablet_alias?: (topodata.ITabletAlias|null);
+
+        /** Backup time. */
+        public time?: (vttime.ITime|null);
+
+        /** Backup engine. */
+        public engine: string;
+
+        /** Backup status. */
+        public status: vtadmin.Backup.Status;
+
+        /**
+         * Creates a new Backup instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns Backup instance
+         */
+        public static create(properties?: vtadmin.IBackup): vtadmin.Backup;
+
+        /**
+         * Encodes the specified Backup message. Does not implicitly {@link vtadmin.Backup.verify|verify} messages.
+         * @param message Backup message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtadmin.IBackup, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified Backup message, length delimited. Does not implicitly {@link vtadmin.Backup.verify|verify} messages.
+         * @param message Backup message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtadmin.IBackup, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a Backup message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns Backup
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtadmin.Backup;
+
+        /**
+         * Decodes a Backup message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns Backup
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtadmin.Backup;
+
+        /**
+         * Verifies a Backup message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a Backup message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns Backup
+         */
+        public static fromObject(object: { [k: string]: any }): vtadmin.Backup;
+
+        /**
+         * Creates a plain object from a Backup message. Also converts values to other types if specified.
+         * @param message Backup
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtadmin.Backup, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this Backup to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    namespace Backup {
+
+        /** Status enum. */
+        enum Status {
+            UNKNOWN = 0,
+            INCOMPLETE = 1,
+            COMPLETE = 2,
+            INVALID = 3,
+            VALID = 5
+        }
+    }
+
     /** Properties of a Cluster. */
     interface ICluster {
 
@@ -453,6 +618,96 @@ export namespace vtadmin {
 
         /**
          * Converts this Cluster to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a ClusterBackups. */
+    interface IClusterBackups {
+
+        /** ClusterBackups backups */
+        backups?: (vtadmin.IBackup[]|null);
+    }
+
+    /** Represents a ClusterBackups. */
+    class ClusterBackups implements IClusterBackups {
+
+        /**
+         * Constructs a new ClusterBackups.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtadmin.IClusterBackups);
+
+        /** ClusterBackups backups. */
+        public backups: vtadmin.IBackup[];
+
+        /**
+         * Creates a new ClusterBackups instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ClusterBackups instance
+         */
+        public static create(properties?: vtadmin.IClusterBackups): vtadmin.ClusterBackups;
+
+        /**
+         * Encodes the specified ClusterBackups message. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
+         * @param message ClusterBackups message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtadmin.IClusterBackups, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ClusterBackups message, length delimited. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
+         * @param message ClusterBackups message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtadmin.IClusterBackups, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a ClusterBackups message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ClusterBackups
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtadmin.ClusterBackups;
+
+        /**
+         * Decodes a ClusterBackups message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ClusterBackups
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtadmin.ClusterBackups;
+
+        /**
+         * Verifies a ClusterBackups message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a ClusterBackups message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ClusterBackups
+         */
+        public static fromObject(object: { [k: string]: any }): vtadmin.ClusterBackups;
+
+        /**
+         * Creates a plain object from a ClusterBackups message. Also converts values to other types if specified.
+         * @param message ClusterBackups
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtadmin.ClusterBackups, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ClusterBackups to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
@@ -1708,6 +1963,186 @@ export namespace vtadmin {
 
         /**
          * Converts this FindSchemaRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a GetBackupsRequest. */
+    interface IGetBackupsRequest {
+
+        /** GetBackupsRequest cluster_ids */
+        cluster_ids?: (string[]|null);
+    }
+
+    /** Represents a GetBackupsRequest. */
+    class GetBackupsRequest implements IGetBackupsRequest {
+
+        /**
+         * Constructs a new GetBackupsRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtadmin.IGetBackupsRequest);
+
+        /** GetBackupsRequest cluster_ids. */
+        public cluster_ids: string[];
+
+        /**
+         * Creates a new GetBackupsRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetBackupsRequest instance
+         */
+        public static create(properties?: vtadmin.IGetBackupsRequest): vtadmin.GetBackupsRequest;
+
+        /**
+         * Encodes the specified GetBackupsRequest message. Does not implicitly {@link vtadmin.GetBackupsRequest.verify|verify} messages.
+         * @param message GetBackupsRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtadmin.IGetBackupsRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetBackupsRequest message, length delimited. Does not implicitly {@link vtadmin.GetBackupsRequest.verify|verify} messages.
+         * @param message GetBackupsRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtadmin.IGetBackupsRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a GetBackupsRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetBackupsRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtadmin.GetBackupsRequest;
+
+        /**
+         * Decodes a GetBackupsRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetBackupsRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtadmin.GetBackupsRequest;
+
+        /**
+         * Verifies a GetBackupsRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a GetBackupsRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetBackupsRequest
+         */
+        public static fromObject(object: { [k: string]: any }): vtadmin.GetBackupsRequest;
+
+        /**
+         * Creates a plain object from a GetBackupsRequest message. Also converts values to other types if specified.
+         * @param message GetBackupsRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtadmin.GetBackupsRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this GetBackupsRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a GetBackupsResponse. */
+    interface IGetBackupsResponse {
+
+        /** GetBackupsResponse backups */
+        backups?: ({ [k: string]: vtadmin.IClusterBackups }|null);
+    }
+
+    /** Represents a GetBackupsResponse. */
+    class GetBackupsResponse implements IGetBackupsResponse {
+
+        /**
+         * Constructs a new GetBackupsResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtadmin.IGetBackupsResponse);
+
+        /** GetBackupsResponse backups. */
+        public backups: { [k: string]: vtadmin.IClusterBackups };
+
+        /**
+         * Creates a new GetBackupsResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetBackupsResponse instance
+         */
+        public static create(properties?: vtadmin.IGetBackupsResponse): vtadmin.GetBackupsResponse;
+
+        /**
+         * Encodes the specified GetBackupsResponse message. Does not implicitly {@link vtadmin.GetBackupsResponse.verify|verify} messages.
+         * @param message GetBackupsResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtadmin.IGetBackupsResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetBackupsResponse message, length delimited. Does not implicitly {@link vtadmin.GetBackupsResponse.verify|verify} messages.
+         * @param message GetBackupsResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtadmin.IGetBackupsResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a GetBackupsResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetBackupsResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtadmin.GetBackupsResponse;
+
+        /**
+         * Decodes a GetBackupsResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetBackupsResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtadmin.GetBackupsResponse;
+
+        /**
+         * Verifies a GetBackupsResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a GetBackupsResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetBackupsResponse
+         */
+        public static fromObject(object: { [k: string]: any }): vtadmin.GetBackupsResponse;
+
+        /**
+         * Creates a plain object from a GetBackupsResponse message. Also converts values to other types if specified.
+         * @param message GetBackupsResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtadmin.GetBackupsResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this GetBackupsResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
@@ -25066,6 +25501,216 @@ export namespace vtctldata {
 
         /**
          * Converts this ApplyRoutingRulesResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of an ApplyVSchemaRequest. */
+    interface IApplyVSchemaRequest {
+
+        /** ApplyVSchemaRequest keyspace */
+        keyspace?: (string|null);
+
+        /** ApplyVSchemaRequest skip_rebuild */
+        skip_rebuild?: (boolean|null);
+
+        /** ApplyVSchemaRequest dry_run */
+        dry_run?: (boolean|null);
+
+        /** ApplyVSchemaRequest cells */
+        cells?: (string[]|null);
+
+        /** ApplyVSchemaRequest v_schema */
+        v_schema?: (vschema.IKeyspace|null);
+
+        /** ApplyVSchemaRequest sql */
+        sql?: (string|null);
+    }
+
+    /** Represents an ApplyVSchemaRequest. */
+    class ApplyVSchemaRequest implements IApplyVSchemaRequest {
+
+        /**
+         * Constructs a new ApplyVSchemaRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtctldata.IApplyVSchemaRequest);
+
+        /** ApplyVSchemaRequest keyspace. */
+        public keyspace: string;
+
+        /** ApplyVSchemaRequest skip_rebuild. */
+        public skip_rebuild: boolean;
+
+        /** ApplyVSchemaRequest dry_run. */
+        public dry_run: boolean;
+
+        /** ApplyVSchemaRequest cells. */
+        public cells: string[];
+
+        /** ApplyVSchemaRequest v_schema. */
+        public v_schema?: (vschema.IKeyspace|null);
+
+        /** ApplyVSchemaRequest sql. */
+        public sql: string;
+
+        /**
+         * Creates a new ApplyVSchemaRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ApplyVSchemaRequest instance
+         */
+        public static create(properties?: vtctldata.IApplyVSchemaRequest): vtctldata.ApplyVSchemaRequest;
+
+        /**
+         * Encodes the specified ApplyVSchemaRequest message. Does not implicitly {@link vtctldata.ApplyVSchemaRequest.verify|verify} messages.
+         * @param message ApplyVSchemaRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtctldata.IApplyVSchemaRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ApplyVSchemaRequest message, length delimited. Does not implicitly {@link vtctldata.ApplyVSchemaRequest.verify|verify} messages.
+         * @param message ApplyVSchemaRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtctldata.IApplyVSchemaRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes an ApplyVSchemaRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ApplyVSchemaRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.ApplyVSchemaRequest;
+
+        /**
+         * Decodes an ApplyVSchemaRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ApplyVSchemaRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.ApplyVSchemaRequest;
+
+        /**
+         * Verifies an ApplyVSchemaRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates an ApplyVSchemaRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ApplyVSchemaRequest
+         */
+        public static fromObject(object: { [k: string]: any }): vtctldata.ApplyVSchemaRequest;
+
+        /**
+         * Creates a plain object from an ApplyVSchemaRequest message. Also converts values to other types if specified.
+         * @param message ApplyVSchemaRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtctldata.ApplyVSchemaRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ApplyVSchemaRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of an ApplyVSchemaResponse. */
+    interface IApplyVSchemaResponse {
+
+        /** ApplyVSchemaResponse v_schema */
+        v_schema?: (vschema.IKeyspace|null);
+    }
+
+    /** Represents an ApplyVSchemaResponse. */
+    class ApplyVSchemaResponse implements IApplyVSchemaResponse {
+
+        /**
+         * Constructs a new ApplyVSchemaResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: vtctldata.IApplyVSchemaResponse);
+
+        /** ApplyVSchemaResponse v_schema. */
+        public v_schema?: (vschema.IKeyspace|null);
+
+        /**
+         * Creates a new ApplyVSchemaResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ApplyVSchemaResponse instance
+         */
+        public static create(properties?: vtctldata.IApplyVSchemaResponse): vtctldata.ApplyVSchemaResponse;
+
+        /**
+         * Encodes the specified ApplyVSchemaResponse message. Does not implicitly {@link vtctldata.ApplyVSchemaResponse.verify|verify} messages.
+         * @param message ApplyVSchemaResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: vtctldata.IApplyVSchemaResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ApplyVSchemaResponse message, length delimited. Does not implicitly {@link vtctldata.ApplyVSchemaResponse.verify|verify} messages.
+         * @param message ApplyVSchemaResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: vtctldata.IApplyVSchemaResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes an ApplyVSchemaResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ApplyVSchemaResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtctldata.ApplyVSchemaResponse;
+
+        /**
+         * Decodes an ApplyVSchemaResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ApplyVSchemaResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtctldata.ApplyVSchemaResponse;
+
+        /**
+         * Verifies an ApplyVSchemaResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates an ApplyVSchemaResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ApplyVSchemaResponse
+         */
+        public static fromObject(object: { [k: string]: any }): vtctldata.ApplyVSchemaResponse;
+
+        /**
+         * Creates a plain object from an ApplyVSchemaResponse message. Also converts values to other types if specified.
+         * @param message ApplyVSchemaResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: vtctldata.ApplyVSchemaResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this ApplyVSchemaResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };

@@ -25,6 +25,7 @@ import "tabletmanagerdata.proto";
 import "topodata.proto";
 import "vschema.proto";
 import "vtctldata.proto";
+import "vttime.proto";
 
 /* Services */
 
@@ -38,6 +39,10 @@ service VTAdmin {
     // An error occurs if either no table exists across any of the clusters with
     // the specified table name, or if multiple tables exist with that name.
     rpc FindSchema(FindSchemaRequest) returns (Schema) {};
+    // GetBackups returns backups grouped by cluster.
+    //
+    // Optionally, if vtadmin-api is configured with
+    rpc GetBackups(GetBackupsRequest) returns (GetBackupsResponse) {};
     // GetClusters returns all configured clusters.
     rpc GetClusters(GetClustersRequest) returns (GetClustersResponse) {};
     // GetGates returns all gates across all the specified clusters.
@@ -76,10 +81,48 @@ service VTAdmin {
 
 /* Data types */
 
+message Backup {
+    string keyspace = 1;
+    string shard = 2;
+    string name = 3;
+    string directory = 4;
+
+    // The following fields will be extracted from the .Name field. If an error
+    // occurs during extraction/parsing, these fields may not be set, but
+    // GetBackups will not fail.
+
+    topodata.TabletAlias tablet_alias = 5;
+    vttime.Time time = 6;
+
+    // The folowing fields are set by plugins, and may not be set.
+
+    // Engine is the name of the backupengine implementation used to create
+    // this backup.
+    string engine = 7;
+    Status status = 8;
+
+    // Status is an enum representing the possible status of a backup.
+    enum Status {
+        UNKNOWN = 0;
+        INCOMPLETE = 1;
+        COMPLETE = 2;
+        // A backup status of INVALID should be set if the backup is complete
+        // but unusable in some way (partial upload, corrupt file, etc).
+        INVALID = 3;
+        // A backup status of VALID should be set if the backup is both
+        // complete and usuable.
+        VALID = 5;
+    }
+}
+
 // Cluster represents information about a Vitess cluster.
 message Cluster {
     string id = 1;
     string name = 2;
+}
+
+message ClusterBackups {
+    repeated Backup backups = 1;
 }
 
 message ClusterWorkflows {
@@ -185,6 +228,14 @@ message FindSchemaRequest {
     string table = 1;
     repeated string cluster_ids = 2;
     GetSchemaTableSizeOptions table_size_options = 3;
+}
+
+message GetBackupsRequest {
+    repeated string cluster_ids = 1;
+}
+
+message GetBackupsResponse {
+    map<string, ClusterBackups> backups = 1;
 }
 
 message GetClustersRequest {}
