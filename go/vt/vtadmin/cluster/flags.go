@@ -145,6 +145,8 @@ func parseOne(cfg *Config, name string, val string) error {
 		cfg.DiscoveryImpl = val
 	case "tablet-fqdn-tmpl":
 		cfg.TabletFQDNTmplStr = val
+	case "backup-validator-plugin":
+		cfg.BackupValidatorPluginPath = val
 	default:
 		if strings.HasPrefix(name, "vtsql-") {
 			if cfg.VtSQLFlags == nil {

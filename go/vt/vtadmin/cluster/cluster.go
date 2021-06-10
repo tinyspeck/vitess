@@ -60,6 +60,9 @@ type Cluster struct {
 	DB     vtsql.DB
 	Vtctld vtctldclient.Proxy
 
+	// optional field to allow users to implement custom backup validation logic
+	backupValidator BackupValidator
+
 	// These fields are kept to power debug endpoints.
 	// (TODO|@amason): Figure out if these are needed or if there's a way to
 	// push down to the credentials / vtsql.
@@ -109,6 +112,20 @@ func New(cfg Config) (*Cluster, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse tablet fqdn template %s: %w", cfg.TabletFQDNTmplStr, err)
 		}
+	}
+
+	if cfg.BackupValidatorPluginPath != "" {
+		sym, err := loadPlugin(cfg.BackupValidatorPluginPath, "NewBackupValidator")
+		if err != nil {
+			return nil, fmt.Errorf("failed to load backup validator from %s: %w", cfg.BackupValidatorPluginPath, err)
+		}
+
+		constructor, ok := sym.(func() BackupValidator)
+		if !ok {
+			return nil, fmt.Errorf("%w: NewBackupValidator does not have type `func() BackupValidator` (got %T)", ErrBadPlugin, sym)
+		}
+
+		cluster.backupValidator = constructor()
 	}
 
 	return cluster, nil
@@ -499,6 +516,12 @@ func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, er
 
 	if rec.HasErrors() {
 		return nil, rec.Error()
+	}
+
+	if c.backupValidator != nil {
+		if err := c.backupValidator.ValidateBackups(ctx, *c, backups...); err != nil {
+			log.Warningf("error from backup validator plugin: %s", err)
+		}
 	}
 
 	return &vtadminpb.ClusterBackups{

@@ -29,6 +29,8 @@ type Config struct {
 	TabletFQDNTmplStr    string
 	VtSQLFlags           map[string]string
 	VtctldFlags          map[string]string
+
+	BackupValidatorPluginPath string
 }
 
 // Cluster returns a new cluster instance from the given config.
@@ -52,6 +54,8 @@ func (cfg *Config) Type() string { return "cluster.Config" }
 //		              // a given discovery implementation's constructor.
 //		vtsql-.*= // VtSQL-specific flags. Further parsing of these is delegated
 // 		          // to the vtsql package.
+//		backup-validator-plugin= // Path to a Go plugin that defines a NewBackupValidator
+//		                         // function which returns a BackupValidator.
 func (cfg *Config) Set(value string) error {
 	if cfg.DiscoveryFlagsByImpl == nil {
 		cfg.DiscoveryFlagsByImpl = map[string]map[string]string{}
@@ -81,13 +85,14 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // config. Neither the caller or the argument are modified in any way.
 func (cfg Config) Merge(override Config) Config {
 	merged := Config{
-		ID:                   cfg.ID,
-		Name:                 cfg.Name,
-		DiscoveryImpl:        cfg.DiscoveryImpl,
-		DiscoveryFlagsByImpl: map[string]map[string]string{},
-		TabletFQDNTmplStr:    cfg.TabletFQDNTmplStr,
-		VtSQLFlags:           map[string]string{},
-		VtctldFlags:          map[string]string{},
+		ID:                        cfg.ID,
+		Name:                      cfg.Name,
+		DiscoveryImpl:             cfg.DiscoveryImpl,
+		DiscoveryFlagsByImpl:      map[string]map[string]string{},
+		TabletFQDNTmplStr:         cfg.TabletFQDNTmplStr,
+		VtSQLFlags:                map[string]string{},
+		VtctldFlags:               map[string]string{},
+		BackupValidatorPluginPath: cfg.BackupValidatorPluginPath,
 	}
 
 	if override.ID != "" {
@@ -104,6 +109,10 @@ func (cfg Config) Merge(override Config) Config {
 
 	if override.TabletFQDNTmplStr != "" {
 		merged.TabletFQDNTmplStr = override.TabletFQDNTmplStr
+	}
+
+	if override.BackupValidatorPluginPath != "" {
+		merged.BackupValidatorPluginPath = override.BackupValidatorPluginPath
 	}
 
 	// first, the default flags
