@@ -33,7 +33,8 @@ export const format = (timestamp: number | Long | null | undefined, template: st
 };
 
 export const formatDateTime = (timestamp: number | Long | null | undefined): string | null => {
-    return format(timestamp, 'YYYY-MM-DD LT Z');
+    // See https://day.js.org/docs/en/display/format
+    return format(timestamp, 'YYYY-MM-DD LTS Z');
 };
 
 export const formatRelativeTime = (timestamp: number | Long | null | undefined): string | null => {
