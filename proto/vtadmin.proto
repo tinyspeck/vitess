@@ -121,8 +121,9 @@ message Cluster {
     string name = 2;
 }
 
-message ClusterBackups {
-    repeated Backup backups = 1;
+message ClusterBackup {
+    Cluster cluster = 1;
+    Backup backup = 2;
 }
 
 message ClusterWorkflows {
@@ -235,7 +236,7 @@ message GetBackupsRequest {
 }
 
 message GetBackupsResponse {
-    map<string, ClusterBackups> backups = 1;
+    repeated ClusterBackup backups = 1;
 }
 
 message GetClustersRequest {}

@@ -1224,25 +1224,25 @@ $root.vtadmin = (function() {
         return Cluster;
     })();
 
-    vtadmin.ClusterBackups = (function() {
+    vtadmin.ClusterBackup = (function() {
 
         /**
-         * Properties of a ClusterBackups.
+         * Properties of a ClusterBackup.
          * @memberof vtadmin
-         * @interface IClusterBackups
-         * @property {Array.<vtadmin.IBackup>|null} [backups] ClusterBackups backups
+         * @interface IClusterBackup
+         * @property {vtadmin.ICluster|null} [cluster] ClusterBackup cluster
+         * @property {vtadmin.IBackup|null} [backup] ClusterBackup backup
          */
 
         /**
-         * Constructs a new ClusterBackups.
+         * Constructs a new ClusterBackup.
          * @memberof vtadmin
-         * @classdesc Represents a ClusterBackups.
-         * @implements IClusterBackups
+         * @classdesc Represents a ClusterBackup.
+         * @implements IClusterBackup
          * @constructor
-         * @param {vtadmin.IClusterBackups=} [properties] Properties to set
+         * @param {vtadmin.IClusterBackup=} [properties] Properties to set
          */
-        function ClusterBackups(properties) {
-            this.backups = [];
+        function ClusterBackup(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -1250,78 +1250,88 @@ $root.vtadmin = (function() {
         }
 
         /**
-         * ClusterBackups backups.
-         * @member {Array.<vtadmin.IBackup>} backups
-         * @memberof vtadmin.ClusterBackups
+         * ClusterBackup cluster.
+         * @member {vtadmin.ICluster|null|undefined} cluster
+         * @memberof vtadmin.ClusterBackup
          * @instance
          */
-        ClusterBackups.prototype.backups = $util.emptyArray;
+        ClusterBackup.prototype.cluster = null;
 
         /**
-         * Creates a new ClusterBackups instance using the specified properties.
-         * @function create
-         * @memberof vtadmin.ClusterBackups
-         * @static
-         * @param {vtadmin.IClusterBackups=} [properties] Properties to set
-         * @returns {vtadmin.ClusterBackups} ClusterBackups instance
+         * ClusterBackup backup.
+         * @member {vtadmin.IBackup|null|undefined} backup
+         * @memberof vtadmin.ClusterBackup
+         * @instance
          */
-        ClusterBackups.create = function create(properties) {
-            return new ClusterBackups(properties);
+        ClusterBackup.prototype.backup = null;
+
+        /**
+         * Creates a new ClusterBackup instance using the specified properties.
+         * @function create
+         * @memberof vtadmin.ClusterBackup
+         * @static
+         * @param {vtadmin.IClusterBackup=} [properties] Properties to set
+         * @returns {vtadmin.ClusterBackup} ClusterBackup instance
+         */
+        ClusterBackup.create = function create(properties) {
+            return new ClusterBackup(properties);
         };
 
         /**
-         * Encodes the specified ClusterBackups message. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
+         * Encodes the specified ClusterBackup message. Does not implicitly {@link vtadmin.ClusterBackup.verify|verify} messages.
          * @function encode
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
-         * @param {vtadmin.IClusterBackups} message ClusterBackups message or plain object to encode
+         * @param {vtadmin.IClusterBackup} message ClusterBackup message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
-        ClusterBackups.encode = function encode(message, writer) {
+        ClusterBackup.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
-            if (message.backups != null && message.backups.length)
-                for (var i = 0; i < message.backups.length; ++i)
-                    $root.vtadmin.Backup.encode(message.backups[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.cluster != null && Object.hasOwnProperty.call(message, "cluster"))
+                $root.vtadmin.Cluster.encode(message.cluster, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.backup != null && Object.hasOwnProperty.call(message, "backup"))
+                $root.vtadmin.Backup.encode(message.backup, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
             return writer;
         };
 
         /**
-         * Encodes the specified ClusterBackups message, length delimited. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
+         * Encodes the specified ClusterBackup message, length delimited. Does not implicitly {@link vtadmin.ClusterBackup.verify|verify} messages.
          * @function encodeDelimited
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
-         * @param {vtadmin.IClusterBackups} message ClusterBackups message or plain object to encode
+         * @param {vtadmin.IClusterBackup} message ClusterBackup message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
-        ClusterBackups.encodeDelimited = function encodeDelimited(message, writer) {
+        ClusterBackup.encodeDelimited = function encodeDelimited(message, writer) {
             return this.encode(message, writer).ldelim();
         };
 
         /**
-         * Decodes a ClusterBackups message from the specified reader or buffer.
+         * Decodes a ClusterBackup message from the specified reader or buffer.
          * @function decode
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {vtadmin.ClusterBackups} ClusterBackups
+         * @returns {vtadmin.ClusterBackup} ClusterBackup
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        ClusterBackups.decode = function decode(reader, length) {
+        ClusterBackup.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.ClusterBackups();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.ClusterBackup();
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1:
-                    if (!(message.backups && message.backups.length))
-                        message.backups = [];
-                    message.backups.push($root.vtadmin.Backup.decode(reader, reader.uint32()));
+                    message.cluster = $root.vtadmin.Cluster.decode(reader, reader.uint32());
+                    break;
+                case 2:
+                    message.backup = $root.vtadmin.Backup.decode(reader, reader.uint32());
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -1332,104 +1342,106 @@ $root.vtadmin = (function() {
         };
 
         /**
-         * Decodes a ClusterBackups message from the specified reader or buffer, length delimited.
+         * Decodes a ClusterBackup message from the specified reader or buffer, length delimited.
          * @function decodeDelimited
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {vtadmin.ClusterBackups} ClusterBackups
+         * @returns {vtadmin.ClusterBackup} ClusterBackup
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        ClusterBackups.decodeDelimited = function decodeDelimited(reader) {
+        ClusterBackup.decodeDelimited = function decodeDelimited(reader) {
             if (!(reader instanceof $Reader))
                 reader = new $Reader(reader);
             return this.decode(reader, reader.uint32());
         };
 
         /**
-         * Verifies a ClusterBackups message.
+         * Verifies a ClusterBackup message.
          * @function verify
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        ClusterBackups.verify = function verify(message) {
+        ClusterBackup.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
-            if (message.backups != null && message.hasOwnProperty("backups")) {
-                if (!Array.isArray(message.backups))
-                    return "backups: array expected";
-                for (var i = 0; i < message.backups.length; ++i) {
-                    var error = $root.vtadmin.Backup.verify(message.backups[i]);
-                    if (error)
-                        return "backups." + error;
-                }
+            if (message.cluster != null && message.hasOwnProperty("cluster")) {
+                var error = $root.vtadmin.Cluster.verify(message.cluster);
+                if (error)
+                    return "cluster." + error;
+            }
+            if (message.backup != null && message.hasOwnProperty("backup")) {
+                var error = $root.vtadmin.Backup.verify(message.backup);
+                if (error)
+                    return "backup." + error;
             }
             return null;
         };
 
         /**
-         * Creates a ClusterBackups message from a plain object. Also converts values to their respective internal types.
+         * Creates a ClusterBackup message from a plain object. Also converts values to their respective internal types.
          * @function fromObject
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
          * @param {Object.<string,*>} object Plain object
-         * @returns {vtadmin.ClusterBackups} ClusterBackups
+         * @returns {vtadmin.ClusterBackup} ClusterBackup
          */
-        ClusterBackups.fromObject = function fromObject(object) {
-            if (object instanceof $root.vtadmin.ClusterBackups)
+        ClusterBackup.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtadmin.ClusterBackup)
                 return object;
-            var message = new $root.vtadmin.ClusterBackups();
-            if (object.backups) {
-                if (!Array.isArray(object.backups))
-                    throw TypeError(".vtadmin.ClusterBackups.backups: array expected");
-                message.backups = [];
-                for (var i = 0; i < object.backups.length; ++i) {
-                    if (typeof object.backups[i] !== "object")
-                        throw TypeError(".vtadmin.ClusterBackups.backups: object expected");
-                    message.backups[i] = $root.vtadmin.Backup.fromObject(object.backups[i]);
-                }
+            var message = new $root.vtadmin.ClusterBackup();
+            if (object.cluster != null) {
+                if (typeof object.cluster !== "object")
+                    throw TypeError(".vtadmin.ClusterBackup.cluster: object expected");
+                message.cluster = $root.vtadmin.Cluster.fromObject(object.cluster);
+            }
+            if (object.backup != null) {
+                if (typeof object.backup !== "object")
+                    throw TypeError(".vtadmin.ClusterBackup.backup: object expected");
+                message.backup = $root.vtadmin.Backup.fromObject(object.backup);
             }
             return message;
         };
 
         /**
-         * Creates a plain object from a ClusterBackups message. Also converts values to other types if specified.
+         * Creates a plain object from a ClusterBackup message. Also converts values to other types if specified.
          * @function toObject
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @static
-         * @param {vtadmin.ClusterBackups} message ClusterBackups
+         * @param {vtadmin.ClusterBackup} message ClusterBackup
          * @param {$protobuf.IConversionOptions} [options] Conversion options
          * @returns {Object.<string,*>} Plain object
          */
-        ClusterBackups.toObject = function toObject(message, options) {
+        ClusterBackup.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
             var object = {};
-            if (options.arrays || options.defaults)
-                object.backups = [];
-            if (message.backups && message.backups.length) {
-                object.backups = [];
-                for (var j = 0; j < message.backups.length; ++j)
-                    object.backups[j] = $root.vtadmin.Backup.toObject(message.backups[j], options);
+            if (options.defaults) {
+                object.cluster = null;
+                object.backup = null;
             }
+            if (message.cluster != null && message.hasOwnProperty("cluster"))
+                object.cluster = $root.vtadmin.Cluster.toObject(message.cluster, options);
+            if (message.backup != null && message.hasOwnProperty("backup"))
+                object.backup = $root.vtadmin.Backup.toObject(message.backup, options);
             return object;
         };
 
         /**
-         * Converts this ClusterBackups to JSON.
+         * Converts this ClusterBackup to JSON.
          * @function toJSON
-         * @memberof vtadmin.ClusterBackups
+         * @memberof vtadmin.ClusterBackup
          * @instance
          * @returns {Object.<string,*>} JSON object
          */
-        ClusterBackups.prototype.toJSON = function toJSON() {
+        ClusterBackup.prototype.toJSON = function toJSON() {
             return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
         };
 
-        return ClusterBackups;
+        return ClusterBackup;
     })();
 
     vtadmin.ClusterWorkflows = (function() {
@@ -4873,7 +4885,7 @@ $root.vtadmin = (function() {
          * Properties of a GetBackupsResponse.
          * @memberof vtadmin
          * @interface IGetBackupsResponse
-         * @property {Object.<string,vtadmin.IClusterBackups>|null} [backups] GetBackupsResponse backups
+         * @property {Array.<vtadmin.IClusterBackup>|null} [backups] GetBackupsResponse backups
          */
 
         /**
@@ -4885,7 +4897,7 @@ $root.vtadmin = (function() {
          * @param {vtadmin.IGetBackupsResponse=} [properties] Properties to set
          */
         function GetBackupsResponse(properties) {
-            this.backups = {};
+            this.backups = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -4894,11 +4906,11 @@ $root.vtadmin = (function() {
 
         /**
          * GetBackupsResponse backups.
-         * @member {Object.<string,vtadmin.IClusterBackups>} backups
+         * @member {Array.<vtadmin.IClusterBackup>} backups
          * @memberof vtadmin.GetBackupsResponse
          * @instance
          */
-        GetBackupsResponse.prototype.backups = $util.emptyObject;
+        GetBackupsResponse.prototype.backups = $util.emptyArray;
 
         /**
          * Creates a new GetBackupsResponse instance using the specified properties.
@@ -4924,11 +4936,9 @@ $root.vtadmin = (function() {
         GetBackupsResponse.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
-            if (message.backups != null && Object.hasOwnProperty.call(message, "backups"))
-                for (var keys = Object.keys(message.backups), i = 0; i < keys.length; ++i) {
-                    writer.uint32(/* id 1, wireType 2 =*/10).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]);
-                    $root.vtadmin.ClusterBackups.encode(message.backups[keys[i]], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim().ldelim();
-                }
+            if (message.backups != null && message.backups.length)
+                for (var i = 0; i < message.backups.length; ++i)
+                    $root.vtadmin.ClusterBackup.encode(message.backups[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             return writer;
         };
 
@@ -4959,31 +4969,14 @@ $root.vtadmin = (function() {
         GetBackupsResponse.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.GetBackupsResponse(), key, value;
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtadmin.GetBackupsResponse();
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1:
-                    if (message.backups === $util.emptyObject)
-                        message.backups = {};
-                    var end2 = reader.uint32() + reader.pos;
-                    key = "";
-                    value = null;
-                    while (reader.pos < end2) {
-                        var tag2 = reader.uint32();
-                        switch (tag2 >>> 3) {
-                        case 1:
-                            key = reader.string();
-                            break;
-                        case 2:
-                            value = $root.vtadmin.ClusterBackups.decode(reader, reader.uint32());
-                            break;
-                        default:
-                            reader.skipType(tag2 & 7);
-                            break;
-                        }
-                    }
-                    message.backups[key] = value;
+                    if (!(message.backups && message.backups.length))
+                        message.backups = [];
+                    message.backups.push($root.vtadmin.ClusterBackup.decode(reader, reader.uint32()));
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -5021,11 +5014,10 @@ $root.vtadmin = (function() {
             if (typeof message !== "object" || message === null)
                 return "object expected";
             if (message.backups != null && message.hasOwnProperty("backups")) {
-                if (!$util.isObject(message.backups))
-                    return "backups: object expected";
-                var key = Object.keys(message.backups);
-                for (var i = 0; i < key.length; ++i) {
-                    var error = $root.vtadmin.ClusterBackups.verify(message.backups[key[i]]);
+                if (!Array.isArray(message.backups))
+                    return "backups: array expected";
+                for (var i = 0; i < message.backups.length; ++i) {
+                    var error = $root.vtadmin.ClusterBackup.verify(message.backups[i]);
                     if (error)
                         return "backups." + error;
                 }
@@ -5046,13 +5038,13 @@ $root.vtadmin = (function() {
                 return object;
             var message = new $root.vtadmin.GetBackupsResponse();
             if (object.backups) {
-                if (typeof object.backups !== "object")
-                    throw TypeError(".vtadmin.GetBackupsResponse.backups: object expected");
-                message.backups = {};
-                for (var keys = Object.keys(object.backups), i = 0; i < keys.length; ++i) {
-                    if (typeof object.backups[keys[i]] !== "object")
+                if (!Array.isArray(object.backups))
+                    throw TypeError(".vtadmin.GetBackupsResponse.backups: array expected");
+                message.backups = [];
+                for (var i = 0; i < object.backups.length; ++i) {
+                    if (typeof object.backups[i] !== "object")
                         throw TypeError(".vtadmin.GetBackupsResponse.backups: object expected");
-                    message.backups[keys[i]] = $root.vtadmin.ClusterBackups.fromObject(object.backups[keys[i]]);
+                    message.backups[i] = $root.vtadmin.ClusterBackup.fromObject(object.backups[i]);
                 }
             }
             return message;
@@ -5071,13 +5063,12 @@ $root.vtadmin = (function() {
             if (!options)
                 options = {};
             var object = {};
-            if (options.objects || options.defaults)
-                object.backups = {};
-            var keys2;
-            if (message.backups && (keys2 = Object.keys(message.backups)).length) {
-                object.backups = {};
-                for (var j = 0; j < keys2.length; ++j)
-                    object.backups[keys2[j]] = $root.vtadmin.ClusterBackups.toObject(message.backups[keys2[j]], options);
+            if (options.arrays || options.defaults)
+                object.backups = [];
+            if (message.backups && message.backups.length) {
+                object.backups = [];
+                for (var j = 0; j < message.backups.length; ++j)
+                    object.backups[j] = $root.vtadmin.ClusterBackup.toObject(message.backups[j], options);
             }
             return object;
         };

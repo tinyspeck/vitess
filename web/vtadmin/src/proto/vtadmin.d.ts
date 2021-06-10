@@ -623,91 +623,97 @@ export namespace vtadmin {
         public toJSON(): { [k: string]: any };
     }
 
-    /** Properties of a ClusterBackups. */
-    interface IClusterBackups {
+    /** Properties of a ClusterBackup. */
+    interface IClusterBackup {
 
-        /** ClusterBackups backups */
-        backups?: (vtadmin.IBackup[]|null);
+        /** ClusterBackup cluster */
+        cluster?: (vtadmin.ICluster|null);
+
+        /** ClusterBackup backup */
+        backup?: (vtadmin.IBackup|null);
     }
 
-    /** Represents a ClusterBackups. */
-    class ClusterBackups implements IClusterBackups {
+    /** Represents a ClusterBackup. */
+    class ClusterBackup implements IClusterBackup {
 
         /**
-         * Constructs a new ClusterBackups.
+         * Constructs a new ClusterBackup.
          * @param [properties] Properties to set
          */
-        constructor(properties?: vtadmin.IClusterBackups);
+        constructor(properties?: vtadmin.IClusterBackup);
 
-        /** ClusterBackups backups. */
-        public backups: vtadmin.IBackup[];
+        /** ClusterBackup cluster. */
+        public cluster?: (vtadmin.ICluster|null);
+
+        /** ClusterBackup backup. */
+        public backup?: (vtadmin.IBackup|null);
 
         /**
-         * Creates a new ClusterBackups instance using the specified properties.
+         * Creates a new ClusterBackup instance using the specified properties.
          * @param [properties] Properties to set
-         * @returns ClusterBackups instance
+         * @returns ClusterBackup instance
          */
-        public static create(properties?: vtadmin.IClusterBackups): vtadmin.ClusterBackups;
+        public static create(properties?: vtadmin.IClusterBackup): vtadmin.ClusterBackup;
 
         /**
-         * Encodes the specified ClusterBackups message. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
-         * @param message ClusterBackups message or plain object to encode
+         * Encodes the specified ClusterBackup message. Does not implicitly {@link vtadmin.ClusterBackup.verify|verify} messages.
+         * @param message ClusterBackup message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encode(message: vtadmin.IClusterBackups, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encode(message: vtadmin.IClusterBackup, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Encodes the specified ClusterBackups message, length delimited. Does not implicitly {@link vtadmin.ClusterBackups.verify|verify} messages.
-         * @param message ClusterBackups message or plain object to encode
+         * Encodes the specified ClusterBackup message, length delimited. Does not implicitly {@link vtadmin.ClusterBackup.verify|verify} messages.
+         * @param message ClusterBackup message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encodeDelimited(message: vtadmin.IClusterBackups, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encodeDelimited(message: vtadmin.IClusterBackup, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Decodes a ClusterBackups message from the specified reader or buffer.
+         * Decodes a ClusterBackup message from the specified reader or buffer.
          * @param reader Reader or buffer to decode from
          * @param [length] Message length if known beforehand
-         * @returns ClusterBackups
+         * @returns ClusterBackup
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtadmin.ClusterBackups;
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): vtadmin.ClusterBackup;
 
         /**
-         * Decodes a ClusterBackups message from the specified reader or buffer, length delimited.
+         * Decodes a ClusterBackup message from the specified reader or buffer, length delimited.
          * @param reader Reader or buffer to decode from
-         * @returns ClusterBackups
+         * @returns ClusterBackup
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtadmin.ClusterBackups;
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): vtadmin.ClusterBackup;
 
         /**
-         * Verifies a ClusterBackups message.
+         * Verifies a ClusterBackup message.
          * @param message Plain object to verify
          * @returns `null` if valid, otherwise the reason why it is not
          */
         public static verify(message: { [k: string]: any }): (string|null);
 
         /**
-         * Creates a ClusterBackups message from a plain object. Also converts values to their respective internal types.
+         * Creates a ClusterBackup message from a plain object. Also converts values to their respective internal types.
          * @param object Plain object
-         * @returns ClusterBackups
+         * @returns ClusterBackup
          */
-        public static fromObject(object: { [k: string]: any }): vtadmin.ClusterBackups;
+        public static fromObject(object: { [k: string]: any }): vtadmin.ClusterBackup;
 
         /**
-         * Creates a plain object from a ClusterBackups message. Also converts values to other types if specified.
-         * @param message ClusterBackups
+         * Creates a plain object from a ClusterBackup message. Also converts values to other types if specified.
+         * @param message ClusterBackup
          * @param [options] Conversion options
          * @returns Plain object
          */
-        public static toObject(message: vtadmin.ClusterBackups, options?: $protobuf.IConversionOptions): { [k: string]: any };
+        public static toObject(message: vtadmin.ClusterBackup, options?: $protobuf.IConversionOptions): { [k: string]: any };
 
         /**
-         * Converts this ClusterBackups to JSON.
+         * Converts this ClusterBackup to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
@@ -2062,7 +2068,7 @@ export namespace vtadmin {
     interface IGetBackupsResponse {
 
         /** GetBackupsResponse backups */
-        backups?: ({ [k: string]: vtadmin.IClusterBackups }|null);
+        backups?: (vtadmin.IClusterBackup[]|null);
     }
 
     /** Represents a GetBackupsResponse. */
@@ -2075,7 +2081,7 @@ export namespace vtadmin {
         constructor(properties?: vtadmin.IGetBackupsResponse);
 
         /** GetBackupsResponse backups. */
-        public backups: { [k: string]: vtadmin.IClusterBackups };
+        public backups: vtadmin.IClusterBackup[];
 
         /**
          * Creates a new GetBackupsResponse instance using the specified properties.
