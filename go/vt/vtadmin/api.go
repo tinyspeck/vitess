@@ -265,7 +265,7 @@ func (api *API) GetBackups(ctx context.Context, req *vtadminpb.GetBackupsRequest
 		m       sync.Mutex
 		wg      sync.WaitGroup
 		rec     concurrency.AllErrorRecorder
-		backups = make(map[string]*vtadminpb.ClusterBackups, len(clusters))
+		backups []*vtadminpb.ClusterBackup
 	)
 
 	for _, c := range clusters {
@@ -283,7 +283,7 @@ func (api *API) GetBackups(ctx context.Context, req *vtadminpb.GetBackupsRequest
 			m.Lock()
 			defer m.Unlock()
 
-			backups[c.ID] = bs
+			backups = append(backups, bs...)
 		}(c)
 	}
 

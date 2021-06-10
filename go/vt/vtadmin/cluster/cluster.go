@@ -428,7 +428,7 @@ func (c *Cluster) findWorkflows(ctx context.Context, keyspaces []string, opts Fi
 }
 
 // GetBackups returns a ClusterBackups object for all backups in the cluster.
-func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, error) {
+func (c *Cluster) GetBackups(ctx context.Context) ([]*vtadminpb.ClusterBackup, error) {
 	span, ctx := trace.NewSpan(ctx, "Cluster.GetBackups")
 	defer span.Finish()
 
@@ -440,10 +440,11 @@ func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, er
 	}
 
 	var (
-		m       sync.Mutex
-		wg      sync.WaitGroup
-		rec     concurrency.AllErrorRecorder
-		backups []*vtadminpb.Backup
+		m            sync.Mutex
+		wg           sync.WaitGroup
+		rec          concurrency.AllErrorRecorder
+		backups      []*vtadminpb.ClusterBackup
+		clusterProto = c.ToProto()
 	)
 
 	for _, ks := range keyspaces {
@@ -469,7 +470,7 @@ func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, er
 					return
 				}
 
-				shardBackups := make([]*vtadminpb.Backup, len(resp.Backups))
+				shardBackups := make([]*vtadminpb.ClusterBackup, len(resp.Backups))
 
 				for i, bh := range resp.Backups {
 					backup := &vtadminpb.Backup{
@@ -501,7 +502,10 @@ func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, er
 						}
 					}
 
-					shardBackups[i] = backup
+					shardBackups[i] = &vtadminpb.ClusterBackup{
+						Cluster: clusterProto,
+						Backup:  backup,
+					}
 				}
 
 				m.Lock()
@@ -524,9 +528,7 @@ func (c *Cluster) GetBackups(ctx context.Context) (*vtadminpb.ClusterBackups, er
 		}
 	}
 
-	return &vtadminpb.ClusterBackups{
-		Backups: backups,
-	}, nil
+	return backups, nil
 }
 
 // GetGates returns the list of all VTGates in the cluster.
