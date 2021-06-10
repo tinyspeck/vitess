@@ -36,5 +36,5 @@ type BackupValidator interface {
 	// they like. They receive a copy of the Cluster to which the backups
 	// belong, so they may use any of the public methods as part of validation,
 	// but cannot modify the calling cluster.
-	ValidateBackups(ctx context.Context, c Cluster, backups ...*vtadminpb.Backup) error
+	ValidateBackups(ctx context.Context, c Cluster, backups ...*vtadminpb.ClusterBackup) error
 }
