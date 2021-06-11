@@ -26,6 +26,7 @@ import { getTableDefinitions } from '../../util/tableDefinitions';
 import { DataCell } from '../dataTable/DataCell';
 import { DataFilter } from '../dataTable/DataFilter';
 import { DataTable } from '../dataTable/DataTable';
+import { DataTable2 } from '../dataTable/DataTable2';
 import { ContentContainer } from '../layout/ContentContainer';
 import { WorkspaceHeader } from '../layout/WorkspaceHeader';
 import { WorkspaceTitle } from '../layout/WorkspaceTitle';
@@ -64,53 +65,114 @@ const TABLE_COLUMNS = [
 export const Schemas = () => {
     useDocumentTitle('Schemas');
 
-    const { data = [] } = useSchemas();
+    const { data: schemas = [] } = useSchemas();
     const { value: filter, updateValue: updateFilter } = useSyncedURLParam('filter');
 
-    const filteredData = React.useMemo(() => {
-        const tableDefinitions = getTableDefinitions(data);
+    const data = React.useMemo(() => {
+        const tableDefinitions = getTableDefinitions(schemas);
 
-        const mapped = tableDefinitions.map((d) => ({
-            cluster: d.cluster?.name,
-            clusterID: d.cluster?.id,
-            keyspace: d.keyspace,
-            table: d.tableDefinition?.name,
-            _raw: d,
-        }));
-
-        const filtered = filterNouns(filter, mapped);
-        return orderBy(filtered, ['cluster', 'keyspace', 'table']);
-    }, [data, filter]);
-
-    const renderRows = (rows: typeof filteredData) =>
-        rows.map((row, idx) => {
+        const mapped = tableDefinitions.map((d) => {
             const href =
-                row.clusterID && row.keyspace && row.table
-                    ? `/schema/${row.clusterID}/${row.keyspace}/${row.table}`
+                d.cluster?.id && d.keyspace && d.tableDefinition?.name
+                    ? `/schema/${d.cluster?.id}/${d.keyspace}/${d.tableDefinition?.name}`
                     : null;
-            return (
-                <tr key={idx}>
-                    <DataCell>
+            return {
+                cluster: d.cluster?.name,
+                clusterID: d.cluster?.id,
+                href,
+                keyspace: d.keyspace,
+                keyspaceID: `${d.cluster?.name}-${d.keyspace}`,
+                rowCount: d.tableSize?.row_count || 0,
+                size: formatBytes(d.tableSize?.data_length),
+                sizeB: formatBytes(d.tableSize?.data_length, 'B'),
+                sizeNum: d.tableSize?.data_length || 0,
+                table: d.tableDefinition?.name,
+                _raw: d,
+            };
+        });
+        return mapped;
+        // const filtered = filterNouns(filter, mapped);
+        // return orderBy(filtered, ['cluster', 'keyspace', 'table']);
+    }, [schemas]);
+
+    const columns: any = React.useMemo(() => {
+        return [
+            {
+                Header: 'Keyspace',
+                id: 'keyspaceID',
+                accessor: 'keyspaceID',
+                Cell: ({ row: { original: row } }: any) => {
+                    return (
                         <KeyspaceLink clusterID={row.clusterID} name={row.keyspace}>
                             <div>{row.keyspace}</div>
                             <div className="font-size-small text-color-secondary">{row.cluster}</div>
                         </KeyspaceLink>
-                    </DataCell>
-                    <DataCell className="font-weight-bold">
-                        {href ? <Link to={href}>{row.table}</Link> : row.table}
-                    </DataCell>
-                    <DataCell className="text-align-right">
-                        <div>{formatBytes(row._raw.tableSize?.data_length)}</div>
-                        <div className="font-size-small text-color-secondary">
-                            {formatBytes(row._raw.tableSize?.data_length, 'B')}
-                        </div>
-                    </DataCell>
-                    <DataCell className="text-align-right">
-                        {(row._raw.tableSize?.row_count || 0).toLocaleString()}
-                    </DataCell>
-                </tr>
-            );
-        });
+                    );
+                },
+            },
+            {
+                Header: 'Table',
+                id: 'table',
+                accessor: 'table',
+                Cell: ({ row: { original: row } }: any) => {
+                    return <span>{row.href ? <Link to={row.href}>{row.table}</Link> : row.table}</span>;
+                },
+            },
+            {
+                Header: 'Approx. Size',
+                accessor: 'sizeNum',
+            },
+            {
+                Header: 'Approx. Rows',
+                accessor: 'rowCount',
+            },
+        ];
+    }, []);
+
+    // const filteredData = React.useMemo(() => {
+    //     const tableDefinitions = getTableDefinitions(data);
+
+    //     const mapped = tableDefinitions.map((d) => ({
+    //         cluster: d.cluster?.name,
+    //         clusterID: d.cluster?.id,
+    //         keyspace: d.keyspace,
+    //         table: d.tableDefinition?.name,
+    //         _raw: d,
+    //     }));
+
+    //     const filtered = filterNouns(filter, mapped);
+    //     return orderBy(filtered, ['cluster', 'keyspace', 'table']);
+    // }, [data, filter]);
+
+    // const renderRows = (rows: typeof filteredData) =>
+    //     rows.map((row, idx) => {
+    //         const href =
+    //             row.clusterID && row.keyspace && row.table
+    //                 ? `/schema/${row.clusterID}/${row.keyspace}/${row.table}`
+    //                 : null;
+    //         return (
+    //             <tr key={idx}>
+    //                 <DataCell>
+    //                     <KeyspaceLink clusterID={row.clusterID} name={row.keyspace}>
+    //                         <div>{row.keyspace}</div>
+    //                         <div className="font-size-small text-color-secondary">{row.cluster}</div>
+    //                     </KeyspaceLink>
+    //                 </DataCell>
+    //                 <DataCell className="font-weight-bold">
+    //                     {href ? <Link to={href}>{row.table}</Link> : row.table}
+    //                 </DataCell>
+    //                 <DataCell className="text-align-right">
+    //                     <div>{formatBytes(row._raw.tableSize?.data_length)}</div>
+    //                     <div className="font-size-small text-color-secondary">
+    //                         {formatBytes(row._raw.tableSize?.data_length, 'B')}
+    //                     </div>
+    //                 </DataCell>
+    //                 <DataCell className="text-align-right">
+    //                     {(row._raw.tableSize?.row_count || 0).toLocaleString()}
+    //                 </DataCell>
+    //             </tr>
+    //         );
+    //     });
 
     return (
         <div>
@@ -125,7 +187,17 @@ export const Schemas = () => {
                     placeholder="Filter schemas"
                     value={filter || ''}
                 />
-                <DataTable columns={TABLE_COLUMNS} data={filteredData} renderRows={renderRows} />
+
+                <DataTable2
+                    columns={columns}
+                    data={data}
+                    filter={filter}
+                    initialState={{
+                        sortBy: [{ id: 'keyspaceID' }, { id: 'table' }],
+                    }}
+                />
+
+                {/* <DataTable columns={TABLE_COLUMNS} data={filteredData} renderRows={renderRows} /> */}
             </ContentContainer>
         </div>
     );
