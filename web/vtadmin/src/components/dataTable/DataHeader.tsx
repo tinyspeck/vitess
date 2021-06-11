@@ -26,6 +26,10 @@ interface Props<T extends object> {
 export const DataHeader = <T extends object>({ column }: Props<T>) => {
     return (
         <th {...column.getHeaderProps(column.getSortByToggleProps())}>
+            {column.canGroupBy ? (
+                // If the column can be grouped, let's add a toggle
+                <span {...column.getGroupByToggleProps()}>{column.isGrouped ? '🛑 ' : '👊 '}</span>
+            ) : null}
             {column.render('Header')}
             <span>{column.isSorted ? (column.isSortedDesc ? ' 🔽' : ' 🔼') : ''}</span>
         </th>

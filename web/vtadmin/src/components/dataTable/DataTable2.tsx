@@ -23,7 +23,20 @@ interface Props<T extends object> {
 }
 
 export const DataTable2 = <T extends object>({ columns, data }: Props<T>) => {
-    const table = useTable({ autoResetSortBy: false, columns, data }, useExpanded, useGroupBy, useSortBy);
+    const table = useTable(
+        {
+            // See https://react-table.tanstack.com/docs/faq#how-do-i-stop-my-table-state-from-automatically-resetting-when-my-data-changes
+            autoResetExpanded: false,
+            autoResetGroupBy: false,
+            autoResetSortBy: false,
+            columns,
+            data,
+        },
+        // Order of plugins matters
+        useGroupBy,
+        useSortBy,
+        useExpanded
+    );
 
     return (
         <table {...table.getTableProps()}>
