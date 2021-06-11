@@ -29,6 +29,8 @@ import { DataTable } from '../../dataTable/DataTable';
 import { KeyspaceLink } from '../../links/KeyspaceLink';
 import { TabletLink } from '../../links/TabletLink';
 import { StreamStatePip } from '../../pips/StreamStatePip';
+import { DataTable2 } from '../../dataTable/DataTable2';
+import { Column } from 'react-table';
 
 interface Props {
     clusterID: string;
@@ -44,88 +46,119 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const streams = useMemo(() => {
         const rows = getStreams(data).map((stream) => ({
             key: formatStreamKey(stream),
-            ...stream,
+            source: getStreamSource(stream),
+            state: stream.state,
+            tablet: formatAlias(stream.tablet),
+            target: getStreamTarget(stream, keyspace),
+            // ...stream,
         }));
 
-        return orderBy(rows, 'streamKey');
-    }, [data]);
+        return rows;
+    }, [data, keyspace]);
 
-    const streamsByState = groupBy(streams, 'state');
+    const columns: any = useMemo(() => {
+        return [
+            {
+                Header: 'Source',
+                accessor: 'source',
+            },
+            {
+                Header: 'Target',
+                accessor: 'target',
+            },
+            {
+                Header: 'Stream',
+                accessor: 'key',
+            },
+            {
+                Header: 'Tablet',
+                accessor: 'tablet',
+            },
+            {
+                Header: 'State',
+                accessor: 'state',
+            },
+        ];
+    }, []);
 
-    const renderRows = (rows: typeof streams) => {
-        return rows.map((row) => {
-            const href =
-                row.tablet && row.id
-                    ? `/workflow/${clusterID}/${keyspace}/${name}/stream/${row.tablet.cell}/${row.tablet.uid}/${row.id}`
-                    : null;
-
-            const source = getStreamSource(row);
-            const target = getStreamTarget(row, keyspace);
-
-            return (
-                <tr key={row.key}>
-                    <DataCell>
-                        <StreamStatePip state={row.state} />{' '}
-                        <Link className="font-weight-bold" to={href}>
-                            {row.key}
-                        </Link>
-                        <div className="font-size-small text-color-secondary">
-                            Updated {formatDateTime(row.time_updated?.seconds)}
-                        </div>
-                    </DataCell>
-                    <DataCell>
-                        {source ? (
-                            <KeyspaceLink
-                                clusterID={clusterID}
-                                name={row.binlog_source?.keyspace}
-                                shard={row.binlog_source?.shard}
-                            >
-                                {source}
-                            </KeyspaceLink>
-                        ) : (
-                            <span className="text-color-secondary">N/A</span>
-                        )}
-                    </DataCell>
-                    <DataCell>
-                        {target ? (
-                            <KeyspaceLink clusterID={clusterID} name={keyspace} shard={row.shard}>
-                                {source}
-                            </KeyspaceLink>
-                        ) : (
-                            <span className="text-color-secondary">N/A</span>
-                        )}
-                    </DataCell>
-                    <DataCell>
-                        <TabletLink alias={formatAlias(row.tablet)} clusterID={clusterID}>
-                            {formatAlias(row.tablet)}
-                        </TabletLink>
-                    </DataCell>
-                </tr>
-            );
-        });
-    };
-
-    return (
-        <div>
-            {/* TODO(doeg): add a protobuf enum for this (https://github.com/vitessio/vitess/projects/12#card-60190340) */}
-            {['Error', 'Copying', 'Running', 'Stopped'].map((streamState) => {
-                if (!Array.isArray(streamsByState[streamState])) {
-                    return null;
-                }
-
-                return (
-                    <div className={style.streamTable} key={streamState}>
-                        <DataTable
-                            columns={COLUMNS}
-                            data={streamsByState[streamState]}
-                            // TODO(doeg): make pagination optional in DataTable https://github.com/vitessio/vitess/projects/12#card-60810231
-                            pageSize={1000}
-                            renderRows={renderRows}
-                            title={streamState}
-                        />
-                    </div>
-                );
-            })}
-        </div>
-    );
+    return <DataTable2 columns={columns} data={streams} />;
 };
+
+// const streamsByState = groupBy(streams, 'state');
+
+// const renderRows = (rows: typeof streams) => {
+//     return rows.map((row) => {
+//         const href =
+//             row.tablet && row.id
+//                 ? `/workflow/${clusterID}/${keyspace}/${name}/stream/${row.tablet.cell}/${row.tablet.uid}/${row.id}`
+//                 : null;
+
+//         const source = getStreamSource(row);
+//         const target = getStreamTarget(row, keyspace);
+
+//         return (
+//             <tr key={row.key}>
+//                 <DataCell>
+//                     <StreamStatePip state={row.state} />{' '}
+//                     <Link className="font-weight-bold" to={href}>
+//                         {row.key}
+//                     </Link>
+//                     <div className="font-size-small text-color-secondary">
+//                         Updated {formatDateTime(row.time_updated?.seconds)}
+//                     </div>
+//                 </DataCell>
+//                 <DataCell>
+//                     {source ? (
+//                         <KeyspaceLink
+//                             clusterID={clusterID}
+//                             name={row.binlog_source?.keyspace}
+//                             shard={row.binlog_source?.shard}
+//                         >
+//                             {source}
+//                         </KeyspaceLink>
+//                     ) : (
+//                         <span className="text-color-secondary">N/A</span>
+//                     )}
+//                 </DataCell>
+//                 <DataCell>
+//                     {target ? (
+//                         <KeyspaceLink clusterID={clusterID} name={keyspace} shard={row.shard}>
+//                             {source}
+//                         </KeyspaceLink>
+//                     ) : (
+//                         <span className="text-color-secondary">N/A</span>
+//                     )}
+//                 </DataCell>
+//                 <DataCell>
+//                     <TabletLink alias={formatAlias(row.tablet)} clusterID={clusterID}>
+//                         {formatAlias(row.tablet)}
+//                     </TabletLink>
+//                 </DataCell>
+//             </tr>
+//         );
+//     });
+// };
+
+// return (
+//     <div>
+//         {/* TODO(doeg): add a protobuf enum for this (https://github.com/vitessio/vitess/projects/12#card-60190340) */}
+//         {['Error', 'Copying', 'Running', 'Stopped'].map((streamState) => {
+//             if (!Array.isArray(streamsByState[streamState])) {
+//                 return null;
+//             }
+
+//             return (
+//                 <div className={style.streamTable} key={streamState}>
+//                     <DataTable
+//                         columns={COLUMNS}
+//                         data={streamsByState[streamState]}
+//                         // TODO(doeg): make pagination optional in DataTable https://github.com/vitessio/vitess/projects/12#card-60810231
+//                         pageSize={1000}
+//                         renderRows={renderRows}
+//                         title={streamState}
+//                     />
+//                 </div>
+//             );
+//         })}
+//     </div>
+// );
