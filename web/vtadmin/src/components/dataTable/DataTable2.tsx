@@ -50,6 +50,8 @@ export const DataTable2 = <T extends object>({ columns, data, filter, initialSta
                 pageSize: 10,
                 ...initialState,
             },
+            manualFilters: true,
+            manualGlobalFilter: true,
         },
         // Order of plugins matters
         // useGroupBy,

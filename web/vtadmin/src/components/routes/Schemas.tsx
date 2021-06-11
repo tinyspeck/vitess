@@ -90,10 +90,10 @@ export const Schemas = () => {
                 _raw: d,
             };
         });
-        return mapped;
-        // const filtered = filterNouns(filter, mapped);
-        // return orderBy(filtered, ['cluster', 'keyspace', 'table']);
-    }, [schemas]);
+        // return mapped;
+        const filtered = filterNouns(filter, mapped);
+        return orderBy(filtered, ['cluster', 'keyspace', 'table']);
+    }, [filter, schemas]);
 
     const columns: any = React.useMemo(() => {
         return [
