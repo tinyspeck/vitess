@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useQuery, useQueryClient, UseQueryOptions } from 'react-query';
+import { useQueries, useQuery, useQueryClient, UseQueryOptions } from 'react-query';
 import {
     fetchClusters,
     fetchExperimentalTabletDebugVars,
@@ -23,6 +23,7 @@ import {
     FetchSchemaParams,
     fetchSchemas,
     fetchTablet,
+    FetchTabletParams,
     fetchTablets,
     fetchVSchema,
     FetchVSchemaParams,
@@ -88,6 +89,29 @@ export const useExperimentalTabletDebugVars = (
         ['experimental/tablet/debug/vars', params],
         () => fetchExperimentalTabletDebugVars(params),
         options
+    );
+};
+
+export interface AllTabletDebugVars {
+    params: FetchTabletParams;
+    data: TabletDebugVars;
+}
+
+export const useAllExperimentalTabletDebugVars = (
+    params: FetchTabletParams[],
+    options?: UseQueryOptions<FetchTabletParams, Error>
+) => {
+    return useQueries(
+        params.map((p) => {
+            return {
+                queryKey: ['experimental/tablet/debug/vars', p],
+                queryFn: async (): Promise<AllTabletDebugVars> => {
+                    const data = await fetchExperimentalTabletDebugVars(p);
+                    return { params: p, data } as any;
+                },
+                ...(options as any),
+            };
+        })
     );
 };
 

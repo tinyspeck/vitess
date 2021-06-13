@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { vtctldata, vtadmin as pb } from '../proto/vtadmin';
 import { formatAlias } from './tablets';
 
@@ -47,6 +48,28 @@ export const getStreamTarget = <S extends vtctldata.Workflow.IStream>(
     workflowKeyspace: string | null | undefined
 ): string | null => {
     return stream?.shard && workflowKeyspace ? `${workflowKeyspace}/${stream.shard}` : null;
+};
+
+/**
+ * getStreamTablets returns an unordered set of tablet aliases across all streams
+ * in the workflow.
+ */
+export const getStreamTablets = <W extends pb.IWorkflow>(workflow: W | null | undefined): string[] => {
+    const streams = getStreams(workflow);
+    if (!Array.isArray(streams)) {
+        return [];
+    }
+
+    // The set of tablet aliases is unique, but using a Set doesn't hurt.
+    const aliases = new Set<string>();
+    streams.forEach((stream) => {
+        const alias = formatAlias(stream.tablet);
+        if (alias) {
+            aliases.add(alias);
+        }
+    });
+
+    return [...aliases];
 };
 
 /**

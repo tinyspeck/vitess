@@ -18,6 +18,7 @@ import { vtadmin as pb } from '../proto/vtadmin';
 import * as errorHandler from '../errors/errorHandler';
 import { HttpFetchError, HttpResponseNotOkError, MalformedHttpResponseError } from '../errors/errorTypes';
 import { HttpOkResponse } from './responseTypes';
+import { TabletDebugVars } from '../util/tabletDebugVars';
 
 /**
  * vtfetch makes HTTP requests against the given vtadmin-api endpoint
@@ -188,7 +189,10 @@ export const fetchTablet = async ({ clusterID, alias }: FetchTabletParams) => {
     return pb.Tablet.create(result);
 };
 
-export const fetchExperimentalTabletDebugVars = async ({ clusterID, alias }: FetchTabletParams) => {
+export const fetchExperimentalTabletDebugVars = async ({
+    clusterID,
+    alias,
+}: FetchTabletParams): Promise<TabletDebugVars> => {
     if (!process.env.REACT_APP_ENABLE_EXPERIMENTAL_TABLET_DEBUG_VARS) {
         return Promise.resolve({});
     }

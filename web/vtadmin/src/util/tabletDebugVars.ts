@@ -37,6 +37,7 @@ export type TabletDebugVars = Partial<{
     QPS: { [k: string]: number[] };
 
     // See https://github.com/vitessio/vitess/blob/main/go/vt/vttablet/tabletmanager/vreplication/stats.go
+    VReplicationLag: { [k: string]: number[] };
     VReplicationQPS: { [k: string]: number[] };
 }>;
 
@@ -52,6 +53,11 @@ export const getQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: 
 
 export const getVReplicationQPSTimeseries = (d: TabletDebugVars | null | undefined, endAt?: number): TimeseriesMap =>
     formatTimeseriesMap(d?.VReplicationQPS || {}, endAt);
+
+export const getStreamVReplicationLagTimeseries = (
+    d: TabletDebugVars | null | undefined,
+    endAt?: number
+): TimeseriesMap => formatTimeseriesMap(d?.VReplicationLag || {}, endAt);
 
 /**
  * REFETCH_INTERVAL defines a default for how often charts, etc.
