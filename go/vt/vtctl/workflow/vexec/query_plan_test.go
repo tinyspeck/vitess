@@ -36,7 +36,7 @@ func TestQueryPlanExecute(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		plan      QueryPlan
+		plan      FixedQueryPlan
 		target    *topo.TabletInfo
 		expected  *querypb.QueryResult
 		shouldErr bool
@@ -44,7 +44,7 @@ func TestQueryPlanExecute(t *testing.T) {
 	}{
 		{
 			name: "success",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: &sqlparser.ParsedQuery{
 					Query: "SELECT id FROM _vt.vreplication",
 				},
@@ -78,7 +78,7 @@ func TestQueryPlanExecute(t *testing.T) {
 		},
 		{
 			name: "no rows affected",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: &sqlparser.ParsedQuery{
 					Query: "SELECT id FROM _vt.vreplication",
 				},
@@ -112,7 +112,7 @@ func TestQueryPlanExecute(t *testing.T) {
 		},
 		{
 			name: "error",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: &sqlparser.ParsedQuery{
 					Query: "SELECT id FROM _vt.vreplication",
 				},
@@ -142,7 +142,7 @@ func TestQueryPlanExecute(t *testing.T) {
 		},
 		{
 			name: "unprepared query",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: nil,
 			},
 			shouldErr: true,
@@ -180,7 +180,7 @@ func TestQueryPlanExecuteScatter(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		plan    QueryPlan
+		plan    FixedQueryPlan
 		targets []*topo.TabletInfo
 		// This is different from our actual return type because guaranteeing
 		// exact pointers in this table-driven style is a bit tough.
@@ -190,7 +190,7 @@ func TestQueryPlanExecuteScatter(t *testing.T) {
 	}{
 		{
 			name: "success",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: &sqlparser.ParsedQuery{
 					Query: "SELECT id FROM _vt.vreplication",
 				},
@@ -246,7 +246,7 @@ func TestQueryPlanExecuteScatter(t *testing.T) {
 		},
 		{
 			name: "some targets fail",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: &sqlparser.ParsedQuery{
 					Query: "SELECT id FROM _vt.vreplication",
 				},
@@ -292,7 +292,7 @@ func TestQueryPlanExecuteScatter(t *testing.T) {
 		},
 		{
 			name: "unprepared query",
-			plan: QueryPlan{
+			plan: FixedQueryPlan{
 				ParsedQuery: nil,
 			},
 			shouldErr: true,
