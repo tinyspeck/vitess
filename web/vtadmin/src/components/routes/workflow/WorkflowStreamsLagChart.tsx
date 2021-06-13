@@ -18,7 +18,7 @@ import { useMemo } from 'react';
 
 import { useAllExperimentalTabletDebugVars, useWorkflow } from '../../../hooks/api';
 import { getStreamVReplicationLagTimeseries, QPS_REFETCH_INTERVAL } from '../../../util/tabletDebugVars';
-import { getStreamTablets } from '../../../util/workflows';
+import { formatStreamKey, getStreams, getStreamTablets } from '../../../util/workflows';
 import { mergeOptions } from '../../charts/chartOptions';
 import { Timeseries } from '../../charts/Timeseries';
 
@@ -48,7 +48,9 @@ export const WorkflowStreamsLagChart = ({ clusterID, keyspace, workflowName }: P
 
     const anyLoading = wq.isLoading || tabletQueries.some((q) => q.isLoading);
 
-    const chartOptions: any = useMemo(() => {
+    const chartOptions: Highcharts.Options = useMemo(() => {
+        const streamKeys = getStreams(workflow).map((s) => formatStreamKey(s));
+
         const series = tabletQueries.reduce((acc, { data }: any) => {
             if (!data) {
                 return acc;
@@ -63,9 +65,15 @@ export const WorkflowStreamsLagChart = ({ clusterID, keyspace, workflowName }: P
                     return;
                 }
 
+                // Filter by streams in this workflow
+                const seriesStreamKey = `${params?.alias}/${streamID}`;
+                if (streamKeys.indexOf(seriesStreamKey) < 0) {
+                    return;
+                }
+
                 acc.push({
                     data: qpsData,
-                    name: `${params?.alias}/${streamID}`,
+                    name: seriesStreamKey,
                     type: 'line',
                 });
             });

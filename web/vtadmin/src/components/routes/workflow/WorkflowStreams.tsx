@@ -30,6 +30,7 @@ import { KeyspaceLink } from '../../links/KeyspaceLink';
 import { TabletLink } from '../../links/TabletLink';
 import { StreamStatePip } from '../../pips/StreamStatePip';
 import { WorkflowStreamsLagChart } from './WorkflowStreamsLagChart';
+import { Button } from '../../Button';
 
 interface Props {
     clusterID: string;
@@ -37,7 +38,7 @@ interface Props {
     name: string;
 }
 
-const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet'];
+const COLUMNS = ['Stream', 'Source', 'Target', 'Tablet', ''];
 
 export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
     const { data } = useWorkflow({ clusterID, keyspace, name }, { refetchInterval: 1000 });
@@ -100,6 +101,11 @@ export const WorkflowStreams = ({ clusterID, keyspace, name }: Props) => {
                         <TabletLink alias={formatAlias(row.tablet)} clusterID={clusterID}>
                             {formatAlias(row.tablet)}
                         </TabletLink>
+                    </DataCell>
+                    <DataCell className="text-align-right">
+                        <Button secondary size="small">
+                            View stream
+                        </Button>
                     </DataCell>
                 </tr>
             );
