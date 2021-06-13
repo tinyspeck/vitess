@@ -89,7 +89,7 @@ export const WorkflowStreamsLagChart = ({ clusterID, keyspace, workflowName }: P
                 },
             },
         });
-    }, [tabletQueries]);
+    }, [tabletQueries, workflow]);
 
     return <Timeseries isLoading={anyLoading} options={chartOptions} />;
 };
