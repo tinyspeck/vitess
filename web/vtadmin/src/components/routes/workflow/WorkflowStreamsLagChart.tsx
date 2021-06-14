@@ -50,6 +50,7 @@ export const WorkflowStreamsLagChart = ({ clusterID, keyspace, workflowName }: P
 
     const chartOptions: Highcharts.Options = useMemo(() => {
         const streamKeys = getStreams(workflow).map((s) => formatStreamKey(s));
+        const now = Date.now();
 
         const series = tabletQueries.reduce((acc, { data }: any) => {
             if (!data) {
@@ -58,7 +59,7 @@ export const WorkflowStreamsLagChart = ({ clusterID, keyspace, workflowName }: P
 
             const { params, data: qData } = data;
 
-            const lagSeries = getStreamVReplicationLagTimeseries(qData);
+            const lagSeries = getStreamVReplicationLagTimeseries(qData, now);
             Object.entries(lagSeries).forEach(([streamID, qpsData]) => {
                 // Don't graph aggregate stream data for the tablet
                 if (streamID === 'All') {
