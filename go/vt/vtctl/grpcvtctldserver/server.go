@@ -25,10 +25,12 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"vitess.io/vitess/go/trace"
 	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/log"
+	"vitess.io/vitess/go/vt/mysqlctl"
 	"vitess.io/vitess/go/vt/mysqlctl/backupstorage"
 	"vitess.io/vitess/go/vt/mysqlctl/mysqlctlproto"
 	"vitess.io/vitess/go/vt/topo"
@@ -338,6 +340,15 @@ func (s *VtctldServer) FindAllShardsInKeyspace(ctx context.Context, req *vtctlda
 
 // GetBackups is part of the vtctldservicepb.VtctldServer interface.
 func (s *VtctldServer) GetBackups(ctx context.Context, req *vtctldatapb.GetBackupsRequest) (*vtctldatapb.GetBackupsResponse, error) {
+	span, ctx := trace.NewSpan(ctx, "VtctldServer.GetBackups")
+	defer span.Finish()
+
+	span.Annotate("keyspace", req.Keyspace)
+	span.Annotate("shard", req.Shard)
+	span.Annotate("limit", req.Limit)
+	span.Annotate("detailed", req.Detailed)
+	span.Annotate("detailed_limit", req.DetailedLimit)
+
 	bs, err := backupstorage.GetBackupStorage()
 	if err != nil {
 		return nil, err
@@ -351,15 +362,47 @@ func (s *VtctldServer) GetBackups(ctx context.Context, req *vtctldatapb.GetBacku
 		return nil, err
 	}
 
-	resp := &vtctldatapb.GetBackupsResponse{
-		Backups: make([]*mysqlctlpb.BackupInfo, len(bhs)),
+	totalBackups := len(bhs)
+	if req.Limit > 0 {
+		totalBackups = int(req.Limit)
 	}
+
+	totalDetailedBackups := len(bhs)
+	if req.DetailedLimit > 0 {
+		totalDetailedBackups = int(req.DetailedLimit)
+	}
+
+	backups := make([]*mysqlctlpb.BackupInfo, 0, totalBackups)
+	backupsToSkip := len(bhs) - totalBackups
+	backupsToSkipDetails := totalBackups - totalDetailedBackups
 
 	for i, bh := range bhs {
-		resp.Backups[i] = mysqlctlproto.BackupHandleToProto(bh)
+		if i < backupsToSkip {
+			continue
+		}
+
+		bi := mysqlctlproto.BackupHandleToProto(bh)
+		bi.Keyspace = req.Keyspace
+		bi.Shard = req.Shard
+
+		if req.Detailed {
+			if i >= backupsToSkipDetails {
+				engine, status, err := mysqlctl.GetBackupInfo(ctx, bh)
+				if err != nil {
+					log.Warningf("error getting detailed backup info for %s/%s %s/%s: %s", bi.Keyspace, bi.Shard, bi.Directory, bi.Name, err)
+				}
+
+				bi.Engine = engine
+				bi.Status = status
+			}
+		}
+
+		backups = append(backups, bi)
 	}
 
-	return resp, nil
+	return &vtctldatapb.GetBackupsResponse{
+		Backups: backups,
+	}, nil
 }
 
 // GetCellInfoNames is part of the vtctlservicepb.VtctldServer interface.
@@ -517,7 +560,7 @@ func (s *VtctldServer) GetSrvKeyspaces(ctx context.Context, req *vtctldatapb.Get
 				return nil, err
 			}
 
-			log.Infof("no srvkeyspace for keyspace %s in cell %s", req.Keyspace, cell)
+			log.Warningf("no srvkeyspace for keyspace %s in cell %s", req.Keyspace, cell)
 
 			srvKeyspace = nil
 		}
@@ -539,6 +582,45 @@ func (s *VtctldServer) GetSrvVSchema(ctx context.Context, req *vtctldatapb.GetSr
 
 	return &vtctldatapb.GetSrvVSchemaResponse{
 		SrvVSchema: vschema,
+	}, nil
+}
+
+// GetSrvVSchemas is part of the vtctlservicepb.VtctldServer interface.
+func (s *VtctldServer) GetSrvVSchemas(ctx context.Context, req *vtctldatapb.GetSrvVSchemasRequest) (*vtctldatapb.GetSrvVSchemasResponse, error) {
+	allCells, err := s.ts.GetCellInfoNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	cells := allCells
+
+	// Omit any cell names in the request that don't map to existing cells
+	if len(req.Cells) > 0 {
+		s1 := sets.NewString(allCells...)
+		s2 := sets.NewString(req.Cells...)
+
+		cells = s1.Intersection(s2).List()
+	}
+
+	svs := make(map[string]*vschemapb.SrvVSchema, len(cells))
+
+	for _, cell := range cells {
+		sv, err := s.ts.GetSrvVSchema(ctx, cell)
+
+		if err != nil {
+			if !topo.IsErrType(err, topo.NoNode) {
+				return nil, err
+			}
+
+			log.Warningf("no SrvVSchema for cell %s", cell)
+			sv = nil
+		}
+
+		svs[cell] = sv
+	}
+
+	return &vtctldatapb.GetSrvVSchemasResponse{
+		SrvVSchemas: svs,
 	}, nil
 }
 

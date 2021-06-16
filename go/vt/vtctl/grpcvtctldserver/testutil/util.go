@@ -20,13 +20,17 @@ package testutil
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/nettest"
 	"google.golang.org/grpc"
 
 	"vitess.io/vitess/go/vt/topo"
+	"vitess.io/vitess/go/vt/topo/topoproto"
 	"vitess.io/vitess/go/vt/vtctl/vtctldclient"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -59,13 +63,48 @@ func WithTestServer(
 	test(t, client)
 }
 
+// WithTestServers creates N gRPC servers listening locally with the given RPC
+// implementations, and then runs the test func with N clients created, where
+// clients[i] points at servers[i].
+func WithTestServers(
+	t *testing.T,
+	test func(t *testing.T, clients ...vtctldclient.VtctldClient),
+	servers ...vtctlservicepb.VtctldServer,
+) {
+	// Declare our recursive helper function so it can refer to itself.
+	var withTestServers func(t *testing.T, servers ...vtctlservicepb.VtctldServer)
+
+	// Preallocate a slice of clients we're eventually going to call the test
+	// function with.
+	clients := make([]vtctldclient.VtctldClient, 0, len(servers))
+
+	withTestServers = func(t *testing.T, servers ...vtctlservicepb.VtctldServer) {
+		if len(servers) == 0 {
+			// We've started up all the test servers and accumulated clients for
+			// each of them (or there were no test servers to start, and we've
+			// accumulated no clients), so finally we run the test and stop
+			// recursing.
+			test(t, clients...)
+
+			return
+		}
+
+		// Start up a test server for the head of our server slice, accumulate
+		// the resulting client, and recurse on the tail of our server slice.
+		WithTestServer(t, servers[0], func(t *testing.T, client vtctldclient.VtctldClient) {
+			clients = append(clients, client)
+			withTestServers(t, servers[1:]...)
+		})
+	}
+
+	withTestServers(t, servers...)
+}
+
 // AddKeyspace adds a keyspace to a topology, failing a test if that keyspace
 // could not be added. It shallow copies the proto struct to prevent XXX_ fields
 // from changing in the marshalling.
 func AddKeyspace(ctx context.Context, t *testing.T, ts *topo.Server, ks *vtctldatapb.Keyspace) {
-	in := *ks.Keyspace // take a copy to avoid XXX_ fields changing.
-
-	err := ts.CreateKeyspace(ctx, ks.Name, &in)
+	err := ts.CreateKeyspace(ctx, ks.Name, proto.Clone(ks.Keyspace).(*topodatapb.Keyspace))
 	require.NoError(t, err)
 }
 
@@ -77,6 +116,23 @@ func AddKeyspaces(ctx context.Context, t *testing.T, ts *topo.Server, keyspaces 
 	}
 }
 
+// AddTabletOptions is a container for different behaviors tests need from
+// AddTablet.
+type AddTabletOptions struct {
+	// AlsoSetShardMaster is an option to control additional setup to take when
+	// AddTablet receives a tablet of type MASTER. When set, AddTablet will also
+	// update the shard record to make that tablet the primary, and fail the
+	// test if the shard record has a serving primary already.
+	AlsoSetShardMaster bool
+	// ForceSetShardMaster, when combined with AlsoSetShardMaster, will ignore
+	// any existing primary in the shard, making the current tablet the serving
+	// primary (given it is type MASTER), and log that it has done so.
+	ForceSetShardMaster bool
+	// SkipShardCreation, when set, makes AddTablet never attempt to create a
+	// shard record in the topo under any circumstances.
+	SkipShardCreation bool
+}
+
 // AddTablet adds a tablet to the topology, failing a test if that tablet record
 // could not be created. It shallow copies to prevent XXX_ fields from changing,
 // including nested proto message fields.
@@ -84,13 +140,24 @@ func AddKeyspaces(ctx context.Context, t *testing.T, ts *topo.Server, keyspaces 
 // AddTablet also optionally adds empty keyspace and shard records to the
 // topology, if they are set on the tablet record and they cannot be retrieved
 // from the topo server without error.
-func AddTablet(ctx context.Context, t *testing.T, ts *topo.Server, tablet *topodatapb.Tablet) {
-	in := *tablet
-	alias := *tablet.Alias
-	in.Alias = &alias
+//
+// If AddTablet receives a tablet record with a keyspace and shard set, and that
+// tablet's type is MASTER, and opts.AlsoSetShardMaster is set, then AddTablet
+// will update the shard record to make that tablet the shard master and set the
+// shard to serving. If that shard record already has a serving primary, then
+// AddTablet will fail the test.
+func AddTablet(ctx context.Context, t *testing.T, ts *topo.Server, tablet *topodatapb.Tablet, opts *AddTabletOptions) {
+	tablet = proto.Clone(tablet).(*topodatapb.Tablet)
+	if opts == nil {
+		opts = &AddTabletOptions{}
+	}
 
-	err := ts.CreateTablet(ctx, &in)
-	require.NoError(t, err, "CreateTablet(%+v)", &in)
+	err := ts.CreateTablet(ctx, tablet)
+	require.NoError(t, err, "CreateTablet(%+v)", tablet)
+
+	if opts.SkipShardCreation {
+		return
+	}
 
 	if tablet.Keyspace != "" {
 		if _, err := ts.GetKeyspace(ctx, tablet.Keyspace); err != nil {
@@ -103,15 +170,36 @@ func AddTablet(ctx context.Context, t *testing.T, ts *topo.Server, tablet *topod
 				err := ts.CreateShard(ctx, tablet.Keyspace, tablet.Shard)
 				require.NoError(t, err, "CreateShard(%s, %s)", tablet.Keyspace, tablet.Shard)
 			}
+
+			if tablet.Type == topodatapb.TabletType_MASTER && opts.AlsoSetShardMaster {
+				_, err := ts.UpdateShardFields(ctx, tablet.Keyspace, tablet.Shard, func(si *topo.ShardInfo) error {
+					if si.IsMasterServing && si.MasterAlias != nil {
+						msg := fmt.Sprintf("shard %v/%v already has a serving master (%v)", tablet.Keyspace, tablet.Shard, topoproto.TabletAliasString(si.MasterAlias))
+
+						if !opts.ForceSetShardMaster {
+							return errors.New(msg)
+						}
+
+						t.Logf("%s; replacing with %v because ForceSetShardMaster = true", msg, topoproto.TabletAliasString(tablet.Alias))
+					}
+
+					si.MasterAlias = tablet.Alias
+					si.IsMasterServing = true
+					si.MasterTermStartTime = tablet.MasterTermStartTime
+
+					return nil
+				})
+				require.NoError(t, err, "UpdateShardFields(%s, %s) to set %s as serving primary failed", tablet.Keyspace, tablet.Shard, topoproto.TabletAliasString(tablet.Alias))
+			}
 		}
 	}
 }
 
 // AddTablets adds a list of tablets to the topology. See AddTablet for more
 // details.
-func AddTablets(ctx context.Context, t *testing.T, ts *topo.Server, tablets ...*topodatapb.Tablet) {
+func AddTablets(ctx context.Context, t *testing.T, ts *topo.Server, opts *AddTabletOptions, tablets ...*topodatapb.Tablet) {
 	for _, tablet := range tablets {
-		AddTablet(ctx, t, ts, tablet)
+		AddTablet(ctx, t, ts, tablet, opts)
 	}
 }
 
@@ -130,6 +218,15 @@ func AddShards(ctx context.Context, t *testing.T, ts *topo.Server, shards ...*vt
 
 		err := ts.CreateShard(ctx, shard.Keyspace, shard.Name)
 		require.NoError(t, err, "CreateShard(%s/%s)", shard.Keyspace, shard.Name)
+
+		if shard.Shard != nil {
+			_, err := ts.UpdateShardFields(ctx, shard.Keyspace, shard.Name, func(si *topo.ShardInfo) error {
+				si.Shard = shard.Shard
+
+				return nil
+			})
+			require.NoError(t, err, "UpdateShardFields(%s/%s, %v)", shard.Keyspace, shard.Name, shard.Shard)
+		}
 	}
 }
 
