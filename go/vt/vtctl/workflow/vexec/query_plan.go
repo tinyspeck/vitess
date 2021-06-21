@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync"
 
+	"vitess.io/vitess/go/sync2"
 	"vitess.io/vitess/go/vt/concurrency"
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/sqlparser"
@@ -49,6 +50,7 @@ type FixedQueryPlan struct {
 
 	workflow string
 	tmc      tmclient.TabletManagerClient
+	pool     *sync2.Semaphore
 }
 
 // Execute is part of the QueryPlan interface.
@@ -60,6 +62,14 @@ func (qp *FixedQueryPlan) Execute(ctx context.Context, target *topo.TabletInfo) 
 	targetAliasStr := target.AliasString()
 
 	log.Infof("Running %v on %v", qp.ParsedQuery.Query, targetAliasStr)
+
+	if qp.pool != nil {
+		if !qp.pool.AcquireContext(ctx) {
+			return nil, ErrConnTimeout
+		}
+		defer qp.pool.Release()
+	}
+
 	defer func() {
 		if err != nil {
 			log.Warningf("Result on %v: %v", targetAliasStr, err)
@@ -136,7 +146,8 @@ func (qp *FixedQueryPlan) ExecuteScatter(ctx context.Context, targets ...*topo.T
 type PerTargetQueryPlan struct {
 	ParsedQueries map[string]*sqlparser.ParsedQuery
 
-	tmc tmclient.TabletManagerClient
+	tmc  tmclient.TabletManagerClient
+	pool *sync2.Semaphore
 }
 
 // Execute is part of the QueryPlan interface.
@@ -152,6 +163,13 @@ func (qp *PerTargetQueryPlan) Execute(ctx context.Context, target *topo.TabletIn
 	query, ok := qp.ParsedQueries[targetAliasStr]
 	if !ok {
 		return nil, fmt.Errorf("%w: no prepared query for target %s", ErrUnpreparedQuery, targetAliasStr)
+	}
+
+	if qp.pool != nil {
+		if !qp.pool.AcquireContext(ctx) {
+			return nil, ErrConnTimeout
+		}
+		defer qp.pool.Release()
 	}
 
 	defer func() {

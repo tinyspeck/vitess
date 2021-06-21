@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/sync2"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/topo"
 	"vitess.io/vitess/go/vt/topo/topoproto"
@@ -54,6 +55,9 @@ var ( // Topo lookup errors.
 	// ErrNoShardsForKeyspace occurs when attempting to run a vexec on an empty
 	// keyspace.
 	ErrNoShardsForKeyspace = errors.New("no shards found in keyspace")
+	// ErrConnTimeout is returned if a call to acquire a vexec's connpool hits
+	// a deadline exceeded.
+	ErrConnTimeout = errors.New("timeout exceeded getting vexec conn")
 )
 
 var ( // Query parsing and planning errors.
@@ -76,6 +80,8 @@ type VExec struct {
 
 	keyspace string
 	workflow string
+
+	pool *sync2.Semaphore
 
 	// (TODO:@ajm188) Consider renaming this field to "targets", and then
 	// support different Strategy functions for loading target tablets from a
@@ -102,12 +108,13 @@ type VExec struct {
 // string). The provided topo server is used to look up target tablets for
 // queries. A given instance will discover targets exactly once for its
 // lifetime, so to force a refresh, create another instance.
-func NewVExec(keyspace string, workflow string, ts *topo.Server, tmc tmclient.TabletManagerClient) *VExec {
+func NewVExec(keyspace string, workflow string, ts *topo.Server, tmc tmclient.TabletManagerClient, pool *sync2.Semaphore) *VExec {
 	return &VExec{
 		ts:       ts,
 		tmc:      tmc,
 		keyspace: keyspace,
 		workflow: workflow,
+		pool:     pool,
 	}
 }
 
@@ -212,7 +219,7 @@ func (vx *VExec) GetPlanner(ctx context.Context, table string) (QueryPlanner, er
 
 	switch table {
 	case qualifiedTableName(VReplicationTableName):
-		return NewVReplicationQueryPlanner(vx.tmc, vx.workflow, vx.primaries[0].DbName()), nil
+		return NewVReplicationQueryPlanner(vx.tmc, vx.workflow, vx.primaries[0].DbName(), vx.pool), nil
 	case qualifiedTableName(VReplicationLogTableName):
 		results, err := vx.QueryContext(ctx, "select id from _vt.vreplication")
 		if err != nil {
@@ -236,7 +243,7 @@ func (vx *VExec) GetPlanner(ctx context.Context, table string) (QueryPlanner, er
 			}
 		}
 
-		return NewVReplicationLogQueryPlanner(vx.tmc, tabletStreamIDMap), nil
+		return NewVReplicationLogQueryPlanner(vx.tmc, tabletStreamIDMap, vx.pool), nil
 	case qualifiedTableName(SchemaMigrationsTableName):
 		return nil, errors.New("Schema Migrations not yet supported in new workflow package")
 	default:
@@ -253,6 +260,7 @@ func (vx *VExec) WithWorkflow(workflow string) *VExec {
 		tmc:       vx.tmc,
 		primaries: vx.primaries,
 		workflow:  workflow,
+		pool:      vx.pool,
 	}
 }
 

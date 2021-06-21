@@ -62,7 +62,7 @@ func TestVReplicationQueryPlanner_PlanQuery(t *testing.T) {
 		},
 	}
 
-	planner := NewVReplicationQueryPlanner(nil, "", "")
+	planner := NewVReplicationQueryPlanner(nil, "", "", nil)
 
 	for _, tt := range tests {
 		tt := tt
@@ -112,7 +112,7 @@ func TestVReplicationQueryPlanner_planSelect(t *testing.T) {
 		},
 	}
 
-	planner := NewVReplicationQueryPlanner(nil, "testworkflow", "vt_testkeyspace")
+	planner := NewVReplicationQueryPlanner(nil, "testworkflow", "vt_testkeyspace", nil)
 
 	for _, tt := range tests {
 		tt := tt
@@ -143,26 +143,26 @@ func TestVReplicationQueryPlanner_planUpdate(t *testing.T) {
 	}{
 		{
 			name:                 "simple update",
-			planner:              NewVReplicationQueryPlanner(nil, "testworkflow", "vt_testkeyspace"),
+			planner:              NewVReplicationQueryPlanner(nil, "testworkflow", "vt_testkeyspace", nil),
 			query:                "UPDATE _vt.vreplication SET state = 'Running'",
 			expectedPlannedQuery: "UPDATE _vt.vreplication SET state = 'Running' WHERE db_name = 'vt_testkeyspace' AND workflow = 'testworkflow'",
 			expectedErr:          nil,
 		},
 		{
 			name:        "including an ORDER BY is an error",
-			planner:     NewVReplicationQueryPlanner(nil, "", ""),
+			planner:     NewVReplicationQueryPlanner(nil, "", "", nil),
 			query:       "UPDATE _vt.vreplication SET state = 'Running' ORDER BY id DESC",
 			expectedErr: ErrUnsupportedQueryConstruct,
 		},
 		{
 			name:        "including a LIMIT is an error",
-			planner:     NewVReplicationQueryPlanner(nil, "", ""),
+			planner:     NewVReplicationQueryPlanner(nil, "", "", nil),
 			query:       "UPDATE _vt.vreplication SET state = 'Running' LIMIT 5",
 			expectedErr: ErrUnsupportedQueryConstruct,
 		},
 		{
 			name:        "cannot update id column",
-			planner:     NewVReplicationQueryPlanner(nil, "", "vt_testkeyspace"),
+			planner:     NewVReplicationQueryPlanner(nil, "", "vt_testkeyspace", nil),
 			query:       "UPDATE _vt.vreplication SET id = 5",
 			expectedErr: ErrCannotUpdateImmutableColumn,
 		},
@@ -227,7 +227,7 @@ func TestVReplicationQueryPlanner_planDelete(t *testing.T) {
 		},
 	}
 
-	planner := NewVReplicationQueryPlanner(nil, "", "vt_testkeyspace")
+	planner := NewVReplicationQueryPlanner(nil, "", "vt_testkeyspace", nil)
 
 	for _, tt := range tests {
 		tt := tt
@@ -356,7 +356,7 @@ func TestVReplicationLogQueryPlanner(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
-				planner := NewVReplicationLogQueryPlanner(nil, tt.targetStreamIDs)
+				planner := NewVReplicationLogQueryPlanner(nil, tt.targetStreamIDs, nil)
 				stmt, err := sqlparser.Parse(tt.query)
 				require.NoError(t, err, "could not parse query %q", tt.query)
 				qp, err := planner.planSelect(stmt.(*sqlparser.Select))

@@ -513,7 +513,7 @@ func (wr *Wrangler) ListAllWorkflows(ctx context.Context, keyspace string, activ
 		where = " where state <> 'Stopped'"
 	}
 	query := "select distinct workflow from _vt.vreplication" + where
-	vx := vtctldvexec.NewVExec(keyspace, "", wr.ts, wr.tmc)
+	vx := vtctldvexec.NewVExec(keyspace, "", wr.ts, wr.tmc, nil)
 	results, err := vx.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

@@ -40,7 +40,6 @@ import (
 	"vitess.io/vitess/go/vt/vttablet/tmclient"
 
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
-	querypb "vitess.io/vitess/go/vt/proto/query"
 	vtctldatapb "vitess.io/vitess/go/vt/proto/vtctldata"
 	"vitess.io/vitess/go/vt/proto/vttime"
 )
@@ -62,10 +61,6 @@ var (
 	// target keyspaces across different shard primaries. This should be
 	// impossible.
 	ErrMultipleTargetKeyspaces = errors.New("multiple target keyspaces for a single workflow")
-
-	// ErrVExecConnTimeout is returned if a call to acquire a server's vexecPool
-	// hits a deadline exceeded
-	ErrVExecConnTimeout = errors.New("timeout exceeded getting vexec conn")
 )
 
 // Server provides an API to work with Vitess workflows, like vreplication
@@ -129,14 +124,8 @@ func (s *Server) GetWorkflows(ctx context.Context, req *vtctldatapb.GetWorkflows
 		where,
 	)
 
-	vx := vexec.NewVExec(req.Keyspace, "", s.ts, s.tmc)
-
-	if !s.vexecPool.AcquireContext(ctx) {
-		return nil, ErrVExecConnTimeout
-	}
+	vx := vexec.NewVExec(req.Keyspace, "", s.ts, s.tmc, s.vexecPool)
 	results, err := vx.QueryContext(ctx, query)
-	s.vexecPool.Release()
-
 	if err != nil {
 		return nil, err
 	}
@@ -361,18 +350,7 @@ ORDER BY
 		span.Annotate("keyspace", req.Keyspace)
 		span.Annotate("workflow", workflow.Name)
 
-		var (
-			results map[*topo.TabletInfo]*querypb.QueryResult
-			err     error
-		)
-
-		if !s.vexecPool.AcquireContext(ctx) {
-			err = ErrVExecConnTimeout
-		} else {
-			results, err = vx.WithWorkflow(workflow.Name).QueryContext(ctx, vrepLogQuery)
-			s.vexecPool.Release()
-		}
-
+		results, err := vx.WithWorkflow(workflow.Name).QueryContext(ctx, vrepLogQuery)
 		if err != nil {
 			// Note that we do not return here. If there are any query results
 			// in the map (i.e. some tablets returned successfully), we will
@@ -560,7 +538,7 @@ func (s *Server) getWorkflowCopyStates(ctx context.Context, tablet *topo.TabletI
 	query := fmt.Sprintf("select table_name, lastpk from _vt.copy_state where vrepl_id = %d", id)
 
 	if !s.vexecPool.AcquireContext(ctx) {
-		return nil, ErrVExecConnTimeout
+		return nil, vexec.ErrConnTimeout
 	}
 
 	qr, err := s.tmc.VReplicationExec(ctx, tablet.Tablet, query)

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 
+	"vitess.io/vitess/go/sync2"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vttablet/tmclient"
 )
@@ -94,15 +95,17 @@ type VReplicationQueryPlanner struct {
 
 	dbname   string
 	workflow string
+	pool     *sync2.Semaphore
 }
 
 // NewVReplicationQueryPlanner returns a new VReplicationQueryPlanner. It is
 // valid to pass empty strings for both the dbname and workflow parameters.
-func NewVReplicationQueryPlanner(tmc tmclient.TabletManagerClient, workflow string, dbname string) *VReplicationQueryPlanner {
+func NewVReplicationQueryPlanner(tmc tmclient.TabletManagerClient, workflow string, dbname string, pool *sync2.Semaphore) *VReplicationQueryPlanner {
 	return &VReplicationQueryPlanner{
 		tmc:      tmc,
 		dbname:   dbname,
 		workflow: workflow,
+		pool:     pool,
 	}
 }
 
@@ -239,6 +242,7 @@ func (planner *VReplicationQueryPlanner) planUpdate(upd *sqlparser.Update) (*Fix
 		ParsedQuery: buf.ParsedQuery(),
 		workflow:    planner.workflow,
 		tmc:         planner.tmc,
+		pool:        planner.pool,
 	}, nil
 }
 
@@ -247,15 +251,17 @@ func (planner *VReplicationQueryPlanner) planUpdate(upd *sqlparser.Update) (*Fix
 type VReplicationLogQueryPlanner struct {
 	tmc             tmclient.TabletManagerClient
 	tabletStreamIDs map[string][]int64
+	pool            *sync2.Semaphore
 }
 
 // NewVReplicationLogQueryPlanner returns a new VReplicationLogQueryPlanner. The
 // tabletStreamIDs map determines what stream_ids are expected to have vrep_log
 // rows, keyed by tablet alias string.
-func NewVReplicationLogQueryPlanner(tmc tmclient.TabletManagerClient, tabletStreamIDs map[string][]int64) *VReplicationLogQueryPlanner {
+func NewVReplicationLogQueryPlanner(tmc tmclient.TabletManagerClient, tabletStreamIDs map[string][]int64, pool *sync2.Semaphore) *VReplicationLogQueryPlanner {
 	return &VReplicationLogQueryPlanner{
 		tmc:             tmc,
 		tabletStreamIDs: tabletStreamIDs,
+		pool:            pool,
 	}
 }
 
@@ -306,6 +312,7 @@ func (planner *VReplicationLogQueryPlanner) planSelect(sel *sqlparser.Select) (Q
 		return &FixedQueryPlan{
 			ParsedQuery: buf.ParsedQuery(),
 			tmc:         planner.tmc,
+			pool:        planner.pool,
 		}, nil
 	}
 
@@ -371,6 +378,7 @@ func (planner *VReplicationLogQueryPlanner) planSelect(sel *sqlparser.Select) (Q
 	return &PerTargetQueryPlan{
 		ParsedQueries: queriesByTarget,
 		tmc:           planner.tmc,
+		pool:          planner.pool,
 	}, nil
 }
 
