@@ -98,7 +98,6 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 			// Even though we have an "open" connection to a vtctld,
 			// we also need to check that it's ready and usable.
 			err := vtctld.VtctldClient.WaitForReady(ctx)
-			log.Infof("gRPCVtctldClient wait error %+v\n", err)
 
 			if err == nil {
 				span.Annotate("is_noop", true)
@@ -107,6 +106,8 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 				// so we're good to go.
 				return nil
 			}
+
+			log.Infof("Oh no, a gRPCVtctldClient wait error! %+v\n", err)
 		}
 
 		log.Infof("Stale connection to vtctld %s, closing and redialing", vtctld.host)
