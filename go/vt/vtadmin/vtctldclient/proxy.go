@@ -147,6 +147,7 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 	}
 
 	// TODO maybe WaitForReady here also???
+	// err = vtctld.VtctldClient.WaitForReady(ctx)
 
 	vtctld.host = addr
 	vtctld.VtctldClient = client

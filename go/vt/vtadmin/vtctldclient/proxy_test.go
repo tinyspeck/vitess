@@ -17,8 +17,11 @@ package vtctldclient
 
 import (
 	"context"
+	"net"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/nettest"
 	"google.golang.org/grpc"
@@ -31,12 +34,12 @@ type fakeVtctld struct {
 	vtctlservicepb.VtctlServer
 }
 
-func TestVtctldClientProxy(t *testing.T) {
+func initFakeVtctld() (net.Listener, *grpc.Server, error) {
 	// See WithTestServer
 	lis, err := nettest.NewLocalListener("tcp")
-	require.NoError(t, err, "cannot create local listener")
-
-	defer lis.Close()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	server := &fakeVtctld{}
 
@@ -44,11 +47,29 @@ func TestVtctldClientProxy(t *testing.T) {
 	vtctlservicepb.RegisterVtctlServer(s, server)
 
 	go s.Serve(lis)
-	defer s.Stop()
+
+	return lis, s, nil
+}
+
+func TestVtctldClientProxy(t *testing.T) {
+	vtctld1, s1, err := initFakeVtctld()
+	defer vtctld1.Close()
+	defer s1.Stop()
+	require.NoError(t, err, "cannot create local listener")
+	t.Logf("vtctld1: %s\n", vtctld1.Addr().String())
+
+	vtctld2, s2, err := initFakeVtctld()
+	defer vtctld2.Close()
+	defer s2.Stop()
+	require.NoError(t, err, "cannot create local listener")
+	t.Logf("vtctld2: %s\n", vtctld2.Addr().String())
 
 	vtctlds := []*vtadminpb.Vtctld{
 		{
-			Hostname: lis.Addr().String(),
+			Hostname: vtctld1.Addr().String(),
+		},
+		{
+			Hostname: vtctld2.Addr().String(),
 		},
 	}
 
@@ -64,6 +85,22 @@ func TestVtctldClientProxy(t *testing.T) {
 
 	proxy := New(config)
 
-	ctx := context.Background()
-	proxy.Dial(ctx)
+	// We don't have a host until we call Dial
+	require.Empty(t, proxy.host)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	err = proxy.Dial(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, vtctld1.Addr().String(), proxy.host)
+
+	// Stop vtctld1 so we switch over to vtctld2
+	s1.Stop()
+
+	err = proxy.Dial(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, vtctld2.Addr().String(), proxy.host)
+
+	// s2.Stop()
 }
