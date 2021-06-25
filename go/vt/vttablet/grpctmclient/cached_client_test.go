@@ -104,7 +104,8 @@ func BenchmarkCachedConnClientSteadyState(b *testing.B) {
 	tablets := make([]*topodatapb.Tablet, 1000)
 	for i := 0; i < len(tablets); i++ {
 		addr, shutdown := grpcTestServer(b, tmserv)
-		b.Cleanup(shutdown)
+		// b.Cleanup(shutdown)
+		defer shutdown()
 
 		tablets[i] = &topodatapb.Tablet{
 			Alias: &topodatapb.TabletAlias{
@@ -118,11 +119,12 @@ func BenchmarkCachedConnClientSteadyState(b *testing.B) {
 		}
 	}
 
-	client := NewCachedConnClient(200)
-	b.Cleanup(client.Close)
+	client := NewCachedConnClient(100)
+	// b.Cleanup(client.Close)
+	defer client.Close()
 
 	// fill the pool
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 100; i++ {
 		err := client.Ping(context.Background(), tablets[i])
 		require.NoError(b, err)
 	}
@@ -169,10 +171,11 @@ func BenchmarkCachedConnClientSteadyState(b *testing.B) {
 
 func BenchmarkCachedConnClientSteadyStateRedials(b *testing.B) {
 	tmserv := tmrpctest.NewFakeRPCTM(b)
-	tablets := make([]*topodatapb.Tablet, 200)
+	tablets := make([]*topodatapb.Tablet, 1000)
 	for i := 0; i < len(tablets); i++ {
 		addr, shutdown := grpcTestServer(b, tmserv)
-		b.Cleanup(shutdown)
+		// b.Cleanup(shutdown)
+		defer shutdown()
 
 		tablets[i] = &topodatapb.Tablet{
 			Alias: &topodatapb.TabletAlias{
@@ -186,11 +189,12 @@ func BenchmarkCachedConnClientSteadyStateRedials(b *testing.B) {
 		}
 	}
 
-	client := NewCachedConnClient(200)
-	b.Cleanup(client.Close)
+	client := NewCachedConnClient(1000)
+	// b.Cleanup(client.Close)
+	defer client.Close()
 
 	// fill the pool
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 1000; i++ {
 		err := client.Ping(context.Background(), tablets[i])
 		require.NoError(b, err)
 	}
@@ -254,23 +258,23 @@ func BenchmarkCachedConnClientSteadyStateEvictions(b *testing.B) {
 		}
 	}
 
-	client := NewCachedConnClient(200)
+	client := NewCachedConnClient(100)
 	b.Cleanup(client.Close)
 
 	// fill the pool
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 100; i++ {
 		err := client.Ping(context.Background(), tablets[i])
 		require.NoError(b, err)
 	}
 
-	assert.Equal(b, len(client.dialer.(*cachedConnDialer).conns), 200)
+	assert.Equal(b, len(client.dialer.(*cachedConnDialer).conns), 100)
 
 	procs := runtime.GOMAXPROCS(0) / 4
 	if procs == 0 {
 		procs = 2
 	}
 
-	start := 200
+	start := 100
 	b.ResetTimer()
 
 	// Begin the benchmark
