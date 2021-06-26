@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"io"
-	"sort"
 	"sync"
 	"time"
 
@@ -69,7 +68,6 @@ type cachedConnDialer struct {
 	m            sync.Mutex
 	conns        map[string]*cachedConn
 	evict        []*cachedConn
-	evictSorted  bool
 	connWaitSema *sync2.Semaphore
 }
 
@@ -96,19 +94,6 @@ func NewCachedConnClient(capacity int) *Client {
 }
 
 var _ dialer = (*cachedConnDialer)(nil)
-
-func (dialer *cachedConnDialer) sortEvictionsLocked() {
-	if !dialer.evictSorted {
-		sort.Slice(dialer.evict, func(i, j int) bool {
-			left, right := dialer.evict[i], dialer.evict[j]
-			if left.refs == right.refs {
-				return left.lastAccessTime.After(right.lastAccessTime)
-			}
-			return left.refs > right.refs
-		})
-		dialer.evictSorted = true
-	}
-}
 
 func (dialer *cachedConnDialer) dial(ctx context.Context, tablet *topodatapb.Tablet) (tabletmanagerservicepb.TabletManagerClient, io.Closer, error) {
 	start := time.Now()
@@ -200,17 +185,25 @@ func (dialer *cachedConnDialer) pollOnce(addr string) (client tabletmanagerservi
 		return client, closer, found, err
 	}
 
-	dialer.sortEvictionsLocked()
+	var evictConn *cachedConn
+	evictIdx := -1
 
-	conn := dialer.evict[len(dialer.evict)-1]
-	if conn.refs != 0 {
+	for i, conn := range dialer.evict {
+		if conn.refs == 0 {
+			evictConn = conn
+			evictIdx = i
+			break
+		}
+	}
+
+	if evictConn == nil {
 		dialer.m.Unlock()
 		return nil, nil, false, nil
 	}
 
-	dialer.evict = dialer.evict[:len(dialer.evict)-1]
-	delete(dialer.conns, conn.addr)
-	conn.cc.Close()
+	dialer.evict = append(dialer.evict[:evictIdx], dialer.evict[evictIdx+1:]...)
+	delete(dialer.conns, evictConn.addr)
+	evictConn.cc.Close()
 	dialer.m.Unlock()
 
 	client, closer, err = dialer.newdial(addr)
@@ -260,7 +253,6 @@ func (dialer *cachedConnDialer) newdial(addr string) (tabletmanagerservicepb.Tab
 		addr:                addr,
 	}
 	dialer.evict = append(dialer.evict, conn)
-	dialer.evictSorted = false
 	dialer.conns[addr] = conn
 
 	return dialer.connWithCloser(conn)
@@ -277,7 +269,6 @@ func (dialer *cachedConnDialer) redialLocked(conn *cachedConn) (tabletmanagerser
 	dialerStats.ConnReuse.Add(1)
 	conn.lastAccessTime = time.Now()
 	conn.refs++
-	dialer.evictSorted = false
 	return dialer.connWithCloser(conn)
 }
 
@@ -289,7 +280,6 @@ func (dialer *cachedConnDialer) connWithCloser(conn *cachedConn) (tabletmanagers
 		dialer.m.Lock()
 		defer dialer.m.Unlock()
 		conn.refs--
-		dialer.evictSorted = false
 		return nil
 	}), nil
 }
