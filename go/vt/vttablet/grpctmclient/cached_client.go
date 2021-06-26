@@ -220,6 +220,19 @@ func (dialer *cachedConnDialer) pollOnce(addr string) (client tabletmanagerservi
 func (dialer *cachedConnDialer) newdial(addr string) (tabletmanagerservicepb.TabletManagerClient, io.Closer, error) {
 	dialerStats.ConnNew.Add(1)
 
+	dialer.m.Lock()
+	defer dialer.m.Unlock()
+
+	if conn, existing := dialer.conns[addr]; existing {
+		// race condition: some other goroutine has dialed our tablet before we have;
+		// this is not great, but shouldn't happen often (if at all), so we're going to
+		// close this connection and reuse the existing one. by doing this, we can keep
+		// the actual Dial out of the global lock and significantly increase throughput
+		dialer.connWaitSema.Release()
+		return dialer.redialLocked(conn)
+	}
+
+
 	opt, err := grpcclient.SecureDialOption(*cert, *key, *ca, *name)
 	if err != nil {
 		dialer.connWaitSema.Release()
@@ -230,19 +243,6 @@ func (dialer *cachedConnDialer) newdial(addr string) (tabletmanagerservicepb.Tab
 	if err != nil {
 		dialer.connWaitSema.Release()
 		return nil, nil, err
-	}
-
-	dialer.m.Lock()
-	defer dialer.m.Unlock()
-
-	if conn, existing := dialer.conns[addr]; existing {
-		// race condition: some other goroutine has dialed our tablet before we have;
-		// this is not great, but shouldn't happen often (if at all), so we're going to
-		// close this connection and reuse the existing one. by doing this, we can keep
-		// the actual Dial out of the global lock and significantly increase throughput
-		cc.Close()
-		dialer.connWaitSema.Release()
-		return dialer.redialLocked(conn)
 	}
 
 	conn := &cachedConn{
