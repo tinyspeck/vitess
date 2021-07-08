@@ -3,16 +3,17 @@
 package vtctldclient
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	vtctlservicepb "vitess.io/vitess/go/vt/proto/vtctlservice"
 )
 
-// VtctldClient augments the vtctlservicepb.VtctlClient interface with io.Closer.
 type VtctldClient interface {
 	vtctlservicepb.VtctldClient
 	Close() error
+	WaitForReady(ctx context.Context) error
 }
 
 // Factory is a function that creates new VtctldClients.

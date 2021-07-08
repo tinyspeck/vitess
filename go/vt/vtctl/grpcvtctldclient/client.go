@@ -19,7 +19,12 @@ limitations under the License.
 package grpcvtctldclient
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/vtctl/grpcclientcommon"
@@ -76,6 +81,35 @@ func (client *gRPCVtctldClient) Close() error {
 	}
 
 	return err
+}
+
+// WaitForReady waits until a gRPC connection to the vtctld is established (or idle).
+func (client *gRPCVtctldClient) WaitForReady(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("Context wait timeout exceeded")
+
+		default:
+			state := client.cc.GetState()
+
+			switch state {
+			case connectivity.Idle, connectivity.Ready:
+				return nil
+			default:
+				// TODO make a flag for the second parameter called connWaitTimeout
+				ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+				defer cancel()
+
+				if !client.cc.WaitForStateChange(ctx, state) {
+					// Failed to transition, so we close and get a new connection.
+					return fmt.Errorf("Failed to transition within timeout")
+				}
+				// Fall-through to the next loop iteration to check again
+				// that the connection is idle/ready and then return.
+			}
+		}
+	}
 }
 
 func init() {
