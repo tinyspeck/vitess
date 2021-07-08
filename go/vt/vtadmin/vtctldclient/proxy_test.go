@@ -77,6 +77,9 @@ func TestDial_Rediscovery(t *testing.T) {
 		},
 	}...)
 
+	t.Logf("vtctld0 %s", vtctld0.Addr().String())
+	t.Logf("vtctld1 %s", vtctld1.Addr().String())
+
 	proxy := New(&Config{
 		Cluster: &vtadminpb.Cluster{
 			Id:   "test",
@@ -88,11 +91,13 @@ func TestDial_Rediscovery(t *testing.T) {
 	// We don't have a vtctld host until we call Dial
 	require.Empty(t, proxy.host)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute) // FIXME not 10 mins lol
 	defer cancel()
 
 	err = proxy.Dial(ctx)
 	require.NoError(t, err)
+
+	t.Logf("first host %s", proxy.host)
 
 	nextHost := ""
 
@@ -101,18 +106,23 @@ func TestDial_Rediscovery(t *testing.T) {
 	switch proxy.host {
 	case vtctld0.Addr().String():
 		vtctld0.Close()
+		s0.Stop()
 		nextHost = vtctld1.Addr().String()
 	case vtctld1.Addr().String():
 		vtctld1.Close()
+		s1.Stop()
 		nextHost = vtctld0.Addr().String()
 	default:
 		t.Fatalf("Initial vtctld hostname invalid: %s", proxy.host)
 	}
+
+	t.Logf("expected next host %s", nextHost)
 
 	disco.RemoveVtctld(proxy.host)
 
 	err = proxy.Dial(ctx)
 	require.NoError(t, err)
 
+	t.Logf("second host %s", proxy.host)
 	assert.Equal(t, nextHost, proxy.host)
 }
