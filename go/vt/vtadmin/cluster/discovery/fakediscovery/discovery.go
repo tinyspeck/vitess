@@ -88,6 +88,23 @@ func (d *Fake) AddTaggedVtctlds(tags []string, vtctlds ...*vtadminpb.Vtctld) {
 	}
 }
 
+// RemoveVtctld removes the vtctld with the given hostname from the
+// list of discoverable Vtctlds. This is a no-op if the hostname does not
+// correspond to a discoverable Vtctld.
+func (d *Fake) RemoveVtctld(hostname string) {
+	delete(d.vtctlds.byName, hostname)
+
+	for tag, vtctlds := range d.vtctlds.byTag {
+		var vs []*vtadminpb.Vtctld
+		for _, v := range vtctlds {
+			if v.Hostname != hostname {
+				vs = append(vs, v)
+			}
+		}
+		d.vtctlds.byTag[tag] = vs
+	}
+}
+
 // SetGatesError instructs whether the fake should return an error on gate
 // discovery functions.
 func (d *Fake) SetGatesError(shouldErr bool) {

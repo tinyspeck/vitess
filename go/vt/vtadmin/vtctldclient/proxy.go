@@ -144,7 +144,7 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 		return err
 	}
 
-	err = vtctld.VtctldClient.WaitForReady(ctx)
+	err = client.WaitForReady(ctx)
 	if err != nil {
 		return err
 	}
