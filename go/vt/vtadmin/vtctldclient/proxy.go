@@ -24,6 +24,7 @@ import (
 
 	"vitess.io/vitess/go/trace"
 	"vitess.io/vitess/go/vt/grpcclient"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/vtadmin/cluster/discovery"
 	"vitess.io/vitess/go/vt/vtadmin/vtadminproto"
 	"vitess.io/vitess/go/vt/vtctl/grpcvtctldclient"
@@ -95,17 +96,25 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 
 	if vtctld.VtctldClient != nil {
 		if !vtctld.closed {
-			span.Annotate("is_noop", true)
-			span.Annotate("vtctld_host", vtctld.host)
+			// Check that our connection is open *and* ready.
+			// (An open connection is not necessarily a usable connection. One can have
+			// an "open" connection to a vtctld that no longer exists, for example.)
+			err := vtctld.VtctldClient.WaitForReady(ctx)
 
-			return nil
+			if err == nil {
+				span.Annotate("is_noop", true)
+				span.Annotate("vtctld_host", vtctld.host)
+
+				return nil
+			}
 		}
 
 		span.Annotate("is_stale", true)
+		log.Infof("Closing stale connection to vtctld %s", vtctld.host)
 
 		// close before reopen. this is safe to call on an already-closed client.
 		if err := vtctld.Close(); err != nil {
-			return fmt.Errorf("error closing possibly-stale connection before re-dialing: %w", err)
+			return fmt.Errorf("error closing possibly-stale connection to vtctld %s before re-dialing: %w", vtctld.host, err)
 		}
 	}
 
@@ -113,6 +122,8 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error discovering vtctld to dial: %w", err)
 	}
+
+	log.Infof("Discovered vtctld %s. Dialing to establish a connection...", addr)
 
 	span.Annotate("vtctld_host", addr)
 	span.Annotate("is_using_credentials", vtctld.creds != nil)
@@ -132,6 +143,13 @@ func (vtctld *ClientProxy) Dial(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	err = vtctld.VtctldClient.WaitForReady(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Established new connection to vtctld %s", addr)
 
 	vtctld.host = addr
 	vtctld.VtctldClient = client
