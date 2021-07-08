@@ -73,3 +73,44 @@ func TestDiscoverVTGates(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, actual)
 }
+
+func TestRemoveVtctld(t *testing.T) {
+	fake := New()
+	vtctlds := []*vtadminpb.Vtctld{
+		{
+			Hostname: "vtctld1",
+		},
+		{
+			Hostname: "vtctld2",
+		},
+		{
+			Hostname: "vtctld3",
+		},
+	}
+
+	ctx := context.Background()
+
+	fake.AddTaggedVtctlds(nil, vtctlds...)
+	fake.AddTaggedVtctlds([]string{"tag1:val1"}, vtctlds[1])
+
+	actual, err := fake.DiscoverVtctlds(ctx, nil)
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, vtctlds, actual)
+
+	fake.RemoveVtctld(vtctlds[1].Hostname)
+
+	actual, err = fake.DiscoverVtctlds(ctx, nil)
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []*vtadminpb.Vtctld{
+		{
+			Hostname: "vtctld1",
+		},
+		{
+			Hostname: "vtctld3",
+		},
+	}, actual)
+
+	actual, err = fake.DiscoverVtctlds(ctx, []string{"tag1:val1"})
+	assert.NoError(t, err)
+	assert.Empty(t, actual)
+}
